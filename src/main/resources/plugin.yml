@@ -1,0 +1,18 @@
+name: EpicDuels
+version: 1.0.0
+main: dev.epicduels.EpicDuels
+api-version: '1.21'
+generators:
+  EpicDuels:
+    dev.epicduels.world.VoidWorldGenerator
+commands:
+  duel:
+    description: Main duel command
+    aliases: [d]
+permissions:
+  epicduels.admin:
+    default: op
+  epicduels.duel:
+    default: true
+  epicduels.stats:
+    default: true
