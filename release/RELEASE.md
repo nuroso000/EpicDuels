@@ -1,76 +1,97 @@
-# EpicDuels v0.2.0
+# EpicDuels — Release Notes
 
-**Release Date:** April 2026
+---
+
+## v0.2.1 — Patch Release
+
+**Date:** April 2026
 **Minecraft:** Paper 1.21.1+
 **Java:** 21
 
+### Bug Fixes
+
+- **Fixed world generator startup error** — Added `load: STARTUP` to `plugin.yml` so the plugin is loaded during the server startup phase (before worlds are created). Without this, Paper could not register the `VoidWorldGenerator` for the default lobby world and printed:
+  ```
+  Could not set generator for default world 'world': Plugin 'EpicDuels v0.2.0' is not enabled yet (is it load:STARTUP?)
+  ```
+
+### Other
+
+- Added `CONTRIBUTING.md` — development guide, project structure, and code style conventions
+- `LICENSE.txt` and `README.md` are now consistently present and up-to-date on all branches
+
 ---
 
-## Changelog
+## v0.2.0 — Major Feature Update
+
+**Date:** April 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
 
 ### New Features
 
-- **Redesigned Main Menu GUI** — The `/duel` menu now has three visual sections:
-  - **Left:** Challenge a Player — opens player selection, then kit selection, then map selection
-  - **Middle:** Stats — displays your wins, losses, win rate, and total duels directly in the GUI with your player head
-  - **Right:** Queue / Matchmaking — join a kit-based queue to auto-match against opponents
+- **Redesigned Main Menu GUI** — The `/duel` menu is now a 54-slot chest split into three visual sections:
+  - **Left (columns 1–3):** Challenge a Player — opens player selection, then kit selection, then map selection
+  - **Middle (columns 4–6):** Stats — displays your wins, losses, win rate, and total duels directly in the GUI with your player head and a BOOK item showing colored lore
+  - **Right (columns 7–9):** Queue / Matchmaking — per-kit queue buttons showing current queue counts; includes "Random Kit" (ENDER_PEARL) and "No Kit" (BARRIER) buttons
 
-- **Queue / Matchmaking System** — New `QueueManager` enables automatic matchmaking:
-  - Join a queue for any kit from the main menu or via `/duel queue <kit>`
-  - Action bar shows real-time queue status with elapsed time
-  - When two players queue for the same kit, they are automatically matched and teleported to a random arena
-  - Players are removed from queue on disconnect
+- **Queue / Matchmaking System (`QueueManager`)** — Kit-based auto-matchmaking:
+  - Join a queue from the main menu or via `/duel queue <kit>`
+  - Action bar updates every second: `Queue [KitName]: searching for opponent... (Xs)`
+  - When two players queue for the same kit they are instantly matched, a random ready arena is chosen, and both are teleported in
+  - Players removed from queue automatically on disconnect
 
-- **Random Map Animation** — When selecting "Random Map" in the map selection GUI:
-  - A slot rapidly cycles through all arena icons, gradually slowing down
-  - Ends with the chosen arena and a level-up sound effect
-  - Proceeds to send the challenge after the animation
+- **Random Map Animation** — Clicking "Random Map" in the map selection GUI triggers a slot-machine animation:
+  - Rapidly cycles through all arena icons, gradually slowing down over ~2 seconds
+  - Plays `BLOCK_NOTE_BLOCK_HAT` ticks during cycling and `ENTITY_PLAYER_LEVELUP` on the final result
+  - Automatically proceeds with the challenge after the animation finishes
 
-- **Arena & Kit Icons** — Admins can now set custom display icons:
-  - `/duel arena seticon <name>` — hold any item, it becomes the arena's icon in GUIs
-  - `/duel kit seticon <name>` — hold any item, it becomes the kit's icon in GUIs
-  - Icons are persisted in `arenas.yml` and `kits.yml`
-  - Default icons: arenas use GRASS_BLOCK, kits use CHEST
+- **Custom Arena & Kit Icons** — Admins can assign any item as the display icon:
+  - `/duel arena seticon <name>` — hold item in hand
+  - `/duel kit seticon <name>` — hold item in hand
+  - Icons stored in `arenas.yml` and `kits.yml`; default icons: `GRASS_BLOCK` for arenas, `CHEST` for kits
 
-- **Architecture Documentation** — Added a comprehensive comment block in the main plugin class explaining how all managers interact
+- **Architecture Documentation** — Detailed comment block in `EpicDuels.java` explaining how all six managers interact
 
 ### Bug Fixes
 
-- **Block Placement & Breaking in Arena Instances** — Players can now place AND break blocks during active duels inside instance worlds. However, original arena template blocks (the map itself) cannot be broken. When an instance world is created, all existing block positions are recorded; only player-placed blocks can be broken.
+- **Block protection in arena instances** — Players can now freely place blocks and break *player-placed* blocks during a duel. Original map blocks are protected: when an instance world is created, all non-air block positions are recorded in `DuelInstance#originalBlocks`; break attempts on those positions are cancelled.
 
-- **Arena Instance Deletion** — Instance worlds are now properly unloaded with `Bukkit.unloadWorld(world, false)` and recursively deleted from disk using `Files.walkFileTree()`. Added error handling and warning logs if deletion fails.
+- **Arena instance world cleanup** — Instance worlds are now properly unloaded with `Bukkit.unloadWorld(world, false)` and recursively deleted from disk via `Files.walkFileTree()`. Warnings are logged if deletion fails.
 
-- **Player Disconnect Mid-Duel** — When a player disconnects during a duel, the duel ends immediately, the remaining player is declared winner and teleported to lobby, stats are updated, and the instance world is cleaned up.
+- **Disconnect mid-duel** — When a player disconnects during an active duel the duel immediately ends, the remaining player wins and is teleported to lobby, stats are updated, and the instance world is deleted.
 
-### Changes
+### Breaking Changes
 
-- **Removed Lobby Spawn Commands** — Removed `/duel setlobbyspawn1` and `/duel setlobbyspawn2`. Only `/duel setlobby` remains. All players teleport to the single lobby spawn on join and after duels.
+- **Removed `/duel setlobbyspawn1` and `/duel setlobbyspawn2`** — These commands no longer exist. Only `/duel setlobby` is supported. The `config.yml` no longer stores `lobby-spawn1` / `lobby-spawn2`.
+- **Challenge flow reordered** — The GUI flow is now Player → Kit → Map (previously Player → Map → Kit).
 
-- **Challenge Flow Reordered** — The challenge flow is now: Select Player -> Select Kit -> Select Map (previously it was Player -> Map -> Kit). This feels more natural.
-
-- **Improved GUIs** — All GUIs now use the correct display icon for arenas and kits instead of hardcoded materials.
-
-### Commands Added
+### Commands Added in v0.2.0
 
 | Command | Description | Permission |
 |---|---|---|
-| `/duel queue <kit>` | Join matchmaking queue for a kit | `epicduels.duel` |
-| `/duel queue leave` | Leave the matchmaking queue | `epicduels.duel` |
-| `/duel arena seticon <name>` | Set arena display icon (hold item) | `epicduels.admin` |
-| `/duel kit seticon <name>` | Set kit display icon (hold item) | `epicduels.admin` |
+| `/duel queue <kit>` | Join matchmaking queue | `epicduels.duel` |
+| `/duel queue leave` | Leave the queue | `epicduels.duel` |
+| `/duel arena seticon <name>` | Set arena display icon | `epicduels.admin` |
+| `/duel kit seticon <name>` | Set kit display icon | `epicduels.admin` |
 
-### Commands Removed
+### Commands Removed in v0.2.0
 
-| Command | Reason |
+| Command | Replacement |
 |---|---|
-| `/duel setlobbyspawn1` | Replaced by single `/duel setlobby` |
-| `/duel setlobbyspawn2` | Replaced by single `/duel setlobby` |
+| `/duel setlobbyspawn1` | Use `/duel setlobby` |
+| `/duel setlobbyspawn2` | Use `/duel setlobby` |
 
 ---
 
-## Installation
+## v1.0.0 — Initial Release
 
-1. Drop `EpicDuels-0.2.0.jar` into your server's `plugins/` folder
-2. Restart the server
-3. Set lobby: `/duel setlobby`
-4. Create arenas and kits, then duel!
+**Date:** early 2026
+
+- Arena system with void template worlds and per-duel instance copies
+- Kit system with full inventory / armor / offhand support and in-GUI editor
+- Duel challenge flow via GUI (player → arena → kit) with 30-second expiry and clickable Accept/Deny
+- 5-second countdown, player freeze, auto-win on death or disconnect
+- Stats tracking (wins, losses, win rate) in `stats.yml`
+- World protection: lobby locked for non-admins, template worlds open for admins, instance worlds locked during duels
+- Void world generator with plains biome

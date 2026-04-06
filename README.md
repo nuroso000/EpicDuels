@@ -121,7 +121,7 @@ gradle clean build
 mvn clean package
 ```
 
-Output JAR: `build/libs/EpicDuels-0.2.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Output JAR: `build/libs/EpicDuels-0.2.1.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
 ## License & Usage
 
