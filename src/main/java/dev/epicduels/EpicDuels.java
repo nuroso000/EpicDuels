@@ -94,9 +94,6 @@ public class EpicDuels extends JavaPlugin {
         // Save default config
         saveDefaultConfig();
 
-        // Setup void world on first start
-        setupVoidWorld();
-
         // Initialize managers
         arenaManager = new ArenaManager(this);
         kitManager = new KitManager(this);
@@ -117,8 +114,12 @@ public class EpicDuels extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
 
-        // Load existing arena template worlds
-        loadArenaWorlds();
+        // Defer world operations to first tick (cannot create worlds during STARTUP phase)
+        Bukkit.getScheduler().runTask(this, () -> {
+            setupVoidWorld();
+            loadArenaWorlds();
+            getLogger().info("Arena worlds loaded.");
+        });
 
         getLogger().info("EpicDuels v" + getDescription().getVersion() + " enabled!");
     }
