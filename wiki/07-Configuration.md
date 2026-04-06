@@ -1,26 +1,26 @@
 # Configuration Guide
 
-Konfiguration von EpicDuels.
+Configuring EpicDuels.
 
-## Dateistruktur
+## File Structure
 
-EpicDuels erstellt automatisch folgende Dateien im `plugins/EpicDuels/` Verzeichnis:
+EpicDuels automatically creates these files in the `plugins/EpicDuels/` directory:
 
 ```
 plugins/EpicDuels/
-├── config.yml      # Lobby-Konfiguration
-├── arenas.yml      # Arena-Daten
-├── kits.yml        # Kit-Daten
-└── stats.yml       # Spieler-Statistiken (autom. erzeugt)
+├── config.yml      # Lobby configuration
+├── arenas.yml      # Arena data
+├── kits.yml        # Kit data
+└── stats.yml       # Player statistics (auto-created)
 ```
 
 ---
 
 ## config.yml
 
-Die Hauptkonfigurationsdatei.
+The main configuration file.
 
-### Struktur
+### Structure
 
 ```yaml
 lobbySpawn:
@@ -32,13 +32,13 @@ lobbySpawn:
   pitch: 0.0
 ```
 
-### Einstellen
+### Setting It
 
-**Automatisch:** Nutze `/duel setlobby` - schreibt die aktuelle Position automatisch.
+**Automatically:** Use `/duel setlobby` - writes the current position automatically.
 
-**Manuell:** Bearbeite die Datei und starte den Server neu.
+**Manually:** Edit the file and restart the server.
 
-### Beispiel
+### Example
 
 ```yaml
 lobbySpawn:
@@ -54,7 +54,7 @@ lobbySpawn:
 
 ## arenas.yml
 
-Speichert alle Arena-Daten.
+Stores all arena data.
 
 ### Format
 
@@ -74,7 +74,7 @@ arenas:
     ready: true
 ```
 
-### Beispiel
+### Example
 
 ```yaml
 arenas:
@@ -105,19 +105,19 @@ arenas:
     ready: true
 ```
 
-### Felder
+### Fields
 
-| Feld | Beschreibung | Beispiel |
+| Field | Description | Example |
 |---|---|---|
-| `spawn1` | Koordinaten Spawn 1 | `{x: 0, y: 100, z: 0}` |
-| `spawn2` | Koordinaten Spawn 2 | `{x: 0, y: 100, z: 20}` |
-| `icon` | Display-Icon | `GRASS_BLOCK` |
-| `worldName` | Welt-Verzeichnis | `epicduels_pvp_arena` |
-| `ready` | Spielbar ja/nein | `true` oder `false` |
+| `spawn1` | Spawn 1 coordinates | `{x: 0, y: 100, z: 0}` |
+| `spawn2` | Spawn 2 coordinates | `{x: 0, y: 100, z: 20}` |
+| `icon` | Display icon | `GRASS_BLOCK` |
+| `worldName` | World directory | `epicduels_pvp_arena` |
+| `ready` | Is playable yes/no | `true` or `false` |
 
-### Manuell bearbeiten
+### Manual Editing
 
-⚠️ **Vorsicht:** Fehler in dieser Datei können zu Problemen führen. Nutze stattdessen Befehle!
+⚠️ **Caution:** Errors in this file can cause problems. Use commands instead!
 
 ```bash
 /duel arena create myarena
@@ -130,7 +130,7 @@ arenas:
 
 ## kits.yml
 
-Speichert alle Kit-Daten.
+Stores all kit data.
 
 ### Format
 
@@ -142,7 +142,7 @@ kits:
     icon: <ItemStack>
 ```
 
-### Beispiel
+### Example
 
 ```yaml
 kits:
@@ -157,9 +157,9 @@ kits:
     icon: BOW
 ```
 
-### Manuell bearbeiten
+### Manual Editing
 
-⚠️ **Nicht empfohlen:** Nutze stattdessen die Befehle:
+⚠️ **Not Recommended:** Use commands instead:
 
 ```bash
 /duel kit create my_kit
@@ -172,7 +172,7 @@ kits:
 
 ## stats.yml
 
-Speichert Spieler-Statistiken (automatisch generiert).
+Stores player statistics (auto-generated).
 
 ### Format
 
@@ -184,7 +184,7 @@ stats:
     totalGames: <int>
 ```
 
-### Beispiel
+### Example
 
 ```yaml
 stats:
@@ -199,20 +199,20 @@ stats:
     totalGames: 5
 ```
 
-### Automatische Updates
+### Automatic Updates
 
-Stats werden automatisch aktualisiert wenn:
-- ✅ Ein Duel endet
-- ✅ Ein Spieler gewinnt oder verliert
-- ✅ Ein Spieler einen Queue-Duel gewinnt
+Stats automatically update when:
+- ✅ A duel ends
+- ✅ A player wins or loses
+- ✅ A player wins a queue duel
 
-### Win Rate Berechnung
+### Win Rate Calculation
 
 ```
 Win Rate = (Wins / Total Games) * 100
 ```
 
-**Beispiel:**
+**Example:**
 ```
 15 Wins / 23 Total = 0.652 * 100 = 65.2%
 ```
@@ -223,7 +223,7 @@ Win Rate = (Wins / Total Games) * 100
 
 ### Void World Generator
 
-Um einen Void-Lobby mit dem Custom-Generator zu haben:
+To have a void lobby with the custom generator:
 
 **bukkit.yml:**
 ```yaml
@@ -232,25 +232,25 @@ worlds:
     generator: EpicDuels
 ```
 
-Dies sorgt dafür, dass die Lobby als Void-Welt generiert wird.
+This makes the lobby a void world.
 
-### Nach Bearbeitung
+### After Editing
 
 ```bash
-# Server neustarten
+# Restart the server
 /stop
-# Starten Sie den Server erneut
+# Start the server again
 ```
 
 ---
 
-## File Berechtigungen
+## File Permissions
 
 ```bash
-# Linux/Mac: Richtige Berechtigungen setzen
+# Linux/Mac: Set correct permissions
 chmod 644 plugins/EpicDuels/*.yml
 
-# Sicherstellen, dass der Server die Dateien lesen/schreiben kann
+# Ensure server can read/write files
 chmod 755 plugins/EpicDuels/
 ```
 
@@ -258,54 +258,54 @@ chmod 755 plugins/EpicDuels/
 
 ## Backup & Recovery
 
-### Backup erstellen
+### Create Backup
 
 ```bash
-# Alle Daten sichern
+# Backup all data
 cp -r plugins/EpicDuels/ plugins/EpicDuels_backup/
 ```
 
-### Wiederherstellen
+### Restore
 
 ```bash
-# Aus Backup zurückstellen
+# Restore from backup
 rm -r plugins/EpicDuels/
 cp -r plugins/EpicDuels_backup/ plugins/EpicDuels/
 ```
 
 ---
 
-## Häufige Probleme
+## Common Issues
 
-### Stats werden nicht gespeichert
+### Stats Not Being Saved
 
-**Lösung:**
-- Überprüfe, dass die Datei `stats.yml` beschreibbar ist
-- Nutze `/duel stats` um zu überprüfen, ob der Wert aktualisiert wird
-- Starte den Server neu
+**Solution:**
+- Check that `stats.yml` is writable
+- Use `/duel stats` to check if values update
+- Restart the server
 
-### Arenen funktionieren nicht nach Bearbeitung
+### Arenas Don't Work After Editing
 
-**Lösung:**
-- Stelle sicher, dass beide Spawn-Punkte gesetzt sind
-- Überprüfe, dass `ready: true` in der Arena eingestellt ist
-- Nutze `/duel arena tp <name>` um die Arena zu überprüfen
+**Solution:**
+- Make sure both spawn points are set
+- Check that `ready: true` is set for the arena
+- Use `/duel arena tp <name>` to verify the arena
 
-### Config-Fehler nach manueller Bearbeitung
+### Config Errors After Manual Edit
 
-**Lösung:**
-- Überprüfe YAML-Syntax (Spaces, nicht Tabs)
-- Nutze einen YAML-Validator: [yamllint.com](https://www.yamllint.com)
-- Starte den Server neu
-- Überprüfe die Server-Logs
+**Solution:**
+- Check YAML syntax (spaces, not tabs)
+- Use a YAML validator: [yamllint.com](https://www.yamllint.com)
+- Restart the server
+- Check server logs
 
 ---
 
-## Erweiterte Konfiguration
+## Advanced Configuration
 
 ### Logs
 
-Aktiviere Debug-Logs für Fehlersuche (falls vorhanden):
+Enable debug logs for troubleshooting (if available):
 
 **bukkit.yml:**
 ```yaml
@@ -314,17 +314,17 @@ plugins:
     debug: true
 ```
 
-### Performance-Tipps
+### Performance Tips
 
-- ✅ Begrenzte Anzahl Arenen (z.B. 10)
-- ✅ Kit-Inventory nicht zu komplex
-- ✅ Regelmäßig Stats-Datei aufräumen
-- ✅ Server mit ausreichend RAM betreiben
+- ✅ Limit arena count (e.g., 10)
+- ✅ Keep kit inventories simple
+- ✅ Regularly clean up stats file
+- ✅ Run server with sufficient RAM
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
-- 🎮 **Spielen:** [Player Guide](./03-Player-Guide.md)
+- 🎮 **Playing:** [Player Guide](./03-Player-Guide.md)
 - 🛠️ **Admin Setup:** [Admin Guide](./04-Admin-Guide.md)
-- 🔐 **Berechtigungen:** [Permissions Guide](./06-Permissions.md)
+- 🔐 **Permissions:** [Permissions Guide](./06-Permissions.md)

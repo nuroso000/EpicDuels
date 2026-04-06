@@ -1,22 +1,22 @@
 # Development Guide
 
-Guide für Entwickler, die an EpicDuels arbeiten oder es erweitern möchten.
+Guide for developers working on or extending EpicDuels.
 
-## Voraussetzungen
+## Prerequisites
 
-### Erforderlich
-- **Java 21** oder höher
-- **Git** zum Klonen des Repositories
-- **IDE:** IntelliJ IDEA, Eclipse oder VSCode
-- **Build-Tool:** Gradle oder Maven
+### Required
+- **Java 21** or higher
+- **Git** for cloning the repository
+- **IDE:** IntelliJ IDEA, Eclipse, or VSCode
+- **Build Tool:** Gradle or Maven
 
 ### Optional
-- **Lombok** (für Code-Generierung)
-- **Docker** (für lokale Tests)
+- **Lombok** (for code generation)
+- **Docker** (for local testing)
 
 ---
 
-## Projekt klonen
+## Clone the Repository
 
 ```bash
 git clone https://github.com/nuroso000/epicduels.git
@@ -27,14 +27,14 @@ cd epicduels
 
 ## Build Setup
 
-### Mit Gradle (empfohlen)
+### With Gradle (Recommended)
 
-#### 1. Abhängigkeiten installieren
+#### 1. Install Dependencies
 ```bash
 gradle clean build
 ```
 
-#### 2. JAR erstellen
+#### 2. Create JAR
 ```bash
 gradle build
 ```
@@ -47,14 +47,14 @@ gradle test
 gradle run
 ```
 
-### Mit Maven
+### With Maven
 
-#### 1. Abhängigkeiten installieren
+#### 1. Install Dependencies
 ```bash
 mvn clean install
 ```
 
-#### 2. JAR erstellen
+#### 2. Create JAR
 ```bash
 mvn clean package
 ```
@@ -68,7 +68,7 @@ mvn test
 
 ---
 
-## Projekt-Struktur
+## Project Structure
 
 ```
 epicduels/
@@ -84,56 +84,56 @@ epicduels/
 │   │   │       ├── arena/
 │   │   │       └── ...
 │   │   └── resources/
-│   │       ├── plugin.yml      # Plugin-Manifest
-│   │       └── config.yml      # Default-Config
+│   │       ├── plugin.yml      # Plugin manifest
+│   │       └── config.yml      # Default config
 │   └── test/
 │       └── java/
-├── build.gradle                 # Gradle-Config
-├── pom.xml                      # Maven-Config
-├── README.md                    # Projekt-Info
-├── CONTRIBUTING.md              # Beitrags-Guide
-└── LICENSE.txt                  # Lizenz (CC BY-NC-SA 4.0)
+├── build.gradle                 # Gradle config
+├── pom.xml                      # Maven config
+├── README.md                    # Project info
+├── CONTRIBUTING.md              # Contributing guide
+└── LICENSE.txt                  # License (CC BY-NC-SA 4.0)
 ```
 
 ---
 
-## Wichtige Klassen & Module
+## Key Classes & Modules
 
 ### Main Plugin Class
 ```
 com.epicduels.plugin.EpicDuels
 ```
-Die Haupt-Plugin-Klasse, initialisiert alles.
+The main plugin class that initializes everything.
 
 ### Command System
 ```
 com.epicduels.commands.*
 ```
-Alle Befehle sind hier implementiert.
+All commands are implemented here.
 
 ### Event Listeners
 ```
 com.epicduels.listeners.*
 ```
-Minecraft-Event-Handler (Player Damage, Join, etc.).
+Minecraft event handlers (Player Damage, Join, etc.).
 
 ### Data Management
 ```
 com.epicduels.data.*
 ```
-YAML-Datei-Management (arenas.yml, kits.yml, etc.).
+YAML file management (arenas.yml, kits.yml, etc.).
 
 ### UI/GUI
 ```
 com.epicduels.ui.*
 ```
-Inventory-GUIs für Menüs.
+Inventory GUIs for menus.
 
 ### Arena System
 ```
 com.epicduels.arena.*
 ```
-Arena-Management und Duel-Logik.
+Arena management and duel logic.
 
 ---
 
@@ -144,77 +144,77 @@ Arena-Management und Duel-Logik.
 compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
 ```
 
-Die Paper-API für Minecraft 1.21.1 (aktuellste Version).
+Paper API for Minecraft 1.21.1 (latest version).
 
-### JUnit (für Tests)
+### JUnit (for Tests)
 ```gradle
 testImplementation 'junit:junit:4.13.2'
 ```
 
 ---
 
-## Entwicklungs-Tipps
+## Development Tips
 
-### 1. Lokaler Test-Server
+### 1. Local Test Server
 
-Erstelle einen Test-Server:
+Create a test server:
 
 ```bash
-# Paper Server JAR herunterladen
+# Download Paper Server JAR
 wget https://launcher.mojang.com/v1/objects/.../server.jar
 
 # server.properties
 echo "online-mode=false" >> server.properties
 echo "level-type=flat" >> server.properties
 
-# Starten
+# Start
 java -Xmx1G -Xms1G -jar server.jar nogui
 ```
 
-### 2. Plugin debuggen
+### 2. Debug the Plugin
 
 ```bash
-# Mit Debug-Modus starten
+# Start with debug mode
 java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar server.jar nogui
 
-# In deiner IDE (IntelliJ/Eclipse) einen Remote Debugger connecten
+# Connect remote debugger in your IDE (IntelliJ/Eclipse)
 ```
 
-### 3. Logs überprüfen
+### 3. Check Logs
 
 ```bash
 tail -f logs/latest.log
 ```
 
-### 4. Code-Qualität
+### 4. Code Quality
 
 ```bash
-# Lint/Analysis Tools nutzen
+# Use lint/analysis tools
 gradle lint
 gradle spotbugs
 ```
 
 ---
 
-## Beitrag zum Projekt
+## Contributing to the Project
 
 ### 1. Fork & Branch
 
 ```bash
-# Fork das Projekt auf GitHub
-# Clone deinen Fork
-git clone https://github.com/<dein-username>/epicduels.git
+# Fork the project on GitHub
+# Clone your fork
+git clone https://github.com/<your-username>/epicduels.git
 cd epicduels
 
-# Erstelle einen Feature-Branch
+# Create a feature branch
 git checkout -b feature/my-feature
 ```
 
-### 2. Implementiere die Feature
+### 2. Implement the Feature
 
-- Folge den bestehenden Code-Konventionen
-- Schreibe sauberen, dokumentierten Code
-- Teste lokal gründlich
+- Follow existing code conventions
+- Write clean, documented code
+- Test thoroughly locally
 
 ### 3. Commit & Push
 
@@ -224,53 +224,53 @@ git commit -m "Add: New feature description"
 git push origin feature/my-feature
 ```
 
-### 4. Pull Request erstellen
+### 4. Create Pull Request
 
-Gehe auf GitHub und erstelle einen Pull Request mit:
-- Aussagekräftiger Titel
-- Detaillierte Beschreibung der Änderungen
-- Tests/Überprüfungen durchgeführt
-- Lizenz-Konformität (CC BY-NC-SA 4.0)
+Go to GitHub and create a Pull Request with:
+- Descriptive title
+- Detailed description of changes
+- Tests performed
+- License compliance (CC BY-NC-SA 4.0)
 
 ---
 
-## Code-Konventionen
+## Code Conventions
 
 ### Naming
 ```java
-// Klassen: PascalCase
+// Classes: PascalCase
 public class DuelManager { }
 
-// Methoden: camelCase
+// Methods: camelCase
 public void startDuel() { }
 
-// Konstanten: UPPER_SNAKE_CASE
+// Constants: UPPER_SNAKE_CASE
 private static final int DUEL_TIMEOUT = 300;
 ```
 
-### Dokumentation
+### Documentation
 ```java
 /**
- * Startet ein Duel zwischen zwei Spielern.
+ * Starts a duel between two players.
  * 
- * @param player1 Erster Spieler
- * @param player2 Zweiter Spieler
- * @param arena Die Arena für das Duel
- * @return true wenn Duel erfolgreich gestartet
+ * @param player1 First player
+ * @param player2 Second player
+ * @param arena The arena for the duel
+ * @return true if duel started successfully
  */
 public boolean startDuel(Player player1, Player player2, Arena arena) {
     // Implementation
 }
 ```
 
-### Null-Checks
+### Null Checks
 ```java
-// Gut: Null-Safety
+// Good: Null safety
 if (player != null && player.isOnline()) {
     player.sendMessage("Hello!");
 }
 
-// Mit Optional (Java 8+)
+// With Optional (Java 8+)
 Optional.ofNullable(player)
     .filter(Player::isOnline)
     .ifPresent(p -> p.sendMessage("Hello!"));
@@ -280,7 +280,7 @@ Optional.ofNullable(player)
 
 ## Testing
 
-### Unit Tests schreiben
+### Write Unit Tests
 
 ```java
 import org.junit.Test;
@@ -302,7 +302,7 @@ public class DuelManagerTest {
 }
 ```
 
-### Tests ausführen
+### Run Tests
 
 ```bash
 gradle test       # Gradle
@@ -311,45 +311,45 @@ mvn test          # Maven
 
 ---
 
-## Release-Process
+## Release Process
 
-### Version-Nummern (Semantic Versioning)
+### Version Numbers (Semantic Versioning)
 
 ```
 X.Y.Z
-│ │ └─ Patch (Bug-Fixes): 0.2.0 → 0.2.1
+│ │ └─ Patch (Bug fixes): 0.2.0 → 0.2.1
 │ └─── Minor (Features): 0.2.0 → 0.3.0
 └───── Major (Breaking): 0.2.0 → 1.0.0
 ```
 
-### Release erstellen
+### Create Release
 
-1. **Update Version** in `build.gradle` oder `pom.xml`
-2. **Commit** mit Version-Tag
-3. **GitHub Release** erstellen
-4. **JAR** hochladen auf:
+1. **Update version** in `build.gradle` or `pom.xml`
+2. **Commit** with version tag
+3. **Create GitHub Release**
+4. **Upload JAR** to:
    - GitHub Releases
    - Modrinth
    - (Optional) SpigotMC, Bukkit
 
 ---
 
-## Lizenz & Rechtliches
+## License & Legal
 
-**EpicDuels** ist lizenziert unter **CC BY-NC-SA 4.0**.
+**EpicDuels** is licensed under **CC BY-NC-SA 4.0**.
 
-### Bedeutung für Entwickler
+### For Developers
 
-- ✅ **Du kannst:** Code ändern und weiterentwickeln
-- ✅ **Du darfst:** Das Projekt für dich selbst nutzen
-- ❌ **Du darfst nicht:** Es kommerziell verkaufen
-- ✅ **Du musst:** Die gleiche Lizenz verwenden
+- ✅ **You can:** Modify and develop the code
+- ✅ **You may:** Use the project for yourself
+- ❌ **You cannot:** Sell it commercially
+- ✅ **You must:** Use the same license
 
-Siehe [LICENSE.txt](../LICENSE.txt) für Details.
+See [LICENSE.txt](../LICENSE.txt) for details.
 
 ---
 
-## Weitere Ressourcen
+## Additional Resources
 
 - 📖 **Paper API Docs:** [papermc.io/docs](https://papermc.io/docs)
 - 🎮 **Bukkit Plugin Dev:** [bukkit.org](https://bukkit.org)
@@ -358,31 +358,31 @@ Siehe [LICENSE.txt](../LICENSE.txt) für Details.
 
 ---
 
-## Probleme & Support
+## Issues & Support
 
-### Build-Fehler
+### Build Errors
 
 ```bash
-# Cache löschen
+# Clear cache
 gradle clean
 rm -rf build/
 
-# Neu bauen
+# Rebuild
 gradle build
 ```
 
-### Abhängigkeits-Probleme
+### Dependency Issues
 
 ```bash
-# Dependencies aktualisieren
+# Check dependencies
 gradle dependencies
 mvn dependency:tree
 ```
 
-### Paper API nicht gefunden
+### Paper API Not Found
 
 ```bash
-# Repository hinzufügen (in build.gradle)
+# Add repository (in build.gradle)
 repositories {
     maven { url = "https://repo.papermc.io/repository/maven-public/" }
 }
@@ -390,12 +390,12 @@ repositories {
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
-👉 **Erste Feature schreiben?** Siehe [CONTRIBUTING.md](../CONTRIBUTING.md)
+👉 **Write your first feature?** See [CONTRIBUTING.md](../CONTRIBUTING.md)
 
-👉 **Fragen?** Öffne ein Issue auf GitHub oder kontaktiere die Maintainer
+👉 **Questions?** Open an issue on GitHub or contact the maintainers
 
 ---
 
-**Viel Spaß beim Entwickeln! 🚀**
+**Have fun developing! 🚀**

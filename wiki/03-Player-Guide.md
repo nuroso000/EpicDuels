@@ -1,164 +1,164 @@
 # Player Guide
 
-Alles was Spieler über EpicDuels wissen müssen.
+Everything players need to know about EpicDuels.
 
-## Hauptmenü
+## Main Menu
 
 ```
 /duel menu
 ```
 
-Das Hauptmenü hat drei Bereiche:
+The main menu has three sections:
 
 ### 1. Challenge
-Fordere einen Spieler zu einem Duel heraus:
-- Wähle einen **Online-Spieler**
-- Wähle ein **Kit** (Ausrüstung)
-- Wähle eine **Arena** (Map)
+Challenge a player to a duel:
+- Select an **online player**
+- Select a **kit** (equipment)
+- Select an **arena** (map)
 
-Der Gegenspieler erhält eine Anfrage mit Accept/Deny-Buttons (30 Sekunden Timeout).
+The other player receives a request with Accept/Deny buttons (30-second timeout).
 
 ### 2. Stats
-Sehe deine Duel-Statistiken:
-- **Wins** — Gewonnene Duels
-- **Losses** — Verlorene Duels
-- **Total** — Gesamt Duels
-- **Win Rate** — Prozentsatz Wins
+View your duel statistics:
+- **Wins** — Duels won
+- **Losses** — Duels lost
+- **Total** — Total duels played
+- **Win Rate** — Percentage of wins
 
 ```
-/duel stats [player]  # Deine oder Spielers Stats ansehen
+/duel stats [player]  # View your or another player's stats
 ```
 
 ### 3. Queue (Matchmaking)
-Trete einer Matchmaking-Queue bei und werde automatisch gegen einen anderen Spieler gematcht:
+Join a matchmaking queue and be automatically matched against another player:
 
 ```
 /duel queue <kit>
 ```
 
-**Wie es funktioniert:**
-1. Du trittst der Queue für ein Kit bei
-2. Das Action Bar zeigt die aktuelle Queue-Größe
-3. Wenn ein anderer Spieler für das gleiche Kit queued, werdet ihr automatisch gematcht
-4. Ihr werdet in eine zufällige Arena teleportiert
-5. Das Duel beginnt nach einem 5-Sekunden Countdown
+**How It Works:**
+1. You join the queue for a kit
+2. The action bar shows the current queue size
+3. When another player queues for the same kit, you're automatically matched
+4. You're teleported to a random arena
+5. The duel starts after a 5-second countdown
 
-**Queue verlassen:**
+**Leave Queue:**
 ```
 /duel queue leave
 ```
 
 ---
 
-## Duel-Ablauf
+## Duel Flow
 
 ### Phase 1: Countdown
-- 5 Sekunden vor dem Start
-- Beide Spieler sind am Spawn eingefroren
-- Title zeigt den Countdown an
+- 5 seconds before start
+- Both players are frozen at spawn
+- Title displays the countdown
 
-### Phase 2: Kampf
-- Du kannst dich bewegen und angreifen
-- Der Gegner kann sich auch bewegen und angreifen
-- Block-Placement ist möglich, aber:
-  - ✅ Deine eigenen Blöcke kannst du zerstören
-  - ❌ Original-Arena-Blöcke können nicht zerstört werden
-  - ❌ Gegners Blöcke können nicht zerstört werden
+### Phase 2: Combat
+- You can move and attack
+- Your opponent can move and attack
+- Block placement is possible, but:
+  - ✅ You can break your own blocks
+  - ❌ Original arena blocks cannot be broken
+  - ❌ Opponent's blocks cannot be broken
 
-### Phase 3: Ende
-- **Gewinner:** Wer den anderen Spieler eliminiert oder der Gegner disconnectet
-- 3-Sekunden Victory Screen
-- Rückkehr zur Lobby
+### Phase 3: End
+- **Winner:** The player who eliminates the opponent or the opponent disconnects
+- 3-second victory screen
+- Return to lobby
 
-### Nach dem Duel
-- **Stats werden aktualisiert** (Win/Loss)
-- **Welt wird gelöscht** (Cleanup)
-- Du kannst direkt ein neues Duel starten
+### After the Duel
+- **Stats are updated** (Win/Loss)
+- **World is deleted** (Cleanup)
+- You can start a new duel immediately
 
 ---
 
-## Commands für Spieler
+## Player Commands
 
-| Befehl | Beschreibung |
+| Command | Description |
 |---|---|
-| `/duel` | Öffne das Hauptmenü |
-| `/duel menu` | Öffne das Hauptmenü (alternative) |
-| `/duel challenge <player>` | Fordere einen Spieler heraus |
-| `/duel accept [player]` | Akzeptiere eine Duel-Anfrage |
-| `/duel deny [player]` | Lehne eine Duel-Anfrage ab |
-| `/duel cancel` | Breche deine aktuelle Anfrage ab |
-| `/duel stats [player]` | Sehe Statistiken |
-| `/duel queue <kit>` | Trete einer Matchmaking-Queue bei |
-| `/duel queue leave` | Verlasse die Queue |
+| `/duel` | Open the main menu |
+| `/duel menu` | Open the main menu (alternative) |
+| `/duel challenge <player>` | Challenge a player |
+| `/duel accept [player]` | Accept a duel request |
+| `/duel deny [player]` | Deny a duel request |
+| `/duel cancel` | Cancel your current request |
+| `/duel stats [player]` | View statistics |
+| `/duel queue <kit>` | Join a matchmaking queue |
+| `/duel queue leave` | Leave the queue |
 
-**Shorthand:** Alle `/duel` Befehle funktionieren auch mit `/d`
+**Shorthand:** All `/duel` commands also work with `/d`
 
 ```bash
-/d              # Shorthand für /duel
-/d challenge NotchMC    # Shorthand für /duel challenge NotchMC
-/d queue pvp    # Shorthand für /duel queue pvp
+/d              # Shorthand for /duel
+/d challenge NotchMC    # Shorthand for /duel challenge NotchMC
+/d queue pvp    # Shorthand for /duel queue pvp
 ```
 
 ---
 
-## Strategien & Tipps
+## Strategy & Tips
 
-### Kit-Wahl
-- 🗡️ **Sword-Kits** — Nahkampf, direkt im Kampf gut
-- 🏹 **Ranged-Kits** — Fernkampf, Positionierung wichtig
-- 🛡️ **Tank-Kits** — Viele Rüstung, länger halten
-- ⚡ **Speed-Kits** — Schnelligkeit, Mobilität
+### Kit Selection
+- 🗡️ **Sword Kits** — Melee, good in direct combat
+- 🏹 **Ranged Kits** — Ranged combat, positioning matters
+- 🛡️ **Tank Kits** — Heavy armor, longer survival
+- ⚡ **Speed Kits** — Speed boost, mobility focused
 
-### Arena-Dynamik
-- Nutze die **Höhen und Tiefen** der Arena für Taktik
-- Denke über deine **Positionen** nach
-- Achte auf **Fall-Schaden**
+### Arena Dynamics
+- Use the **heights and depths** of the arena for tactics
+- Think about your **positioning**
+- Watch out for **fall damage**
 
-### Queue-Tipps
-- Die **gleiche Queue für alle** — Es spielt keine Rolle, welche Arena
-- **Action Bar** zeigt die aktuelle Anzahl wartender Spieler
-- Queue ist **Anonymous** — Du weißt nicht, gegen wen du spielst
+### Queue Tips
+- The **queue is the same for everyone** — Arena doesn't matter
+- **Action bar** shows current waiting players
+- Queue is **anonymous** — You don't know who you're playing
 
 ---
 
-## Berechtigungen
+## Permissions
 
-Mit diesen Berechtigungen kannst du was machen:
+These permissions control what you can do:
 
-| Permission | Zugang |
+| Permission | Access |
 |---|---|
-| `epicduels.duel` | Challenges, Queue, Accept/Deny |
-| `epicduels.stats` | Stats anschauen |
+| `epicduels.duel` | Challenges, queue, accept/deny |
+| `epicduels.stats` | View stats |
 
-Standard: Alle Spieler haben diese Berechtigungen.
-
----
-
-## Häufige Fragen
-
-**F: Können mehrere Spieler gleichzeitig duellieren?**
-A: Nein, EpicDuels ist 1v1 only. Jedes Duel läuft in einer separaten Welt-Kopie.
-
-**F: Kann ich während eines Duels bauen?**
-A: Ja! Du kannst Blöcke platzieren, aber:
-   - Du kannst nur Blöcke brechen, die du selbst platziert hast
-   - Original-Arena-Blöcke können nicht zerstört werden
-
-**F: Was passiert, wenn ich disconnecte?**
-A: Der andere Spieler gewinnt automatisch. Deine Stats werden aktualisiert.
-
-**F: Wie oft kann ich duellieren?**
-A: Unbegrenzt! Es gibt kein Limit für Anzahl oder Zeit.
-
-**F: Werden meine Stats gelöscht?**
-A: Nein, Stats sind permanent und werden lokal gespeichert.
-
-👉 **Mehr Fragen:** [FAQ](./09-FAQ.md)
+Default: All players have these permissions.
 
 ---
 
-## Nächste Schritte
+## Frequently Asked Questions
 
-- 🏗️ **Arena-Details:** Frag deinen Admin, welche Arenen verfügbar sind
-- 📊 **Stats verfolgen:** Nutze `/duel stats` um deine Fortschritte zu sehen
-- 🎮 **Spielen:** Starte dein erstes Duel mit `/duel` oder `/d queue <kit>`
+**Q: Can multiple players duel at once?**
+A: No, EpicDuels is 1v1 only. Each duel runs in a separate world copy.
+
+**Q: Can I build during a duel?**
+A: Yes! You can place blocks, but:
+   - You can only break blocks you placed yourself
+   - Original arena blocks cannot be broken
+
+**Q: What happens if I disconnect?**
+A: The other player wins automatically. Your stats are updated.
+
+**Q: How many times can I duel?**
+A: Unlimited! There's no limit on number or time.
+
+**Q: Are my stats deleted?**
+A: No, stats are permanent and stored locally.
+
+👉 **More Questions:** [FAQ](./09-FAQ.md)
+
+---
+
+## Next Steps
+
+- 🏗️ **Arena Details:** Ask your admin which arenas are available
+- 📊 **Track Progress:** Use `/duel stats` to see your progress
+- 🎮 **Start Dueling:** Launch your first duel with `/duel` or `/d queue <kit>`

@@ -1,26 +1,26 @@
 # Commands Reference
 
-Vollständige Liste aller EpicDuels-Befehle.
+Complete list of all EpicDuels commands.
 
-## 📋 Übersicht
+## 📋 Overview
 
-- **[Spieler-Befehle](#spieler-befehle)** — Für normale Spieler
-- **[Admin-Befehle](#admin-befehle)** — Für Server-Administratoren
-- **[Shorthand](#shorthand)** — Abkürzungen
+- **[Player Commands](#player-commands)** — For regular players
+- **[Admin Commands](#admin-commands)** — For server administrators
+- **[Shorthand](#shorthand)** — Abbreviations
 
 ---
 
-## Spieler-Befehle
+## Player Commands
 
-Alle Spieler können diese Befehle nutzen (wenn sie die Berechtigung haben).
+All players can use these commands (if they have permission).
 
-### Menü
+### Menu
 
 ```bash
 /duel
 /duel menu
 ```
-Öffnet das Hauptmenü mit drei Optionen:
+Opens the main menu with three options:
 - Challenge
 - Stats
 - Queue
@@ -31,223 +31,223 @@ Alle Spieler können diese Befehle nutzen (wenn sie die Berechtigung haben).
 
 ### Challenges
 
-#### Challenge starten
+#### Start a Challenge
 ```bash
 /duel challenge <player>
 ```
 
-Öffnet eine GUI zum Herausfordern:
-1. Spieler auswählen (bereits ausgewählt)
-2. Kit auswählen
-3. Map auswählen
+Opens a GUI to challenge a player:
+1. Player is already selected
+2. Select a kit
+3. Select a map
 
-Der Gegenspieler erhält eine Accept/Deny Anfrage.
+The opponent receives an Accept/Deny request.
 
 **Permission:** `epicduels.duel`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel challenge NotchMC
 ```
 
-#### Challenge akzeptieren
+#### Accept Challenge
 ```bash
 /duel accept [player]
 ```
 
-Akzeptiere eine eingegangene Challenge.
+Accept an incoming challenge request.
 
 **Permission:** `epicduels.duel`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel accept
 /duel accept Steve
 ```
 
-#### Challenge ablehnen
+#### Deny Challenge
 ```bash
 /duel deny [player]
 ```
 
-Lehne eine eingegangene Challenge ab.
+Deny an incoming challenge request.
 
 **Permission:** `epicduels.duel`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel deny
 /duel deny Steve
 ```
 
-#### Challenge stornieren
+#### Cancel Challenge
 ```bash
 /duel cancel
 ```
 
-Bricht deine aktuelle ausgehende Challenge-Anfrage ab.
+Cancel your current outgoing challenge request.
 
 **Permission:** `epicduels.duel`
 
 ---
 
-### Statistiken
+### Statistics
 
 ```bash
 /duel stats [player]
 ```
 
-Zeigt Duel-Statistiken an:
-- **Wins** — Gewonnene Duels
-- **Losses** — Verlorene Duels
-- **Total** — Gesamte Duels
-- **Win Rate** — Prozentsatz Wins
+View duel statistics:
+- **Wins** — Duels won
+- **Losses** — Duels lost
+- **Total** — Total duels played
+- **Win Rate** — Win percentage
 
 **Permission:** `epicduels.stats`
 
-**Beispiel:**
+**Example:**
 ```bash
-/duel stats              # Deine eigenen Stats
-/duel stats NotchMC      # Stats von NotchMC
+/duel stats              # Your own stats
+/duel stats NotchMC      # NotchMC's stats
 ```
 
 ---
 
 ### Matchmaking Queue
 
-#### Queue beitreten
+#### Join Queue
 ```bash
 /duel queue <kit>
 ```
 
-Tritt der Matchmaking-Queue für ein Kit bei.
+Join the matchmaking queue for a kit.
 
-Das Plugin wartet auf einen anderen Spieler:
-- Beide Spieler müssen das gleiche Kit wählen
-- Wenn 2 Spieler queued sind → automatisches Match
-- Beide werden zu einer zufälligen Arena teleportiert
-- Duel startet nach 5-Sekunden Countdown
+The plugin waits for another player:
+- Both players must select the same kit
+- When 2 players queue → automatic match
+- Both get teleported to a random arena
+- Duel starts after 5-second countdown
 
-**Action Bar** zeigt aktuelle Queue-Größe.
+**Action bar** shows current queue size.
 
 **Permission:** `epicduels.duel`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel queue pvp_sword
 /duel queue speed_pvp
 ```
 
-#### Queue verlassen
+#### Leave Queue
 ```bash
 /duel queue leave
 ```
 
-Verlasse die aktuelle Matchmaking-Queue.
+Leave the current matchmaking queue.
 
 **Permission:** `epicduels.duel`
 
 ---
 
-## Admin-Befehle
+## Admin Commands
 
-Nur Administratoren mit `epicduels.admin` Permission können diese Befehle nutzen.
+Only administrators with `epicduels.admin` permission can use these commands.
 
 ### Arena Management
 
-#### Arena erstellen
+#### Create Arena
 ```bash
 /duel arena create <name>
 ```
 
-Erstellt eine neue Arena.
+Create a new arena.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel arena create pvp_1
 /duel arena create sky_arena
 ```
 
-#### Spawn 1 setzen
+#### Set Spawn 1
 ```bash
 /duel arena setspawn1
 ```
 
-Setzt deinen aktuellen Standort als Spawn-Punkt 1 (muss in Arena-Welt sein).
+Set your current location as spawn point 1 (must be in arena world).
 
 **Permission:** `epicduels.admin`
 
-#### Spawn 2 setzen
+#### Set Spawn 2
 ```bash
 /duel arena setspawn2
 ```
 
-Setzt deinen aktuellen Standort als Spawn-Punkt 2 (muss in Arena-Welt sein).
+Set your current location as spawn point 2 (must be in arena world).
 
 **Permission:** `epicduels.admin`
 
-#### Arena speichern
+#### Save Arena
 ```bash
 /duel arena save
 ```
 
-Speichert die aktuelle Arena und markiert sie als "ready".
+Save the current arena and mark it as "ready".
 
 **Permission:** `epicduels.admin`
 
-#### Arena löschen
+#### Delete Arena
 ```bash
 /duel arena delete <name>
 ```
 
-Löscht eine Arena permanent.
+Permanently delete an arena.
 
 **Permission:** `epicduels.admin`
 
-**⚠️ Warnung:** Dies kann nicht rückgängig gemacht werden!
+**⚠️ Warning:** This cannot be undone!
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel arena delete pvp_1
 ```
 
-#### Arena-Liste
+#### Arena List
 ```bash
 /duel arena list
 ```
 
-Zeigt alle Arenen mit ihrem Status (ready/building).
+Show all arenas with their status (ready/building).
 
 **Permission:** `epicduels.admin`
 
-#### Zu Arena teleportieren
+#### Teleport to Arena
 ```bash
 /duel arena tp <name>
 ```
 
-Teleportiert dich zur Arena zum Bearbeiten.
+Teleport to the arena for editing.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel arena tp pvp_1
 ```
 
-#### Arena-Icon setzen
+#### Set Arena Icon
 ```bash
 /duel arena seticon <name>
 ```
 
-Setzt das Icon der Arena auf das Item in deiner Hand.
+Set the arena's icon to the item in your hand.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
-# Halten Sie einen Grass Block in der Hand
+# Hold a Grass Block in your hand
 /duel arena seticon pvp_1
 ```
 
@@ -255,86 +255,86 @@ Setzt das Icon der Arena auf das Item in deiner Hand.
 
 ### Kit Management
 
-#### Kit erstellen
+#### Create Kit
 ```bash
 /duel kit create <name>
 ```
 
-Speichert deine aktuelle Inventar als Kit.
+Save your current inventory as a kit.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel kit create survival_pvp
 /duel kit create ranged_kit
 ```
 
-#### Kit löschen
+#### Delete Kit
 ```bash
 /duel kit delete <name>
 ```
 
-Löscht ein Kit permanent.
+Permanently delete a kit.
 
 **Permission:** `epicduels.admin`
 
-**⚠️ Warnung:** Spieler können dieses Kit nicht mehr nutzen!
+**⚠️ Warning:** Players can no longer use this kit!
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel kit delete old_kit
 ```
 
-#### Kit bearbeiten
+#### Edit Kit
 ```bash
 /duel kit edit <name>
 ```
 
-Öffnet eine Chest-GUI zum Bearbeiten des Kits.
+Open a chest GUI to edit the kit.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel kit edit survival_pvp
 ```
 
-#### Kit anschauen
+#### Preview Kit
 ```bash
 /duel kit preview <name>
 ```
 
-Zeigt die Kit-Items in einer Read-Only Chest-GUI.
+Show kit items in a read-only chest GUI.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
 /duel kit preview survival_pvp
 ```
 
-#### Kit-Liste
+#### Kit List
 ```bash
 /duel kit list
 ```
 
-Zeigt alle verfügbaren Kits.
+Show all available kits.
 
 **Permission:** `epicduels.admin`
 
-#### Kit-Icon setzen
+#### Set Kit Icon
 ```bash
 /duel kit seticon <name>
 ```
 
-Setzt das Icon des Kits auf das Item in deiner Hand.
+Set the kit's icon to the item in your hand.
 
 **Permission:** `epicduels.admin`
 
-**Beispiel:**
+**Example:**
 ```bash
-# Halten Sie einen Diamond Sword in der Hand
+# Hold a Diamond Sword in your hand
 /duel kit seticon survival_pvp
 ```
 
@@ -342,12 +342,12 @@ Setzt das Icon des Kits auf das Item in deiner Hand.
 
 ### Lobby Management
 
-#### Lobby-Spawn setzen
+#### Set Lobby Spawn
 ```bash
 /duel setlobby
 ```
 
-Setzt deinen aktuellen Standort als Lobby-Spawn.
+Set your current location as the lobby spawn.
 
 **Permission:** `epicduels.admin`
 
@@ -355,7 +355,7 @@ Setzt deinen aktuellen Standort als Lobby-Spawn.
 
 ## Shorthand
 
-Alle `/duel` Befehle funktionieren auch mit der Abkürzung `/d`:
+All `/duel` commands also work with the shorthand `/d`:
 
 ```bash
 /d                       # = /duel
@@ -368,7 +368,7 @@ Alle `/duel` Befehle funktionieren auch mit der Abkürzung `/d`:
 /d queue pvp             # = /duel queue pvp
 /d queue leave           # = /duel queue leave
 
-# Admin-Befehle
+# Admin commands
 /d arena create pvp_1    # = /duel arena create pvp_1
 /d arena list            # = /duel arena list
 /d kit list              # = /duel kit list
@@ -377,40 +377,40 @@ Alle `/duel` Befehle funktionieren auch mit der Abkürzung `/d`:
 
 ---
 
-## Permission-Übersicht
+## Permission Overview
 
-| Befehl | Permission | Default |
+| Command | Permission | Default |
 |---|---|---|
-| `/duel` (Menu) | — | Alle |
-| `/duel challenge` | `epicduels.duel` | Alle |
-| `/duel accept/deny/cancel` | `epicduels.duel` | Alle |
-| `/duel stats` | `epicduels.stats` | Alle |
-| `/duel queue` | `epicduels.duel` | Alle |
-| Alle Arena-Befehle | `epicduels.admin` | OP |
-| Alle Kit-Befehle | `epicduels.admin` | OP |
+| `/duel` (Menu) | — | All |
+| `/duel challenge` | `epicduels.duel` | All |
+| `/duel accept/deny/cancel` | `epicduels.duel` | All |
+| `/duel stats` | `epicduels.stats` | All |
+| `/duel queue` | `epicduels.duel` | All |
+| All arena commands | `epicduels.admin` | OP |
+| All kit commands | `epicduels.admin` | OP |
 | `/duel setlobby` | `epicduels.admin` | OP |
 
 ---
 
-## Fehlerhafte Befehle
+## Invalid Commands
 
-Wenn du einen Befehl falsch eingibst:
+If you enter a command incorrectly:
 
 ```bash
 /duel invalid_command
 # → Error: Unknown command
 ```
 
-Überprüfe:
-1. Rechtschreibung
-2. Erforderliche Parameter
-3. Berechtigungen
-4. Gültige Kit/Arena-Namen
+Check:
+1. Spelling
+2. Required parameters
+3. Permissions
+4. Valid kit/arena names
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
-- 🔐 **Berechtigungen:** [Permissions Guide](./06-Permissions.md)
-- 🎮 **Spielen:** [Player Guide](./03-Player-Guide.md)
+- 🔐 **Permissions:** [Permissions Guide](./06-Permissions.md)
+- 🎮 **Playing:** [Player Guide](./03-Player-Guide.md)
 - 🛠️ **Admin Setup:** [Admin Guide](./04-Admin-Guide.md)

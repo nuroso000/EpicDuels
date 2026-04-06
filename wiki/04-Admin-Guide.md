@@ -1,129 +1,129 @@
 # Admin Guide
 
-Server-Administrator Guide für EpicDuels Verwaltung.
+Server administrator guide for managing EpicDuels.
 
-## Anforderungen
+## Requirements
 
-- **OP-Berechtigungen** oder `epicduels.admin` Permission
-- **Zugriff auf die Server-Konsole**
-- Minecraft **1.21.1+** und **Java 21+**
+- **OP Permissions** or `epicduels.admin` permission
+- **Server Console Access**
+- Minecraft **1.21.1+** and **Java 21+**
 
 ---
 
 ## Arena Management
 
-### Arena erstellen
+### Create an Arena
 
 ```bash
 /duel arena create myarena
 ```
 
-Das Plugin:
-1. Erstellt eine neue Void-World (`epicduels_myarena`)
-2. Teleportiert dich in Creative Mode
-3. Du bist jetzt im Arena-Template
+The plugin will:
+1. Create a new void world (`epicduels_myarena`)
+2. Teleport you to Creative Mode
+3. You're now in the arena template
 
-### Arena bauen
+### Building the Arena
 
-Im Arena-Template kannst du frei bauen:
-- ✅ Blöcke platzieren & brechen
-- ✅ Creative Mode verwenden
-- ✅ Gelande formen nach Belieben
+In the arena template, you can build freely:
+- ✅ Place & break blocks
+- ✅ Use Creative Mode
+- ✅ Shape the landscape however you want
 
-**Tipps zum Arena-Design:**
-- Schaffe faire Spawn-Punkte (nicht zu nah beieinander)
-- Nutze Höhen und Tiefen für taktisches Gameplay
-- Vermeide zu enge Räume für Sword-Kits
-- Weite Räume für Ranged-Kits ideal
+**Arena Design Tips:**
+- Create fair spawn points (not too close)
+- Use heights and depths for tactical gameplay
+- Avoid tight spaces for sword kits
+- Wide spaces ideal for ranged kits
 
-### Spawn-Punkte setzen
+### Set Spawn Points
 
-Stehe an Position 1 (z.B. links):
+Stand at Position 1 (e.g., left side):
 ```bash
 /duel arena setspawn1
 ```
 
-Gehe zu Position 2 (z.B. rechts):
+Go to Position 2 (e.g., right side):
 ```bash
 /duel arena setspawn2
 ```
 
-**Wichtig:**
-- Beide Spawns sollten **gleiche Y-Koordinate** haben (falls möglich)
-- **Mindestens 10 Blöcke Abstand** zwischen den Spawns
-- **Keine Wasser oder Lava** an Spawn-Positionen
+**Important:**
+- Both spawns should have **the same Y coordinate** if possible
+- **At least 10 blocks apart**
+- **No water or lava** at spawn positions
 
-### Arena speichern
+### Save the Arena
 
 ```bash
 /duel arena save
 ```
 
-Die Arena wird:
-1. Gespeichert in `arenas.yml`
-2. Markiert als "ready" (spielbar)
-3. Zum Template gemacht (kann wieder bearbeitet werden)
-4. Du wirst zur Lobby teleportiert
+The arena will:
+1. Be saved to `arenas.yml`
+2. Be marked as "ready" (playable)
+3. Become the template (can be edited again)
+4. Teleport you back to the lobby
 
-### Arena-Icon setzen
+### Set Arena Icon
 
-Das Icon wird im GUI angezeigt:
+The icon displays in the GUI:
 
 ```bash
-# Halte ein Item in der Hand (z.B. Grass Block, Cobblestone)
+# Hold an item in your hand (e.g., Grass Block, Cobblestone)
 /duel arena seticon myarena
 ```
 
-Das Item wird als Icon für die Arena gespeichert.
+The item becomes the arena's icon.
 
-### Arena Liste anschauen
+### List All Arenas
 
 ```bash
 /duel arena list
 ```
 
-Zeigt alle Arenen mit Status:
-- ✅ **ready** — Spielbar
-- ⏳ **building** — Wird noch gebaut
+Shows all arenas with their status:
+- ✅ **ready** — Playable
+- ⏳ **building** — Still being built
 
-### Zu Arena-Template gehen
+### Go to Arena Template
 
 ```bash
 /duel arena tp myarena
 ```
 
-Teleportiert dich ins Template zum Bearbeiten.
+Teleports you to the template for editing.
 
-### Arena löschen
+### Delete an Arena
 
 ```bash
 /duel arena delete myarena
 ```
 
-**Vorsicht:** Löscht Arena und alle Duels-Daten für diese Arena!
+**Warning:** Deletes the arena and all its duel data!
 
 ---
 
 ## Kit Management
 
-### Kit erstellen
+### Create a Kit
 
-1. Rüste dich mit der gewünschten Ausrüstung aus
+1. Equip yourself with the desired gear
    - Armor
    - Weapon
-   - Items in Inventory
-   - Offhand Item
+   - Inventory items
+   - Offhand item
 
-2. Führe aus:
+2. Execute:
 ```bash
 /duel kit create pvp_sword
 ```
 
-Das Plugin speichert deine aktuelle Inventar als Kit.
+The plugin saves your current inventory as a kit.
 
-### Kit-Vorlagen
+### Kit Templates
 
-**Beispiel-Kits:**
+**Example Kits:**
 
 ```
 pvp_sword:
@@ -143,90 +143,90 @@ ranged:
   - Blocks
 ```
 
-### Kit bearbeiten
+### Edit a Kit
 
 ```bash
 /duel kit edit pvp_sword
 ```
 
-Öffnet die Kit-Items in einer Chest-GUI:
-- Nimm Items raus oder rein
-- Ordne Items an
-- Schließe die Chest
+Opens the kit items in a chest GUI:
+- Remove or add items
+- Arrange items
+- Close the chest
 
-Das Kit wird automatisch aktualisiert.
+The kit is automatically updated.
 
-### Kit anschauen (Read-Only)
+### Preview a Kit (Read-Only)
 
 ```bash
 /duel kit preview pvp_sword
 ```
 
-Zeigt die Kit-Items in einer Chest (kann nicht bearbeitet werden).
+Shows kit items in a chest (cannot be edited).
 
-### Kit-Icon setzen
+### Set Kit Icon
 
 ```bash
-# Halte ein Item in der Hand (z.B. Diamond Sword)
+# Hold an item in your hand (e.g., Diamond Sword)
 /duel kit seticon pvp_sword
 ```
 
-Das Item wird als Icon im GUI angezeigt.
+The item becomes the kit's icon in the GUI.
 
-### Kit Liste anschauen
+### List All Kits
 
 ```bash
 /duel kit list
 ```
 
-Zeigt alle verfügbaren Kits.
+Shows all available kits.
 
-### Kit löschen
+### Delete a Kit
 
 ```bash
 /duel kit delete pvp_sword
 ```
 
-**Vorsicht:** Spieler können dieses Kit nicht mehr nutzen!
+**Warning:** Players can no longer use this kit!
 
 ---
 
 ## Lobby Setup
 
-### Lobby-Spawn setzen
+### Set Lobby Spawn
 
-Teleportiere dich an den Ort, wo Spieler landen sollen:
+Teleport to the location where players should land:
 
 ```bash
 /duel setlobby
 ```
 
-Das ist der Punkt, wo Spieler mit `/duel` landen und das Hauptmenü sehen.
+This is where players land with `/duel` and see the main menu.
 
 ---
 
-## Dateistruktur
+## File Structure
 
 ```
 plugins/EpicDuels/
-├── config.yml          # Lobby-Position
+├── config.yml          # Lobby position
 │   └── lobbySpawn:
 │       location: "world,x,y,z,yaw,pitch"
 │
-├── arenas.yml          # Alle Arenen
+├── arenas.yml          # All arenas
 │   ├── Arena-Name
 │   │   ├── spawn1: {x, y, z}
 │   │   ├── spawn2: {x, y, z}
 │   │   ├── icon: <Item>
 │   │   └── worldName: epicduels_<name>
 │
-├── kits.yml            # Alle Kits
+├── kits.yml            # All kits
 │   ├── Kit-Name
 │   │   ├── inventory: <Base64>
 │   │   ├── armor: <Base64>
 │   │   └── icon: <Item>
 │
-└── stats.yml           # Spieler-Statistiken
+└── stats.yml           # Player statistics
     └── PlayerUUID
         ├── wins: <int>
         ├── losses: <int>
@@ -237,49 +237,49 @@ plugins/EpicDuels/
 
 ## Best Practices
 
-### Arena-Design
-- ✅ Mehrere unterschiedliche Arenen erstellen
-- ✅ Spawn-Punkte testen vor Speichern
-- ✅ Icons für bessere Übersicht setzen
-- ✅ Regelmäßig Arenen updaten/überarbeiten
+### Arena Design
+- ✅ Create multiple different arenas
+- ✅ Test spawn points before saving
+- ✅ Set icons for better overview
+- ✅ Regularly update/revise arenas
 
-### Kit-Management
-- ✅ Verschiedene Play-Styles abdecken (Sword, Ranged, Tank, Speed)
-- ✅ Kits balancieren (nicht zu overpowered)
-- ✅ Icons setzen für Spieler-Übersicht
-- ✅ Kits regelmäßig überprüfen und updaten
+### Kit Management
+- ✅ Cover different play styles (Sword, Ranged, Tank, Speed)
+- ✅ Balance kits (not overpowered)
+- ✅ Set icons for player overview
+- ✅ Regularly check and update kits
 
 ### Performance
-- ✅ Arenen-Welten werden automatisch gelöscht nach Duels
-- ✅ Kein speicher-Problem durch alte Welten
-- ✅ Stats sind optimiert (per YAML)
+- ✅ Arena worlds are automatically deleted after duels
+- ✅ No storage problems from old worlds
+- ✅ Stats are optimized (YAML)
 
 ---
 
-## Commands Referenz
+## Commands Reference
 
-| Command | Beschreibung | Permission |
+| Command | Description | Permission |
 |---|---|---|
-| `/duel arena create <name>` | Neue Arena erstellen | `epicduels.admin` |
-| `/duel arena setspawn1` | Spawn 1 setzen | `epicduels.admin` |
-| `/duel arena setspawn2` | Spawn 2 setzen | `epicduels.admin` |
-| `/duel arena save` | Arena speichern | `epicduels.admin` |
-| `/duel arena delete <name>` | Arena löschen | `epicduels.admin` |
-| `/duel arena list` | Alle Arenen anzeigen | `epicduels.admin` |
-| `/duel arena tp <name>` | Zu Arena teleportieren | `epicduels.admin` |
-| `/duel arena seticon <name>` | Arena-Icon setzen | `epicduels.admin` |
-| `/duel kit create <name>` | Kit erstellen | `epicduels.admin` |
-| `/duel kit delete <name>` | Kit löschen | `epicduels.admin` |
-| `/duel kit edit <name>` | Kit bearbeiten | `epicduels.admin` |
-| `/duel kit preview <name>` | Kit anschauen | `epicduels.admin` |
-| `/duel kit list` | Alle Kits anzeigen | `epicduels.admin` |
-| `/duel kit seticon <name>` | Kit-Icon setzen | `epicduels.admin` |
-| `/duel setlobby` | Lobby-Spawn setzen | `epicduels.admin` |
+| `/duel arena create <name>` | Create new arena | `epicduels.admin` |
+| `/duel arena setspawn1` | Set spawn 1 | `epicduels.admin` |
+| `/duel arena setspawn2` | Set spawn 2 | `epicduels.admin` |
+| `/duel arena save` | Save arena | `epicduels.admin` |
+| `/duel arena delete <name>` | Delete arena | `epicduels.admin` |
+| `/duel arena list` | List all arenas | `epicduels.admin` |
+| `/duel arena tp <name>` | Teleport to arena | `epicduels.admin` |
+| `/duel arena seticon <name>` | Set arena icon | `epicduels.admin` |
+| `/duel kit create <name>` | Create kit | `epicduels.admin` |
+| `/duel kit delete <name>` | Delete kit | `epicduels.admin` |
+| `/duel kit edit <name>` | Edit kit | `epicduels.admin` |
+| `/duel kit preview <name>` | Preview kit | `epicduels.admin` |
+| `/duel kit list` | List all kits | `epicduels.admin` |
+| `/duel kit seticon <name>` | Set kit icon | `epicduels.admin` |
+| `/duel setlobby` | Set lobby spawn | `epicduels.admin` |
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
-- 📖 **Berechtigungen:** [Permissions Guide](./06-Permissions.md)
-- ⚙️ **Konfiguration:** [Configuration Guide](./07-Configuration.md)
-- 🎮 **Spieler:** [Player Guide](./03-Player-Guide.md)
+- 📖 **Permissions:** [Permissions Guide](./06-Permissions.md)
+- ⚙️ **Configuration:** [Configuration Guide](./07-Configuration.md)
+- 🎮 **Players:** [Player Guide](./03-Player-Guide.md)

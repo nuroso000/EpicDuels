@@ -1,134 +1,134 @@
-# FAQ (Häufig Gestellte Fragen)
+# FAQ (Frequently Asked Questions)
 
-Die wichtigsten Fragen und Antworten zu EpicDuels.
+Common questions and answers about EpicDuels.
 
 ---
 
 ## Installation & Setup
 
-### F: Welche Minecraft-Version brauche ich?
-**A:** EpicDuels benötigt **Paper 1.21.1 oder höher**. Ältere Versionen werden nicht unterstützt.
+### Q: Which Minecraft version do I need?
+**A:** EpicDuels requires **Paper 1.21.1 or higher**. Older versions are not supported.
 
-### F: Auf welcher Minecraft-Version läuft der Server?
-**A:** Der Server muss **1.21.1+** sein. Du kannst die Version überprüfen mit:
+### Q: What Minecraft version is my server running?
+**A:** Your server must be **1.21.1+**. Check with:
 ```bash
 /version
 ```
 
-### F: Brauche ich Java 21?
-**A:** Ja! EpicDuels benötigt **Java 21 oder höher**. Überprüfe deine Java-Version:
+### Q: Do I need Java 21?
+**A:** Yes! EpicDuels requires **Java 21 or higher**. Check your Java version:
 ```bash
 java -version
 ```
 
-### F: Wo lade ich EpicDuels herunter?
-**A:** Hier:
+### Q: Where do I download EpicDuels?
+**A:** Here:
 - 📥 [GitHub Releases](https://github.com/nuroso000/epicduels/releases)
 - 🎮 [Modrinth](https://modrinth.com/plugin/epicduels)
 
-### F: Wo platziere ich die JAR-Datei?
-**A:** In den `plugins/` Ordner deines Servers:
+### Q: Where do I place the JAR file?
+**A:** In your server's `plugins/` folder:
 ```
 server/
 └── plugins/
     └── EpicDuels-0.2.1.jar
 ```
 
-### F: Der Server startet nicht nach Installation
-**A:** Überprüfe:
-1. ✅ Java-Version ist 21+
-2. ✅ JAR-Datei ist in `plugins/` 
-3. ✅ JAR-Datei ist nicht beschädigt
-4. ✅ Schau in die `logs/latest.log`
+### Q: The server won't start after installation
+**A:** Check:
+1. ✅ Java version is 21+
+2. ✅ JAR file is in `plugins/`
+3. ✅ JAR file isn't corrupted
+4. ✅ Check `logs/latest.log` for errors
 
 ---
 
 ## Gameplay & Features
 
-### F: Was ist ein "Duel"?
-**A:** Ein 1v1 Kampf zwischen zwei Spielern. Einer gewinnt, einer verliert. Stats werden aktualisiert.
+### Q: What is a "Duel"?
+**A:** A 1v1 fight between two players. One wins, one loses. Stats are updated.
 
-### F: Kann ich mit mehr Spielern duellieren?
-**A:** Nein, EpicDuels ist nur 1v1. Multiplayer-Duels sind nicht unterstützt.
+### Q: Can I duel with more players?
+**A:** No, EpicDuels is 1v1 only. Multiplayer duels are not supported.
 
-### F: Was ist die "Queue"?
-**A:** Eine Warteschlange für automatisches Matchmaking. Du wartest, bis ein anderer Spieler das gleiche Kit wählt, dann werdet ihr automatisch gematcht.
+### Q: What is the "Queue"?
+**A:** A waiting list for automatic matchmaking. You wait until another player selects the same kit, then you're automatically matched.
 
-### F: Wie lange dauert ein Duel?
-**A:** So lange, bis ein Spieler stirbt oder disconnectet. Durchschnittlich 2-5 Minuten.
+### Q: How long does a duel take?
+**A:** As long as it takes until one player dies or disconnects. Usually 2-5 minutes.
 
-### F: Kann ich während eines Duels bauen?
-**A:** Ja! Du kannst:
-- ✅ Blöcke platzieren
-- ✅ Deine eigenen Blöcke brechen
-- ❌ Original-Arena-Blöcke nicht brechen
-- ❌ Gegners Blöcke nicht brechen
+### Q: Can I build during a duel?
+**A:** Yes! You can:
+- ✅ Place blocks
+- ✅ Break your own blocks
+- ❌ Cannot break original arena blocks
+- ❌ Cannot break opponent's blocks
 
-### F: Was passiert, wenn beide Spieler sterben?
-**A:** Der Spieler, der zuerst starb, verliert. Der andere gewinnt.
+### Q: What happens if both players die?
+**A:** The player who died first loses. The other wins.
 
-### F: Kann ich Items mitbringen?
-**A:** Nein! Du bekommst die Items vom Kit. Deine Items werden nicht benutzt.
+### Q: Can I bring items with me?
+**A:** No! You get the items from the kit. Your items aren't used.
 
-### F: Werden meine Stats gelöscht?
-**A:** Nein, Stats sind permanent in `stats.yml`. Sie werden nie automatisch gelöscht.
+### Q: Are my stats deleted?
+**A:** No, stats are permanent in `stats.yml`. They're never auto-deleted.
 
 ---
 
-## Kits & Arenen
+## Kits & Arenas
 
-### F: Wie erstelle ich ein Kit?
+### Q: How do I create a kit?
 **A:** 
-1. Rüste dich mit der gewünschten Ausrüstung aus
+1. Equip yourself with the desired gear
 2. `/duel kit create my_kit`
-3. Fertig!
+3. Done!
 
-### F: Kann ich ein Kit nach Erstellung ändern?
-**A:** Ja! Mit `/duel kit edit my_kit` kannst du Items ändern.
+### Q: Can I change a kit after creation?
+**A:** Yes! Use `/duel kit edit my_kit` to modify items.
 
-### F: Wie viele Kits kann ich erstellen?
-**A:** Unbegrenzt!
+### Q: How many kits can I create?
+**A:** Unlimited!
 
-### F: Wie erstelle ich eine Arena?
+### Q: How do I create an arena?
 **A:**
-1. `/duel arena create my_arena` — Teleportiert dich ins Template
-2. Baue deine Arena
-3. Setze Spawns: `/duel arena setspawn1` und `/duel arena setspawn2`
-4. `/duel arena save` — Speichert die Arena
+1. `/duel arena create my_arena` — Teleports to template
+2. Build your arena
+3. Set spawns: `/duel arena setspawn1` and `/duel arena setspawn2`
+4. `/duel arena save` — Saves the arena
 
-### F: Kann ich eine Arena nach Erstellung bearbeiten?
-**A:** Ja! Mit `/duel arena tp my_arena` kannst du zurück ins Template und bearbeiten.
+### Q: Can I edit an arena after creation?
+**A:** Yes! Use `/duel arena tp my_arena` to go back to the template and edit.
 
-### F: Wie viele Arenen kann ich erstellen?
-**A:** Unbegrenzt, aber bedenke:
-- Jede Arena braucht Speicherplatz
-- Jedes Duel erstellt eine Welt-Kopie
-- Zu viele Arenen = Performance-Probleme
+### Q: How many arenas can I create?
+**A:** Unlimited, but keep in mind:
+- Each arena takes storage space
+- Each duel creates a world copy
+- Too many arenas = performance issues
 
-### F: Werden Arenen-Welten gelöscht?
-**A:** Ja! Nach jedem Duel wird die Welt-Kopie automatisch gelöscht. Sauberes System, kein Speicher-Problem.
+### Q: Are arena worlds deleted?
+**A:** Yes! After each duel, the world copy is automatically deleted. Clean system, no storage problems.
 
-### F: Können Spieler eine Arena nicht sehen?
-**A:** Überprüfe:
-1. Arena hat mindestens einen Spawn gesetzt
-2. Arena hat Status `ready: true`
-3. Spieler kann das Kit nutzen
+### Q: Players can't see an arena
+**A:** Check:
+1. Arena has both spawns set
+2. Arena has status `ready: true`
+3. Players have permission for the kit
 
-### F: Kann ich das Arena-Icon ändern?
-**A:** Ja! Halte ein Item und nutze `/duel arena seticon my_arena`.
+### Q: Can I change the arena icon?
+**A:** Yes! Hold an item and use `/duel arena seticon my_arena`.
 
 ---
 
-## Statistiken
+## Statistics
 
-### F: Wo werden Statistiken gespeichert?
+### Q: Where are statistics stored?
 **A:** In `plugins/EpicDuels/stats.yml`
 
-### F: Kann ich Statistiken anschauen?
-**A:** Ja, mit `/duel stats` oder `/duel stats <player>`
+### Q: Can I view statistics?
+**A:** Yes, with `/duel stats` or `/duel stats <player>`
 
-### F: Kann ich Statistiken zurücksetzen?
-**A:** Ja, aber du musst die `stats.yml` Datei manuell bearbeiten:
+### Q: Can I reset statistics?
+**A:** Yes, but you must manually edit `stats.yml`:
 ```yaml
 stats:
   "player-uuid":
@@ -137,179 +137,179 @@ stats:
     totalGames: 0
 ```
 
-### F: Wie wird Win Rate berechnet?
+### Q: How is win rate calculated?
 **A:**
 ```
 Win Rate (%) = (Wins / Total Games) * 100
 ```
 
-**Beispiel:** 15 Wins / 30 Duels = 50% Win Rate
+**Example:** 15 Wins / 30 Duels = 50% Win Rate
 
-### F: Werden Stats für jeden Spieler einzeln?
-**A:** Ja, jeder Spieler hat eigene Stats.
+### Q: Does each player have separate stats?
+**A:** Yes, each player has their own stats.
 
 ---
 
 ## Administration
 
-### F: Wie gebe ich Spielern Berechtigungen?
-**A:** Mit einem Permission-Manager wie LuckPerms:
+### Q: How do I give players permissions?
+**A:** Use a permission manager like LuckPerms:
 ```bash
 /lp user <player> permission set epicduels.duel true
 ```
 
-### F: Welche Berechtigungen gibt es?
+### Q: What permissions exist?
 **A:**
-- `epicduels.admin` — Admin-Befehle
-- `epicduels.duel` — Duels spielen
-- `epicduels.stats` — Stats ansehen
+- `epicduels.admin` — Admin commands
+- `epicduels.duel` — Play duels
+- `epicduels.stats` — View stats
 
-### F: Können Spieler Arenen selbst erstellen?
-**A:** Nein, nur Admins mit `epicduels.admin` können Arenen erstellen.
+### Q: Can players create arenas themselves?
+**A:** No, only admins with `epicduels.admin` can create arenas.
 
-### F: Was ist ein "Void World Generator"?
-**A:** Ein Custom Generator, der leere Welten erzeugt. Füge zu `bukkit.yml` hinzu:
+### Q: What is a "Void World Generator"?
+**A:** A custom generator that creates empty worlds. Add to `bukkit.yml`:
 ```yaml
 worlds:
   world:
     generator: EpicDuels
 ```
 
-### F: Muss ich den Server neustarten nach Konfiguration?
-**A:** Ja, immer nach Änderungen in `bukkit.yml`. Für andere Dateien manchmal nicht (aber empfohlen).
+### Q: Do I need to restart the server after configuring?
+**A:** Yes, always after changes to `bukkit.yml`. For other files, sometimes not (but recommended).
 
 ---
 
-## Probleme & Fehler
+## Problems & Errors
 
-### F: Plugin lädt nicht
-**A:** Überprüfe:
+### Q: Plugin won't load
+**A:** Check:
 1. Java 21+
 2. Paper 1.21.1+
-3. Server-Logs für Fehlermeldungen
-4. JAR-Datei nicht beschädigt
+3. Server logs for error messages
+4. JAR file isn't corrupted
 
-### F: Spieler können `/duel` nicht ausführen
-**A:** Überprüfe Berechtigungen:
+### Q: Players can't run `/duel`
+**A:** Check permissions:
 ```bash
 /lp user <player> permission check epicduels.duel
 ```
 
-### F: Arenen-Welten werden nicht gelöscht
-**A:** Das ist normal! Nach dem Duel wird die Welt gelöscht. Manchmal dauert es ein paar Sekunden.
+### Q: Arena worlds aren't deleted
+**A:** That's normal! The world is deleted after the duel. Sometimes takes a few seconds.
 
-### F: Stats werden nicht gespeichert
-**A:** Überprüfe:
-1. Datei-Berechtigungen
-2. Server-Logs auf Fehler
-3. `stats.yml` existiert und ist beschreibbar
+### Q: Stats aren't being saved
+**A:** Check:
+1. File permissions
+2. Server logs for errors
+3. `stats.yml` exists and is writable
 
-### F: Duel startet nicht
-**A:** Überprüfe:
-1. ✅ Mindestens 1 Arena existiert
-2. ✅ Arena hat 2 Spawns
-3. ✅ Arena hat Status `ready`
-4. ✅ Mindestens 1 Kit existiert
+### Q: Duel won't start
+**A:** Check:
+1. ✅ At least 1 arena exists
+2. ✅ Arena has 2 spawns
+3. ✅ Arena has status `ready`
+4. ✅ At least 1 kit exists
 
-### F: Spieler teleportiert nicht zu Arena
-**A:** Überprüfe:
-1. Arena-Welt existiert
-2. Spawn-Koordinaten sind gültig
-3. Server-Logs auf Fehler
+### Q: Player won't teleport to arena
+**A:** Check:
+1. Arena world exists
+2. Spawn coordinates are valid
+3. Server logs for errors
 
 ---
 
-## Performance & Optimierung
+## Performance & Optimization
 
-### F: Das Plugin ist langsam
+### Q: The plugin is slow
 **A:** 
-1. ✅ Stelle sicher, dass der Server genug RAM hat (mindestens 4GB)
-2. ✅ Begrenzte Anzahl Arenen (z.B. 10)
-3. ✅ Vereinfache Arena-Komplexität
-4. ✅ Überprüfe andere Plugins
+1. ✅ Ensure server has enough RAM (minimum 4GB)
+2. ✅ Limit arena count (e.g., 10)
+3. ✅ Simplify arena complexity
+4. ✅ Check other plugins
 
-### F: Server crasht beim Duel
+### Q: Server crashes during duels
 **A:**
-1. Überprüfe RAM
-2. Überprüfe Logs auf Out of Memory
-3. Reduziere Anzahl Spieler gleichzeitig
-4. Überprüfe andere Plugins auf Konflikt
+1. Check RAM
+2. Check logs for Out of Memory
+3. Reduce number of simultaneous players
+4. Check other plugins for conflicts
 
-### F: Spieler laggen während Duel
+### Q: Players lag during duels
 **A:**
-1. Überprüfe Arena-Größe (nicht zu groß)
-2. Überprüfe Partikel-Effekte
-3. Überprüfe andere Plugins
-4. Überprüfe Internet-Verbindung
+1. Check arena size (not too big)
+2. Check particle effects
+3. Check other plugins
+4. Check internet connection
 
 ---
 
-## Lizenz & Rechtliches
+## License & Legal
 
-### F: Kann ich EpicDuels kommerziell nutzen?
-**A:** Ja, du darfst es auf einem Geld-verdienenden Server nutzen. **Aber:** Du darfst das Plugin selbst nicht verkaufen.
+### Q: Can I use EpicDuels commercially?
+**A:** Yes, you can use it on a money-making server. **But:** You cannot sell the plugin itself.
 
-### F: Kann ich EpicDuels modifizieren?
-**A:** Ja! Es ist Open Source (CC BY-NC-SA 4.0).
+### Q: Can I modify EpicDuels?
+**A:** Yes! It's open source (CC BY-NC-SA 4.0).
 
-### F: Muss ich den Code offen lassen?
-**A:** Ja, wenn du es weitergibst, muss der Code offen bleiben.
+### Q: Must I keep the code open?
+**A:** Yes, if you redistribute it, the code must remain open.
 
-### F: Wer hat das Plugin entwickelt?
-**A:** [nuroso000](https://github.com/nuroso000) auf GitHub.
+### Q: Who developed EpicDuels?
+**A:** [nuroso000](https://github.com/nuroso000) on GitHub.
 
 ---
 
-## Weitere Hilfe
+## Need More Help?
 
-### F: Meine Frage ist nicht hier beantwortet
+### Q: My question isn't answered here
 **A:** 
-- 📖 Schau die [Dokumentation](./01-Home.md)
+- 📖 Check the [Documentation](./01-Home.md)
 - 🎮 [Admin Guide](./04-Admin-Guide.md)
 - 📋 [Commands Reference](./05-Commands.md)
 - 🔐 [Permissions Guide](./06-Permissions.md)
 
-### F: Ich möchte einen Bug melden
-**A:** Öffne ein Issue auf [GitHub](https://github.com/nuroso000/epicduels/issues)
+### Q: I want to report a bug
+**A:** Open an issue on [GitHub](https://github.com/nuroso000/epicduels/issues)
 
-### F: Ich möchte eine Feature vorschlagen
-**A:** Öffne ein Issue auf [GitHub](https://github.com/nuroso000/epicduels/issues) mit "Feature Request"
+### Q: I want to suggest a feature
+**A:** Open an issue on [GitHub](https://github.com/nuroso000/epicduels/issues) with "Feature Request"
 
-### F: Ich möchte beitragen
-**A:** Siehe [Development Guide](./08-Development.md) und [CONTRIBUTING.md](../CONTRIBUTING.md)
+### Q: I want to contribute
+**A:** See [Development Guide](./08-Development.md) and [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ---
 
-## Checklisten
+## Checklists
 
 ### Installation Checklist
-- [ ] Java 21+ installiert
-- [ ] Paper 1.21.1+ installiert
-- [ ] EpicDuels JAR heruntergeladen
-- [ ] JAR in `plugins/` platziert
-- [ ] Server gestartet
-- [ ] Plugin geladen (Logs überprüfen)
+- [ ] Java 21+ installed
+- [ ] Paper 1.21.1+ installed
+- [ ] EpicDuels JAR downloaded
+- [ ] JAR placed in `plugins/`
+- [ ] Server started
+- [ ] Plugin loaded (check logs)
 
 ### Setup Checklist
-- [ ] Lobby mit `/duel setlobby` gesetzt
-- [ ] Mindestens 1 Arena erstellt
-- [ ] Arena hat 2 Spawns gesetzt
-- [ ] Arena gespeichert
-- [ ] Mindestens 1 Kit erstellt
-- [ ] Berechtigungen konfiguriert
+- [ ] Lobby set with `/duel setlobby`
+- [ ] At least 1 arena created
+- [ ] Arena has 2 spawns set
+- [ ] Arena saved
+- [ ] At least 1 kit created
+- [ ] Permissions configured
 
 ### First Duel Checklist
-- [ ] Spieler hat `epicduels.duel` Permission
-- [ ] Spieler kennt `/duel` Befehl
-- [ ] Arena und Kit existieren
-- [ ] `/duel` öffnet GUI
-- [ ] Spieler kann Challenge akzeptieren
-- [ ] Duel startet erfolgreich
+- [ ] Player has `epicduels.duel` permission
+- [ ] Player knows `/duel` command
+- [ ] Arena and kit exist
+- [ ] `/duel` opens GUI
+- [ ] Player can accept challenge
+- [ ] Duel starts successfully
 
 ---
 
-**Viel Spaß mit EpicDuels! 🎮**
+**Have fun with EpicDuels! 🎮**
 
 ---
 
-*Zuletzt aktualisiert: 2026-04-06*
+*Last updated: 2026-04-06*

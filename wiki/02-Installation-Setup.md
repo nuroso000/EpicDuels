@@ -1,116 +1,121 @@
 # Installation & Setup
 
-In diesem Guide lernst du, EpicDuels zu installieren und einzurichten.
+In this guide, you'll learn how to install EpicDuels and get it set up.
 
 ## Installation
 
-### Voraussetzungen
-- **Minecraft Server:** Paper 1.21.1 oder höher
-- **Java:** Version 21 oder höher
+### Requirements
+- **Minecraft Server:** Paper 1.21.1 or higher
+- **Java:** Version 21 or higher
 
-### Schritt 1: Plugin herunterladen
+### Step 1: Download the Plugin
 
-Lade die aktuellste JAR-Datei herunter:
-- 📥 **[Release Seite](https://github.com/nuroso000/epicduels/releases)** — Offizielle Releases
-- 🎮 **[Modrinth](https://modrinth.com/plugin/epicduels)** — Alternative Quelle
+Download the latest JAR file:
+- 📥 **[Releases Page](https://github.com/nuroso000/epicduels/releases)** — Official releases
+- 🎮 **[Modrinth](https://modrinth.com/plugin/epicduels)** — Alternative source
 
-### Schritt 2: Plugin installieren
+### Step 2: Install the Plugin
 
-1. Lade `EpicDuels-x.x.x.jar` herunter
-2. Kopiere die Datei in den `plugins/` Ordner deines Servers
-3. Starte deinen Server neu (oder nutze ein Plugin-Reload-Tool)
+1. Download `EpicDuels-x.x.x.jar`
+2. Copy the file to your server's `plugins/` folder
+3. Restart your server (or use a plugin reload tool)
 
 ```
 server/
 ├── plugins/
-│   └── EpicDuels-0.2.1.jar  ← Hier platzieren
+│   └── EpicDuels-0.2.1.jar  ← Place here
 ├── bukkit.yml
 └── server.properties
 ```
 
-### Schritt 3: Starten & Erste Konfiguration
+### Step 3: Start & Initial Configuration
 
-Nach dem Start erzeugt EpicDuels automatisch diese Dateien:
+After startup, EpicDuels will automatically create these files:
 
 ```
 plugins/EpicDuels/
-├── config.yml      # Lobby-Spawn-Position
-├── arenas.yml      # Arena-Daten
-├── kits.yml        # Kit-Vorlagen
-└── stats.yml       # Spieler-Statistiken
+├── config.yml      # Lobby spawn location
+├── arenas.yml      # Arena data
+├── kits.yml        # Kit templates
+└── stats.yml       # Player statistics
 ```
 
 ---
 
-## Erste Einrichtung (5 Minuten)
+## Quick Setup (5 minutes)
 
-### 1️⃣ Lobby setzen
+### 1️⃣ Set Lobby Spawn
 
 ```bash
 /duel setlobby
 ```
 
-Teleportiere dich an den Ort, wo Spieler beim `/duel` Command landen sollen, und führe den Befehl aus.
+Teleport to the location where players should land when running `/duel`, then execute the command.
 
-### 2️⃣ Erste Arena erstellen
+### 2️⃣ Create Your First Arena
 
 ```bash
 /duel arena create pvp_1
 ```
 
-Du wirst in eine leere Void-World teleportiert, wo du bauen kannst.
+You'll be teleported to an empty void world where you can build.
 
-### 3️⃣ Arena bauen
+### 3️⃣ Build Your Arena
 
-- Baue deine Arena (z.B. eine Plattform, Landschaft, etc.)
-- Nutze Creative Mode zum schnellen Bauen
+- Build your arena (e.g., a platform, landscape, etc.)
+- Use Creative Mode for faster building
 
-### 4️⃣ Spawn-Punkte setzen
+### 4️⃣ Set Spawn Points
 
-Stehe an der Stelle, wo Spieler 1 spawnen soll:
+Stand at the location where Player 1 should spawn:
 ```bash
 /duel arena setspawn1
 ```
 
-Gehe zu Spieler 2s Spawn-Punkt:
+Go to Player 2's spawn location:
 ```bash
 /duel arena setspawn2
 ```
 
-### 5️⃣ Arena speichern
+### 5️⃣ Save the Arena
 
 ```bash
 /duel arena save
 ```
 
-Die Arena wird gespeichert und ist sofort einsatzbereit!
+The arena is saved and immediately ready for use!
 
-### 6️⃣ Kit erstellen
+### 6️⃣ Create a Kit
 
-1. Rüste dich mit gewünschter Ausrüstung aus (Armor, Sword, etc.)
-2. Führe aus:
+1. Equip yourself with the desired gear
+   - Armor
+   - Weapon
+   - Inventory items
+   - Offhand item
+
+2. Execute:
 ```bash
 /duel kit create survival_pvp
 ```
 
-### 7️⃣ Spielen!
+### 7️⃣ Play!
 
 ```bash
 /duel
 ```
 
-Öffnet das Hauptmenü mit drei Optionen:
-- **Challenge** — Fordere einen Spieler heraus
-- **Stats** — Sehe deine Statistiken
-- **Queue** — Trete einer Matchmaking-Queue bei
+Opens the main menu with three options:
+- **Challenge** — Challenge a player
+- **Stats** — View your statistics
+- **Queue** — Join a matchmaking queue
 
 ---
 
-## Optionale Konfigurationen
+## Optional Configurations
 
-### Void-World Generator
+### Void World Generator
 
-Um einen echten Void-Lobby zu haben, füge zu `bukkit.yml` hinzu:
+To have a true void lobby, add to `bukkit.yml`:
 
 ```yaml
 worlds:
@@ -118,48 +123,48 @@ worlds:
     generator: EpicDuels
 ```
 
-Dann starte den Server neu.
+Then restart the server.
 
-### Icons setzen
+### Set Icons
 
-**Arena-Icon:**
+**Arena Icon:**
 ```bash
-# Halte ein Item in der Hand (z.B. Grass Block)
+# Hold an item in your hand (e.g., Grass Block)
 /duel arena seticon pvp_1
 ```
 
-**Kit-Icon:**
+**Kit Icon:**
 ```bash
-# Halte ein Item in der Hand (z.B. Diamond Sword)
+# Hold an item in your hand (e.g., Diamond Sword)
 /duel kit seticon survival_pvp
 ```
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
-✅ Plugin installiert und konfiguriert?
+✅ Plugin installed and configured?
 
-- 📖 **Mehr erfahren:** [Admin Guide](./04-Admin-Guide.md)
-- 🎮 **Spielen:** [Player Guide](./03-Player-Guide.md)
-- ⚙️ **Erweiterte Konfiguration:** [Configuration](./07-Configuration.md)
+- 📖 **Learn More:** [Admin Guide](./04-Admin-Guide.md)
+- 🎮 **Start Playing:** [Player Guide](./03-Player-Guide.md)
+- ⚙️ **Advanced Configuration:** [Configuration](./07-Configuration.md)
 
 ---
 
-## Fehlerbehebung
+## Troubleshooting
 
-### Plugin startet nicht
-- Überprüfe die **Java-Version** (muss 21+ sein)
-- Überprüfe die **Minecraft-Version** (muss 1.21.1+ sein)
-- Schau in die **Server-Logs** für Fehlermeldungen
+### Plugin won't start
+- Check your **Java version** (must be 21+)
+- Check your **Minecraft version** (must be 1.21.1+)
+- Look at **server logs** for error messages
 
-### Arenen werden nicht erstellt
-- Stelle sicher, dass du **Op-Berechtigungen** hast
-- Überprüfe die Berechtigungen: `epicduels.admin`
+### Arenas can't be created
+- Make sure you have **OP permissions**
+- Check the permission: `epicduels.admin`
 
-### Spieler können nicht duellieren
-- Überprüfe, dass **mindestens eine Arena** existiert
-- Überprüfe, dass **mindestens ein Kit** existiert
-- Überprüfe die Berechtigungen: `epicduels.duel`
+### Players can't duel
+- Verify that **at least one arena** exists
+- Verify that **at least one kit** exists
+- Check the permission: `epicduels.duel`
 
-👉 **Mehr Hilfe:** [FAQ](./09-FAQ.md)
+👉 **More Help:** [FAQ](./09-FAQ.md)

@@ -1,27 +1,27 @@
 # Permissions Guide
 
-Das Permission-System von EpicDuels.
+The EpicDuels permission system.
 
-## Permission-Liste
+## Permission List
 
-EpicDuels nutzt folgende Permissions:
+EpicDuels uses the following permissions:
 
-| Permission | Beschreibung | Default | Befehl |
+| Permission | Description | Default | Command |
 |---|---|---|---|
-| `epicduels.admin` | Alle Admin-Befehle | OP | Arena & Kit Management |
-| `epicduels.duel` | Challenges, Queue, Accept/Deny | Alle | `/duel` Befehle |
-| `epicduels.stats` | Stats anschauen | Alle | `/duel stats` |
+| `epicduels.admin` | All admin commands | OP | Arena & Kit Management |
+| `epicduels.duel` | Challenges, queue, accept/deny | All | `/duel` commands |
+| `epicduels.stats` | View stats | All | `/duel stats` |
 
 ---
 
-## Permission-Details
+## Permission Details
 
 ### epicduels.admin
-**Gruppe:** Admin/Moderator
-**Standard:** OP (Operator)
-**Zugriff auf:**
-- ✅ Alle Arena-Befehle (`/duel arena ...`)
-- ✅ Alle Kit-Befehle (`/duel kit ...`)
+**Group:** Admin/Moderator
+**Default:** OP (Operator)
+**Access to:**
+- ✅ All arena commands (`/duel arena ...`)
+- ✅ All kit commands (`/duel kit ...`)
 - ✅ `/duel setlobby`
 
 ```yml
@@ -30,10 +30,10 @@ epicduels:
 ```
 
 ### epicduels.duel
-**Gruppe:** Spieler
-**Standard:** Alle
-**Zugriff auf:**
-- ✅ `/duel` (Menü)
+**Group:** Players
+**Default:** All
+**Access to:**
+- ✅ `/duel` (Menu)
 - ✅ `/duel challenge <player>`
 - ✅ `/duel accept [player]`
 - ✅ `/duel deny [player]`
@@ -47,9 +47,9 @@ epicduels:
 ```
 
 ### epicduels.stats
-**Gruppe:** Spieler
-**Standard:** Alle
-**Zugriff auf:**
+**Group:** Players
+**Default:** All
+**Access to:**
 - ✅ `/duel stats [player]`
 
 ```yml
@@ -59,60 +59,60 @@ epicduels:
 
 ---
 
-## Permission-Management
+## Permission Management
 
-### Mit LuckPerms (empfohlen)
+### With LuckPerms (Recommended)
 
-**Spieler zur Gruppe hinzufügen:**
+**Add user to group:**
 ```bash
 /lp user <player> parent add epicduels
 ```
 
-**Admin-Permissions geben:**
+**Give admin permissions:**
 ```bash
 /lp user <player> permission set epicduels.admin true
 ```
 
-**Spieler-Permissions geben:**
+**Give player permissions:**
 ```bash
 /lp user <player> permission set epicduels.duel true
 /lp user <player> permission set epicduels.stats true
 ```
 
-**Gruppe mit Permission erstellen:**
+**Create group with permissions:**
 ```bash
 /lp creategroup duelers
 /lp group duelers permission set epicduels.duel true
 /lp group duelers permission set epicduels.stats true
 ```
 
-### Mit bukkit.yml
+### With bukkit.yml
 
-Bearbeite `bukkit.yml`:
+Edit `bukkit.yml`:
 
 ```yaml
 permissions:
   epicduels.*:
-    description: Alle EpicDuels Permissions
+    description: All EpicDuels Permissions
     children:
       epicduels.admin: true
       epicduels.duel: true
       epicduels.stats: true
   
   epicduels.admin:
-    description: Admin-Befehle
+    description: Admin commands
     default: op
   
   epicduels.duel:
-    description: Duel-Befehle
+    description: Duel commands
     default: true
   
   epicduels.stats:
-    description: Stats ansehen
+    description: View stats
     default: true
 ```
 
-### Mit PEX (PermissionsEx)
+### With PEX (PermissionsEx)
 
 ```yaml
 groups:
@@ -130,36 +130,36 @@ groups:
 
 ---
 
-## Scenario-Beispiele
+## Scenario Examples
 
-### Szenario 1: Standard-Server
+### Scenario 1: Standard Server
 
-**Wunsch:** Alle können spielen, nur Admins können Arenen bauen
+**Goal:** Everyone can play, only admins build arenas
 
 ```bash
-# Standard-Gruppe bekommen diese Permissions:
+# Default group gets these permissions:
 epicduels.duel: true
 epicduels.stats: true
 
-# Admin-Gruppe bekommen diese:
+# Admin group gets these:
 epicduels.admin: true
 epicduels.duel: true
 epicduels.stats: true
 ```
 
-### Szenario 2: VIP-System
+### Scenario 2: VIP System
 
-**Wunsch:** VIPs bekommen Zugang zu bestimmten Kits
+**Goal:** VIPs get access to specific kits
 
-**Hinweis:** EpicDuels hat kein eingebautes Kit-Permission-System. Du müsstest diese Features selbst implementieren oder einen anderen Ansatz nutzen.
+**Note:** EpicDuels doesn't have built-in kit permissions. You'd need to implement this yourself or use a different approach.
 
-### Szenario 3: Restricted Server
+### Scenario 3: Restricted Server
 
-**Wunsch:** Nur bestimmte Spieler dürfen duellieren
+**Goal:** Only specific players can duel
 
 ```bash
-# Standard-Spieler OHNE epicduels.duel
-# Nur Whitelisted-Spieler BEKOMMEN epicduels.duel
+# Default players WITHOUT epicduels.duel
+# Only whitelisted players GET epicduels.duel
 /lp user Steve permission set epicduels.duel true
 ```
 
@@ -167,42 +167,42 @@ epicduels.stats: true
 
 ## Troubleshooting
 
-### Spieler können `/duel` nicht benutzen
+### Player Can't Use `/duel`
 
-**Überprüfe:**
+**Check:**
 ```bash
-# Check im Server
+# Check on server
 /lp user <player> permission check epicduels.duel
 ```
 
-Falls `false`:
+If `false`:
 ```bash
 /lp user <player> permission set epicduels.duel true
 ```
 
-### Spieler können Stats nicht sehen
+### Player Can't View Stats
 
-Überprüfe `epicduels.stats` Permission:
+Check `epicduels.stats` permission:
 ```bash
 /lp user <player> permission set epicduels.stats true
 ```
 
-### Admin-Befehle funktionieren nicht
+### Admin Commands Don't Work
 
-Stelle sicher, dass der Admin `epicduels.admin` hat:
+Make sure the admin has `epicduels.admin`:
 ```bash
 /lp user <admin> permission set epicduels.admin true
 ```
 
-### Wildcard Permission
+### Wildcard Permissions
 
-Falls du ein Permission-System mit Wildcards nutzt:
+If using a permission system with wildcards:
 
 ```bash
-# Alle EpicDuels Permissions
+# All EpicDuels Permissions
 epicduels.*
 
-# Alle Admin-Permissions
+# All admin permissions
 epicduels.admin
 ```
 
@@ -210,21 +210,21 @@ epicduels.admin
 
 ## Best Practices
 
-✅ **Empfohlen:**
-- 🔐 Nutze ein Permission-Manager wie LuckPerms
-- 👥 Erstelle Gruppen (Spieler, VIP, Admin)
-- 📋 Dokumentiere deine Permissions
-- ✓ Teste Permissions nach Änderungen
+✅ **Recommended:**
+- 🔐 Use a permission manager like LuckPerms
+- 👥 Create groups (Players, VIP, Admin)
+- 📋 Document your permissions
+- ✓ Test permissions after changes
 
-❌ **Nicht empfohlen:**
-- Alle als OP setzen
-- Permissions in bukkit.yml hardcoden
-- Keine Backup der Permission-Konfiguration
+❌ **Not Recommended:**
+- Making everyone OP
+- Hardcoding permissions in bukkit.yml
+- No backup of permission config
 
 ---
 
-## Nächste Schritte
+## Next Steps
 
 - 🛠️ **Admin Setup:** [Admin Guide](./04-Admin-Guide.md)
-- ⚙️ **Konfiguration:** [Configuration Guide](./07-Configuration.md)
-- 🎮 **Spielen:** [Player Guide](./03-Player-Guide.md)
+- ⚙️ **Configuration:** [Configuration Guide](./07-Configuration.md)
+- 🎮 **Playing:** [Player Guide](./03-Player-Guide.md)
