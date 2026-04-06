@@ -3,13 +3,13 @@ package dev.epicduels.listener;
 import dev.epicduels.EpicDuels;
 import dev.epicduels.model.DuelInstance;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.entity.Player;
 
 public class WorldProtectionListener implements Listener {
 
@@ -20,13 +20,37 @@ public class WorldProtectionListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
+    public void onBlockPlace(BlockPlaceEvent event) {
+        String worldName = event.getBlock().getWorld().getName();
+
+        // Always allow in arena template worlds (admin building)
+        if (worldName.startsWith("arena_template_")) return;
+
+        if (worldName.startsWith("arena_instance_")) {
+            DuelInstance duel = plugin.getDuelManager().getDuelByWorld(worldName);
+            if (duel == null || !duel.isActive()) {
+                event.setCancelled(true);
+                return;
+            }
+            // Record this as a player-placed block so it can be broken later
+            Block b = event.getBlock();
+            duel.recordPlayerBlock(b.getX(), b.getY(), b.getZ());
+            return;
+        }
+
+        // Protect lobby for non-admins
+        if (!event.getPlayer().hasPermission("epicduels.admin")) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
     public void onBlockBreak(BlockBreakEvent event) {
         String worldName = event.getBlock().getWorld().getName();
 
         // Always allow in arena template worlds (admin building)
         if (worldName.startsWith("arena_template_")) return;
 
-        // In instance worlds: allow breaking player-placed blocks, deny breaking original map blocks
         if (worldName.startsWith("arena_instance_")) {
             DuelInstance duel = plugin.getDuelManager().getDuelByWorld(worldName);
             if (duel == null || !duel.isActive()) {
@@ -34,38 +58,18 @@ public class WorldProtectionListener implements Listener {
                 return;
             }
 
-            Block block = event.getBlock();
-            if (duel.isOriginalBlock(block.getX(), block.getY(), block.getZ())) {
+            Block b = event.getBlock();
+            if (duel.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
+                // Player-placed block — allow and remove from tracking
+                duel.removePlayerBlock(b.getX(), b.getY(), b.getZ());
+            } else {
+                // Original map block — deny
                 event.setCancelled(true);
             }
-            // Player-placed blocks can be broken
             return;
         }
 
-        // Block in lobby for non-admins
-        if (!event.getPlayer().hasPermission("epicduels.admin")) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.LOW)
-    public void onBlockPlace(BlockPlaceEvent event) {
-        String worldName = event.getBlock().getWorld().getName();
-
-        // Always allow in arena template worlds (admin building)
-        if (worldName.startsWith("arena_template_")) return;
-
-        // Allow placing blocks in active arena instance worlds
-        if (worldName.startsWith("arena_instance_")) {
-            DuelInstance duel = plugin.getDuelManager().getDuelByWorld(worldName);
-            if (duel == null || !duel.isActive()) {
-                event.setCancelled(true);
-            }
-            // Placing new blocks is always allowed during active duels
-            return;
-        }
-
-        // Block in lobby for non-admins
+        // Protect lobby for non-admins
         if (!event.getPlayer().hasPermission("epicduels.admin")) {
             event.setCancelled(true);
         }
