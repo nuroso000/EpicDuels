@@ -1,3 +1,6 @@
+> [!WARNING]
+> This is very much in beta and might be buggy...
+
 # EpicDuels
 
 A full-featured 1v1 Duels plugin for Paper 1.21.1 servers.
