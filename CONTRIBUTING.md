@@ -29,5 +29,4 @@ By contributing you agree that your contributions will be licensed under the sam
 
 ---
 
----
 Thank you for helping to improve EpicDuels.
