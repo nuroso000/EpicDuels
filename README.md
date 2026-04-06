@@ -1,6 +1,19 @@
-# EpicDuels
+# <h1 align="center">EpicDuels</h1>
+<p align="center">
+  <img src="https://i.ibb.co/VYNPYwxK/Neues-Projekt.png" width="100" alt="Logo">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1+-green">
+  <img src="https://img.shields.io/badge/Java-21-orange">
+  <a href="https://discordapp.com/users/1245992673677017119">
+    <img src="https://img.shields.io/badge/Discord-Profile-5865f2?style=flat&logo=discord&logoColor=white" alt="Discord Profile">
+  </a>
+</p>
 
 A full-featured 1v1 Duels plugin for Paper 1.21.1 servers.
+
+---
 
 ## Features
 
@@ -23,7 +36,7 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers.
 
 ## Installation
 
-1. Download `EpicDuels-0.2.1.jar` from the `release/` folder or build from source
+1. Download `EpicDuels-0.2.0.jar` from the `release/` folder or build from source
 2. Place it in your server's `plugins/` folder
 3. Restart the server
 4. (Optional) Add to `bukkit.yml` for true void lobby world:
@@ -68,7 +81,8 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers.
 | `/duel kit seticon <name>` | Set kit icon (hold item in hand) | `epicduels.admin` |
 | `/duel setlobby` | Set lobby spawn point | `epicduels.admin` |
 
-**Alias:** `/d` works as shorthand for `/duel`
+>[!TIP]
+>`/d` works as shorthand for `/duel`
 
 ## Permissions
 
@@ -107,9 +121,9 @@ gradle clean build
 mvn clean package
 ```
 
-Output JAR: `build/libs/EpicDuels-0.2.1.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Output JAR: `build/libs/EpicDuels-0.2.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
-## ⚖️ License & Usage
+## License & Usage
 
 This project is licensed under **CC BY-NC-SA 4.0**.
 
