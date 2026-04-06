@@ -11,7 +11,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
@@ -129,6 +128,17 @@ public class DuelManager {
         startDuel(player1, player2, arena, kit);
     }
 
+    public void startQueueDuel(Player player1, Player player2, String arenaName, String kitName) {
+        Arena arena = plugin.getArenaManager().getArena(arenaName);
+        Kit kit = plugin.getKitManager().getKit(kitName);
+        if (arena == null || kit == null) {
+            player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            return;
+        }
+        startDuel(player1, player2, arena, kit);
+    }
+
     private void startDuel(Player player1, Player player2, Arena arena, Kit kit) {
         DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName());
         activeDuels.put(player1.getUniqueId(), duel);
@@ -137,8 +147,8 @@ public class DuelManager {
         player1.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
         player2.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
 
-        // Copy and load the arena world
-        plugin.getArenaManager().createInstanceWorld(arena).thenAccept(world -> {
+        // Copy and load the arena world, passing the duel instance to record original blocks
+        plugin.getArenaManager().createInstanceWorld(arena, duel).thenAccept(world -> {
             if (world == null) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player1.sendMessage(Component.text("Failed to create duel arena!", NamedTextColor.RED));
@@ -335,6 +345,15 @@ public class DuelManager {
 
     public DuelInstance getDuel(UUID playerId) {
         return activeDuels.get(playerId);
+    }
+
+    public DuelInstance getDuelByWorld(String worldName) {
+        for (DuelInstance duel : activeDuels.values()) {
+            if (duel.getInstanceWorldName().equals(worldName)) {
+                return duel;
+            }
+        }
+        return null;
     }
 
     public void cleanupAll() {

@@ -1,7 +1,10 @@
 package dev.epicduels.model;
 
 import org.bukkit.World;
+import org.bukkit.block.Block;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class DuelInstance {
@@ -15,6 +18,7 @@ public class DuelInstance {
     private World instanceWorld;
     private boolean active;
     private boolean countdownComplete;
+    private final Set<Long> originalBlocks = new HashSet<>();
 
     public DuelInstance(UUID player1, UUID player2, String arenaName, String kitName) {
         this.id = UUID.randomUUID();
@@ -81,5 +85,21 @@ public class DuelInstance {
 
     public UUID getOpponent(UUID uuid) {
         return player1.equals(uuid) ? player2 : player1;
+    }
+
+    public Set<Long> getOriginalBlocks() {
+        return originalBlocks;
+    }
+
+    public void recordOriginalBlock(int x, int y, int z) {
+        originalBlocks.add(encodeBlockPos(x, y, z));
+    }
+
+    public boolean isOriginalBlock(int x, int y, int z) {
+        return originalBlocks.contains(encodeBlockPos(x, y, z));
+    }
+
+    private static long encodeBlockPos(int x, int y, int z) {
+        return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0xFFFL) << 26 | ((long) z & 0x3FFFFFFL);
     }
 }

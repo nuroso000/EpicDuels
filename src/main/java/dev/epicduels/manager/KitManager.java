@@ -2,6 +2,7 @@ package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
 import dev.epicduels.model.Kit;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectInputStream;
@@ -41,6 +42,12 @@ public class KitManager {
                     }
                 }
                 Kit kit = new Kit(name, contents != null ? contents : new ItemStack[0], armor, offHand);
+                String iconStr = config.getString(name + ".icon");
+                if (iconStr != null) {
+                    try {
+                        kit.setIcon(Material.valueOf(iconStr));
+                    } catch (IllegalArgumentException ignored) {}
+                }
                 kits.put(name.toLowerCase(), kit);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING, "Failed to load kit: " + name, e);
@@ -58,6 +65,9 @@ public class KitManager {
             }
             if (kit.getOffHand() != null) {
                 config.set(name + ".offhand", serializeItemStacks(new ItemStack[]{kit.getOffHand()}));
+            }
+            if (kit.getIcon() != null) {
+                config.set(name + ".icon", kit.getIcon().name());
             }
         }
         try {

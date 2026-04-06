@@ -35,6 +35,8 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         // Handle disconnect during duel
         plugin.getDuelManager().handleDisconnect(player.getUniqueId());
+        // Remove from queue
+        plugin.getQueueManager().removePlayer(player.getUniqueId());
         // Cancel any pending requests
         plugin.getDuelManager().cancelRequest(player.getUniqueId());
         plugin.getDuelManager().denyRequest(player.getUniqueId());

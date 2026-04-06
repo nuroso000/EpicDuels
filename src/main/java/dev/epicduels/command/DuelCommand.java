@@ -6,11 +6,11 @@ import dev.epicduels.model.DuelRequest;
 import dev.epicduels.model.Kit;
 import dev.epicduels.model.PlayerStats;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -45,14 +45,13 @@ public class DuelCommand implements CommandExecutor {
         switch (sub) {
             case "arena" -> handleArena(player, args);
             case "setlobby" -> handleSetLobby(player);
-            case "setlobbyspawn1" -> handleSetLobbySpawn(player, 1);
-            case "setlobbyspawn2" -> handleSetLobbySpawn(player, 2);
             case "kit" -> handleKit(player, args);
             case "challenge", "c" -> handleChallenge(player, args);
             case "accept" -> handleAccept(player, args);
             case "deny" -> handleDeny(player, args);
             case "cancel" -> handleCancel(player);
             case "stats" -> handleStats(player, args);
+            case "queue", "q" -> handleQueue(player, args);
             default -> sendHelp(player);
         }
 
@@ -66,7 +65,7 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel arena <create|delete|setspawn1|setspawn2|save|list|tp> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel arena <create|delete|setspawn1|setspawn2|save|list|tp|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
@@ -84,7 +83,6 @@ public class DuelCommand implements CommandExecutor {
                     player.sendMessage(Component.text("Arena '" + name + "' already exists!", NamedTextColor.RED));
                     return;
                 }
-                // Teleport to the new arena world
                 org.bukkit.World world = Bukkit.getWorld(arena.getWorldName());
                 if (world != null) {
                     player.teleport(new Location(world, 0.5, 65, 0.5));
@@ -169,6 +167,25 @@ public class DuelCommand implements CommandExecutor {
                     player.sendMessage(Component.text("Teleported to arena '" + arena.getName() + "'.", NamedTextColor.GREEN));
                 }
             }
+            case "seticon" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Component.text("Usage: /duel arena seticon <name> (hold item in hand)", NamedTextColor.YELLOW));
+                    return;
+                }
+                Arena arena = plugin.getArenaManager().getArena(args[2]);
+                if (arena == null) {
+                    player.sendMessage(Component.text("Arena not found.", NamedTextColor.RED));
+                    return;
+                }
+                ItemStack hand = player.getInventory().getItemInMainHand();
+                if (hand.getType() == Material.AIR) {
+                    player.sendMessage(Component.text("Hold an item in your hand to use as the icon!", NamedTextColor.RED));
+                    return;
+                }
+                arena.setIcon(hand.getType());
+                plugin.getArenaManager().saveArenas();
+                player.sendMessage(Component.text("Arena '" + arena.getName() + "' icon set to " + hand.getType().name() + "!", NamedTextColor.GREEN));
+            }
             default -> player.sendMessage(Component.text("Unknown arena action.", NamedTextColor.RED));
         }
     }
@@ -189,15 +206,6 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("Lobby spawn set!", NamedTextColor.GREEN));
     }
 
-    private void handleSetLobbySpawn(Player player, int number) {
-        if (!player.hasPermission("epicduels.admin")) {
-            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
-            return;
-        }
-        plugin.setLobbyQueueSpawn(number, player.getLocation());
-        player.sendMessage(Component.text("Lobby queue spawn " + number + " set!", NamedTextColor.GREEN));
-    }
-
     private void handleKit(Player player, String[] args) {
         if (!player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -205,7 +213,7 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel kit <create|delete|list|edit|preview> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel kit <create|delete|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
@@ -222,7 +230,6 @@ public class DuelCommand implements CommandExecutor {
                 ItemStack[] armor = player.getInventory().getArmorContents();
                 ItemStack offHand = player.getInventory().getItemInOffHand();
 
-                // Clone arrays
                 ItemStack[] clonedContents = new ItemStack[contents.length];
                 for (int i = 0; i < contents.length; i++) {
                     clonedContents[i] = contents[i] != null ? contents[i].clone() : null;
@@ -231,7 +238,7 @@ public class DuelCommand implements CommandExecutor {
                 for (int i = 0; i < armor.length; i++) {
                     clonedArmor[i] = armor[i] != null ? armor[i].clone() : null;
                 }
-                ItemStack clonedOffHand = offHand.getType() != org.bukkit.Material.AIR ? offHand.clone() : null;
+                ItemStack clonedOffHand = offHand.getType() != Material.AIR ? offHand.clone() : null;
 
                 Kit kit = plugin.getKitManager().createKit(name, clonedContents, clonedArmor, clonedOffHand);
                 if (kit == null) {
@@ -284,6 +291,25 @@ public class DuelCommand implements CommandExecutor {
                 }
                 plugin.getGUIManager().openKitPreview(player, kit);
             }
+            case "seticon" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Component.text("Usage: /duel kit seticon <name> (hold item in hand)", NamedTextColor.YELLOW));
+                    return;
+                }
+                Kit kit = plugin.getKitManager().getKit(args[2]);
+                if (kit == null) {
+                    player.sendMessage(Component.text("Kit not found.", NamedTextColor.RED));
+                    return;
+                }
+                ItemStack hand = player.getInventory().getItemInMainHand();
+                if (hand.getType() == Material.AIR) {
+                    player.sendMessage(Component.text("Hold an item in your hand to use as the icon!", NamedTextColor.RED));
+                    return;
+                }
+                kit.setIcon(hand.getType());
+                plugin.getKitManager().updateKit(kit);
+                player.sendMessage(Component.text("Kit '" + kit.getName() + "' icon set to " + hand.getType().name() + "!", NamedTextColor.GREEN));
+            }
             default -> player.sendMessage(Component.text("Unknown kit action.", NamedTextColor.RED));
         }
     }
@@ -300,7 +326,6 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            // Open player select GUI
             plugin.getGUIManager().openPlayerSelect(player);
             return;
         }
@@ -321,8 +346,8 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        // Open arena selection GUI
-        plugin.getGUIManager().openArenaSelect(player, target.getUniqueId());
+        // Open kit selection first (new flow: player -> kit -> map)
+        plugin.getGUIManager().openKitSelect(player, target.getUniqueId());
     }
 
     private void handleAccept(Player player, String[] args) {
@@ -402,6 +427,51 @@ public class DuelCommand implements CommandExecutor {
         }
     }
 
+    private void handleQueue(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.duel")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
+        if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
+            plugin.getQueueManager().leaveQueue(player.getUniqueId());
+            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
+            player.sendActionBar(Component.empty());
+            return;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /duel queue <kit> or /duel queue leave", NamedTextColor.YELLOW));
+            return;
+        }
+
+        if (args[1].equalsIgnoreCase("leave")) {
+            plugin.getQueueManager().leaveQueue(player.getUniqueId());
+            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
+            player.sendActionBar(Component.empty());
+            return;
+        }
+
+        String kitName = args[1];
+        Kit kit = plugin.getKitManager().getKit(kitName);
+        if (kit == null) {
+            player.sendMessage(Component.text("Kit not found.", NamedTextColor.RED));
+            return;
+        }
+
+        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+            return;
+        }
+
+        boolean joined = plugin.getQueueManager().joinQueue(player.getUniqueId(), kit.getName());
+        if (joined) {
+            player.sendMessage(Component.text("You joined the queue for: " + kit.getName(), NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text("Could not join queue.", NamedTextColor.RED));
+        }
+    }
+
     private void handleStats(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -427,23 +497,15 @@ public class DuelCommand implements CommandExecutor {
         PlayerStats stats = plugin.getStatsManager().getStats(targetUUID);
 
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("╔══════════════════════╗", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("║ ", NamedTextColor.GOLD)
-                .append(Component.text(targetName + "'s Stats", NamedTextColor.YELLOW, TextDecoration.BOLD))
-                .append(Component.text("       ║", NamedTextColor.GOLD)));
-        player.sendMessage(Component.text("║ ", NamedTextColor.GOLD)
-                .append(Component.text("Wins: ", NamedTextColor.GRAY))
+        player.sendMessage(Component.text("=== " + targetName + "'s Stats ===", NamedTextColor.GOLD, TextDecoration.BOLD));
+        player.sendMessage(Component.text(" Wins: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(stats.getWins()), NamedTextColor.GREEN)));
-        player.sendMessage(Component.text("║ ", NamedTextColor.GOLD)
-                .append(Component.text("Losses: ", NamedTextColor.GRAY))
+        player.sendMessage(Component.text(" Losses: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(stats.getLosses()), NamedTextColor.RED)));
-        player.sendMessage(Component.text("║ ", NamedTextColor.GOLD)
-                .append(Component.text("Total: ", NamedTextColor.GRAY))
+        player.sendMessage(Component.text(" Total: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(stats.getTotalGames()), NamedTextColor.AQUA)));
-        player.sendMessage(Component.text("║ ", NamedTextColor.GOLD)
-                .append(Component.text("Win Rate: ", NamedTextColor.GRAY))
-                .append(Component.text(String.format("%.1f%%", stats.getWinRate()), NamedTextColor.YELLOW)));
-        player.sendMessage(Component.text("╚══════════════════════╝", NamedTextColor.GOLD));
+        player.sendMessage(Component.text(" Win Rate: ", NamedTextColor.GRAY)
+                .append(Component.text(String.format("%.1f%%", stats.getWinRate()), NamedTextColor.GOLD)));
         player.sendMessage(Component.empty());
     }
 
@@ -456,6 +518,8 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel deny [player]", NamedTextColor.YELLOW).append(Component.text(" - Deny a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel cancel", NamedTextColor.YELLOW).append(Component.text(" - Cancel outgoing request", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel stats [player]", NamedTextColor.YELLOW).append(Component.text(" - View stats", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));

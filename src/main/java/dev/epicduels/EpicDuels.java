@@ -16,11 +16,76 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 
+/*
+ * ============================================================
+ * EpicDuels — Architecture Overview
+ * ============================================================
+ *
+ * This plugin is organized around six manager classes, each
+ * responsible for a distinct domain. They are all instantiated
+ * in onEnable() and accessed through getter methods on the
+ * main plugin class.
+ *
+ * ArenaManager
+ *   Handles arena CRUD: creating void template worlds, saving/
+ *   loading arena definitions (spawns, icons, ready state) from
+ *   arenas.yml, and copying template worlds into isolated
+ *   instance worlds for each duel. Also responsible for
+ *   recording original block positions when an instance is
+ *   created (so the WorldProtectionListener can tell template
+ *   blocks from player-placed ones) and for deleting instance
+ *   worlds after duels finish.
+ *
+ * KitManager
+ *   Manages kit CRUD: saving player inventories (contents,
+ *   armor, offhand) as Base64-encoded data in kits.yml, plus
+ *   per-kit display icons. Provides lookup and listing methods
+ *   used by both commands and GUIs.
+ *
+ * DuelManager
+ *   Owns the full duel lifecycle: sending / accepting / denying
+ *   challenge requests, starting duels (teleport, kit apply,
+ *   countdown, freeze), detecting wins (death or disconnect),
+ *   ending duels (stats update, announcements, cleanup).
+ *   Also exposes startQueueDuel() for the QueueManager to
+ *   initiate matchmade duels without a challenge request.
+ *
+ * QueueManager
+ *   Implements kit-based matchmaking. Players join a queue for
+ *   a specific kit; a repeating task checks each queue every
+ *   second and pairs the first two players, picking a random
+ *   ready arena. A separate task sends action-bar updates
+ *   showing queue time. Handles cleanup on disconnect.
+ *
+ * StatsManager
+ *   Simple per-player win/loss tracker backed by stats.yml.
+ *   Provides getStats(), addWin(), addLoss() and auto-saves
+ *   after every change.
+ *
+ * GUIManager
+ *   Builds and manages all chest-based GUIs: the redesigned
+ *   main menu (three-section layout with challenge, stats, and
+ *   queue), player selection, kit selection, map selection
+ *   (with random-map animation), kit edit/preview, and arena/
+ *   kit list views. Tracks per-player GUI state for the
+ *   multi-step challenge flow (player -> kit -> map).
+ *
+ * Listeners
+ *   - PlayerListener: join (lobby TP), quit (cleanup), move
+ *     freeze, damage cancel during countdown, death handling.
+ *   - GUIListener: routes inventory clicks to the correct
+ *     handler based on inventory title.
+ *   - WorldProtectionListener: protects lobby, allows admin
+ *     building in templates, allows player block placement in
+ *     instances but prevents breaking original map blocks.
+ * ============================================================
+ */
 public class EpicDuels extends JavaPlugin {
 
     private ArenaManager arenaManager;
     private KitManager kitManager;
     private DuelManager duelManager;
+    private QueueManager queueManager;
     private StatsManager statsManager;
     private GUIManager guiManager;
 
@@ -38,6 +103,7 @@ public class EpicDuels extends JavaPlugin {
         statsManager = new StatsManager(this);
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
+        queueManager = new QueueManager(this);
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -64,6 +130,11 @@ public class EpicDuels extends JavaPlugin {
             duelManager.cleanupAll();
         }
 
+        // Cleanup queue
+        if (queueManager != null) {
+            queueManager.cleanup();
+        }
+
         // Save all data
         if (arenaManager != null) arenaManager.saveArenas();
         if (kitManager != null) kitManager.saveKits();
@@ -78,11 +149,8 @@ public class EpicDuels extends JavaPlugin {
     }
 
     private void setupVoidWorld() {
-        // Check if this is first start by checking if world folder has region data
         World defaultWorld = Bukkit.getWorld("world");
         if (defaultWorld != null) {
-            File regionDir = new File(Bukkit.getWorldContainer(), "world/region");
-            // If region files exist and no marker file, this might be first run
             File markerFile = new File(getDataFolder(), ".void-setup-complete");
             if (!markerFile.exists()) {
                 getDataFolder().mkdirs();
@@ -92,7 +160,6 @@ public class EpicDuels extends JavaPlugin {
                     getLogger().warning("Could not create marker file");
                 }
 
-                // Configure the default world as void-like
                 defaultWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
                 defaultWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
                 defaultWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
@@ -102,8 +169,7 @@ public class EpicDuels extends JavaPlugin {
                 defaultWorld.setTime(6000);
                 defaultWorld.setSpawnLocation(0, 100, 0);
 
-                getLogger().info("Default world configured for lobby use. Use VoidWorldGenerator in server.properties for true void.");
-                getLogger().info("Set level-type=flat and generator-settings in bukkit.yml for void generation.");
+                getLogger().info("Default world configured for lobby use.");
             }
         }
     }
@@ -159,17 +225,6 @@ public class EpicDuels extends JavaPlugin {
         saveConfig();
     }
 
-    public void setLobbyQueueSpawn(int number, Location loc) {
-        String key = "lobby-spawn" + number;
-        getConfig().set(key + ".world", loc.getWorld().getName());
-        getConfig().set(key + ".x", loc.getX());
-        getConfig().set(key + ".y", loc.getY());
-        getConfig().set(key + ".z", loc.getZ());
-        getConfig().set(key + ".yaw", (double) loc.getYaw());
-        getConfig().set(key + ".pitch", (double) loc.getPitch());
-        saveConfig();
-    }
-
     // --- Manager getters ---
 
     public ArenaManager getArenaManager() {
@@ -182,6 +237,10 @@ public class EpicDuels extends JavaPlugin {
 
     public DuelManager getDuelManager() {
         return duelManager;
+    }
+
+    public QueueManager getQueueManager() {
+        return queueManager;
     }
 
     public StatsManager getStatsManager() {

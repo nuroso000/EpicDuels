@@ -2,8 +2,10 @@ package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
 import dev.epicduels.model.Arena;
+import dev.epicduels.model.DuelInstance;
 import dev.epicduels.world.VoidWorldGenerator;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -41,6 +43,12 @@ public class ArenaManager {
                 arena.setSpawn2(deserializeLocation(config, name + ".spawn2"));
             }
             arena.setReady(config.getBoolean(name + ".ready", false));
+            String iconStr = config.getString(name + ".icon");
+            if (iconStr != null) {
+                try {
+                    arena.setIcon(Material.valueOf(iconStr));
+                } catch (IllegalArgumentException ignored) {}
+            }
             arenas.put(name.toLowerCase(), arena);
         }
     }
@@ -56,6 +64,9 @@ public class ArenaManager {
                 serializeLocation(config, name + ".spawn2", arena.getSpawn2());
             }
             config.set(name + ".ready", arena.isReady());
+            if (arena.getIcon() != null) {
+                config.set(name + ".icon", arena.getIcon().name());
+            }
         }
         try {
             config.save(dataFile);
@@ -117,6 +128,14 @@ public class ArenaManager {
         return arenas.values();
     }
 
+    public List<Arena> getReadyArenas() {
+        List<Arena> ready = new ArrayList<>();
+        for (Arena arena : arenas.values()) {
+            if (arena.isReady()) ready.add(arena);
+        }
+        return ready;
+    }
+
     public List<String> getReadyArenaNames() {
         List<String> names = new ArrayList<>();
         for (Arena arena : arenas.values()) {
@@ -125,10 +144,10 @@ public class ArenaManager {
         return names;
     }
 
-    public CompletableFuture<World> createInstanceWorld(Arena arena) {
+    public CompletableFuture<World> createInstanceWorld(Arena arena, DuelInstance duelInstance) {
         return CompletableFuture.supplyAsync(() -> {
             String templateWorldName = arena.getWorldName();
-            String instanceName = "arena_instance_" + arena.getName() + "_" + UUID.randomUUID().toString().substring(0, 8);
+            String instanceName = duelInstance.getInstanceWorldName();
 
             File templateDir = new File(Bukkit.getWorldContainer(), templateWorldName);
             File instanceDir = new File(Bukkit.getWorldContainer(), instanceName);
@@ -149,7 +168,6 @@ public class ArenaManager {
         }).thenApply(instanceName -> {
             if (instanceName == null) return null;
 
-            // Must create world on main thread
             CompletableFuture<World> worldFuture = new CompletableFuture<>();
             Bukkit.getScheduler().runTask(plugin, () -> {
                 WorldCreator creator = new WorldCreator((String) instanceName);
@@ -161,6 +179,9 @@ public class ArenaManager {
                     world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
                     world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
                     world.setAutoSave(false);
+
+                    // Record all existing (non-air) blocks as original template blocks
+                    recordOriginalBlocks(world, duelInstance);
                 }
                 worldFuture.complete(world);
             });
@@ -174,18 +195,58 @@ public class ArenaManager {
         });
     }
 
+    private void recordOriginalBlocks(World world, DuelInstance duelInstance) {
+        for (Chunk chunk : world.getLoadedChunks()) {
+            int baseX = chunk.getX() << 4;
+            int baseZ = chunk.getZ() << 4;
+            int minY = world.getMinHeight();
+            int maxY = world.getMaxHeight();
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    for (int y = minY; y < maxY; y++) {
+                        Block block = chunk.getBlock(x, y, z);
+                        if (block.getType() != Material.AIR) {
+                            duelInstance.recordOriginalBlock(baseX + x, y, baseZ + z);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     public void deleteInstanceWorld(String worldName) {
         World world = Bukkit.getWorld(worldName);
         if (world != null) {
             World fallback = Bukkit.getWorlds().get(0);
             for (Player p : world.getPlayers()) {
-                p.teleport(fallback.getSpawnLocation());
+                p.teleport(plugin.getLobbyLocation());
             }
-            Bukkit.unloadWorld(world, false);
+            boolean unloaded = Bukkit.unloadWorld(world, false);
+            if (!unloaded) {
+                plugin.getLogger().warning("Failed to unload instance world: " + worldName);
+            }
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            deleteWorldFolder(new File(Bukkit.getWorldContainer(), worldName));
+            File folder = new File(Bukkit.getWorldContainer(), worldName);
+            if (!folder.exists()) return;
+            try {
+                Files.walkFileTree(folder.toPath(), new SimpleFileVisitor<>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        Files.delete(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        Files.delete(dir);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to delete instance world folder: " + worldName, e);
+            }
         });
     }
 
