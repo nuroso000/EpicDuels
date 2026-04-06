@@ -109,7 +109,7 @@ mvn clean package
 
 Output JAR: `build/libs/EpicDuels-0.2.1.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
-## License & Usage
+## ⚖️ License & Usage
 
 This project is licensed under **CC BY-NC-SA 4.0**.
 
