@@ -1,7 +1,6 @@
 package dev.epicduels.model;
 
 import org.bukkit.World;
-import org.bukkit.block.Block;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,7 +17,9 @@ public class DuelInstance {
     private World instanceWorld;
     private boolean active;
     private boolean countdownComplete;
-    private final Set<Long> originalBlocks = new HashSet<>();
+    // Tracks blocks placed by players during the duel - these may be broken freely.
+    // All other blocks are original map blocks and cannot be broken.
+    private final Set<Long> playerPlacedBlocks = new HashSet<>();
 
     public DuelInstance(UUID player1, UUID player2, String arenaName, String kitName) {
         this.id = UUID.randomUUID();
@@ -87,19 +88,19 @@ public class DuelInstance {
         return player1.equals(uuid) ? player2 : player1;
     }
 
-    public Set<Long> getOriginalBlocks() {
-        return originalBlocks;
+    public void recordPlayerBlock(int x, int y, int z) {
+        playerPlacedBlocks.add(encodeBlockPos(x, y, z));
     }
 
-    public void recordOriginalBlock(int x, int y, int z) {
-        originalBlocks.add(encodeBlockPos(x, y, z));
+    public void removePlayerBlock(int x, int y, int z) {
+        playerPlacedBlocks.remove(encodeBlockPos(x, y, z));
     }
 
-    public boolean isOriginalBlock(int x, int y, int z) {
-        return originalBlocks.contains(encodeBlockPos(x, y, z));
+    public boolean isPlayerPlacedBlock(int x, int y, int z) {
+        return playerPlacedBlocks.contains(encodeBlockPos(x, y, z));
     }
 
     private static long encodeBlockPos(int x, int y, int z) {
-        return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0xFFFL) << 26 | ((long) z & 0x3FFFFFFL);
+        return ((long) (x & 0x3FFFFFF)) << 38 | ((long) (y & 0xFFF)) << 26 | ((long) (z & 0x3FFFFFF));
     }
 }

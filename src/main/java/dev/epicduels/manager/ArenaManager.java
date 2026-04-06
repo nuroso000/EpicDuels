@@ -5,7 +5,6 @@ import dev.epicduels.model.Arena;
 import dev.epicduels.model.DuelInstance;
 import dev.epicduels.world.VoidWorldGenerator;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -179,9 +178,6 @@ public class ArenaManager {
                     world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
                     world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
                     world.setAutoSave(false);
-
-                    // Record all existing (non-air) blocks as original template blocks
-                    recordOriginalBlocks(world, duelInstance);
                 }
                 worldFuture.complete(world);
             });
@@ -193,25 +189,6 @@ public class ArenaManager {
                 return null;
             }
         });
-    }
-
-    private void recordOriginalBlocks(World world, DuelInstance duelInstance) {
-        for (Chunk chunk : world.getLoadedChunks()) {
-            int baseX = chunk.getX() << 4;
-            int baseZ = chunk.getZ() << 4;
-            int minY = world.getMinHeight();
-            int maxY = world.getMaxHeight();
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    for (int y = minY; y < maxY; y++) {
-                        Block block = chunk.getBlock(x, y, z);
-                        if (block.getType() != Material.AIR) {
-                            duelInstance.recordOriginalBlock(baseX + x, y, baseZ + z);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public void deleteInstanceWorld(String worldName) {
