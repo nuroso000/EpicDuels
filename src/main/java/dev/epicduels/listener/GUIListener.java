@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -47,6 +46,7 @@ public class GUIListener implements Listener {
                 || title.equals(GUIManager.KIT_SELECT_TITLE)
                 || title.startsWith(GUIManager.KIT_PREVIEW_TITLE)
                 || title.equals(GUIManager.PLAYER_SELECT_TITLE)
+                || title.equals(GUIManager.QUEUE_KIT_SELECT_TITLE)
                 || title.equals("Kits")
                 || title.equals("Arenas")) {
 
@@ -55,45 +55,102 @@ public class GUIListener implements Listener {
             ItemStack clicked = event.getCurrentItem();
             if (clicked == null || clicked.getType() == Material.AIR) return;
 
-            // Skip border panes
+            // Skip border/divider panes
             if (clicked.getType().name().endsWith("STAINED_GLASS_PANE")) return;
 
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
 
             if (title.equals(GUIManager.MAIN_MENU_TITLE)) {
-                handleMainMenuClick(player, event.getSlot());
+                handleMainMenuClick(player, event.getSlot(), clicked);
             } else if (title.equals(GUIManager.PLAYER_SELECT_TITLE)) {
                 handlePlayerSelectClick(player, clicked);
-            } else if (title.equals(GUIManager.ARENA_SELECT_TITLE)) {
-                handleArenaSelectClick(player, clicked);
             } else if (title.equals(GUIManager.KIT_SELECT_TITLE)) {
                 handleKitSelectClick(player, clicked);
+            } else if (title.equals(GUIManager.ARENA_SELECT_TITLE)) {
+                handleArenaSelectClick(player, clicked, event.getSlot(), event.getInventory());
             } else if (title.equals("Kits")) {
                 handleKitListClick(player, clicked);
             }
         }
     }
 
-    private void handleMainMenuClick(Player player, int slot) {
-        player.closeInventory();
-        switch (slot) {
-            case 10 -> { // Challenge Player
-                if (!player.hasPermission("epicduels.duel")) {
-                    player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
-                    return;
-                }
-                plugin.getGUIManager().openPlayerSelect(player);
+    private void handleMainMenuClick(Player player, int slot, ItemStack clicked) {
+        // LEFT SECTION: Challenge (columns 0-2)
+        int col = slot % 9;
+        int row = slot / 9;
+
+        // Challenge button area (left section)
+        if (col <= 2) {
+            if (!player.hasPermission("epicduels.duel")) {
+                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                return;
             }
-            case 12 -> { // My Stats
-                player.performCommand("duel stats");
-            }
-            case 14 -> { // Kits
-                plugin.getGUIManager().openKitList(player);
-            }
-            case 16 -> { // Arenas
-                plugin.getGUIManager().openArenaList(player);
-            }
+            player.closeInventory();
+            plugin.getGUIManager().openPlayerSelect(player);
+            return;
         }
+
+        // RIGHT SECTION: Queue (columns 6-8)
+        if (col >= 6) {
+            String itemName = getItemName(clicked);
+            if (itemName == null) return;
+
+            // Handle special buttons
+            if (itemName.equals("Random Kit")) {
+                handleQueueToggle(player, getRandomKitName());
+                return;
+            }
+            if (itemName.equals("No Kit")) {
+                handleQueueToggle(player, "__nokit__");
+                return;
+            }
+            if (itemName.equals("Queue / Matchmaking")) return;
+
+            // Regular kit queue button
+            Kit kit = plugin.getKitManager().getKit(itemName);
+            if (kit != null) {
+                handleQueueToggle(player, kit.getName());
+            }
+            return;
+        }
+
+        // MIDDLE SECTION: Stats (column 4) - no click action needed, stats are displayed inline
+    }
+
+    private void handleQueueToggle(Player player, String kitName) {
+        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+            return;
+        }
+
+        if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
+            plugin.getQueueManager().leaveQueue(player.getUniqueId());
+            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
+            player.sendActionBar(Component.empty());
+            player.closeInventory();
+            plugin.getGUIManager().openMainMenu(player);
+            return;
+        }
+
+        if (kitName == null) {
+            player.sendMessage(Component.text("No kits available!", NamedTextColor.RED));
+            return;
+        }
+
+        boolean joined = plugin.getQueueManager().joinQueue(player.getUniqueId(), kitName);
+        if (joined) {
+            String displayName = kitName.equals("__nokit__") ? "No Kit" : kitName;
+            player.sendMessage(Component.text("You joined the queue for: " + displayName, NamedTextColor.GREEN));
+            player.closeInventory();
+        } else {
+            player.sendMessage(Component.text("Could not join queue. You may already be in a duel.", NamedTextColor.RED));
+        }
+    }
+
+    private String getRandomKitName() {
+        var kitNames = plugin.getKitManager().getKitNames();
+        if (kitNames.isEmpty()) return null;
+        return kitNames.get(new java.util.Random().nextInt(kitNames.size()));
     }
 
     private void handlePlayerSelectClick(Player player, ItemStack clicked) {
@@ -116,28 +173,8 @@ public class GUIListener implements Listener {
         }
 
         player.closeInventory();
-        plugin.getGUIManager().openArenaSelect(player, target.getUniqueId());
-    }
-
-    private void handleArenaSelectClick(Player player, ItemStack clicked) {
-        String itemName = getItemName(clicked);
-        if (itemName == null) return;
-
-        Arena arena = plugin.getArenaManager().getArena(itemName);
-        if (arena == null || !arena.isReady()) {
-            player.sendMessage(Component.text("Arena not available.", NamedTextColor.RED));
-            player.closeInventory();
-            return;
-        }
-
-        UUID target = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
-        if (target == null) {
-            player.closeInventory();
-            return;
-        }
-
-        player.closeInventory();
-        plugin.getGUIManager().openKitSelect(player, target, arena.getName());
+        // After selecting player, open kit selection (new flow: player -> kit -> map)
+        plugin.getGUIManager().openKitSelect(player, target.getUniqueId());
     }
 
     private void handleKitSelectClick(Player player, ItemStack clicked) {
@@ -152,52 +189,43 @@ public class GUIListener implements Listener {
         }
 
         UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
-        String arenaName = plugin.getGUIManager().getChallengeArena(player.getUniqueId());
-
-        if (targetUUID == null || arenaName == null) {
+        if (targetUUID == null) {
             player.closeInventory();
-            return;
-        }
-
-        Player target = Bukkit.getPlayer(targetUUID);
-        if (target == null || !target.isOnline()) {
-            player.sendMessage(Component.text("Player is no longer online.", NamedTextColor.RED));
-            player.closeInventory();
-            plugin.getGUIManager().clearChallengeData(player.getUniqueId());
             return;
         }
 
         player.closeInventory();
-        plugin.getGUIManager().clearChallengeData(player.getUniqueId());
+        // After selecting kit, open map/arena selection
+        plugin.getGUIManager().openArenaSelect(player, targetUUID, kit.getName());
+    }
 
-        // Send the challenge
-        boolean sent = plugin.getDuelManager().sendRequest(player.getUniqueId(), targetUUID, arenaName, kit.getName());
-        if (!sent) {
-            player.sendMessage(Component.text("Could not send duel request. You may already have a pending request.", NamedTextColor.RED));
+    private void handleArenaSelectClick(Player player, ItemStack clicked, int slot, Inventory inv) {
+        // Check if this is the "Random Map" button (compass in last row center)
+        if (clicked.getType() == Material.COMPASS) {
+            String itemName = getItemName(clicked);
+            if (itemName != null && itemName.equals("Random Map")) {
+                if (!plugin.getGUIManager().isAnimating(player.getUniqueId())) {
+                    plugin.getGUIManager().startRandomMapAnimation(player);
+                }
+                return;
+            }
+        }
+
+        // Don't allow clicking during animation
+        if (plugin.getGUIManager().isAnimating(player.getUniqueId())) return;
+
+        String itemName = getItemName(clicked);
+        if (itemName == null) return;
+
+        Arena arena = plugin.getArenaManager().getArena(itemName);
+        if (arena == null || !arena.isReady()) {
+            player.sendMessage(Component.text("Arena not available.", NamedTextColor.RED));
+            player.closeInventory();
             return;
         }
 
-        player.sendMessage(Component.text("Duel request sent to " + target.getName() + "!", NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kit.getName(), NamedTextColor.GRAY));
-
-        target.sendMessage(Component.empty());
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
-        target.sendMessage(Component.text(player.getName(), NamedTextColor.YELLOW)
-                .append(Component.text(" challenged you to a duel!", NamedTextColor.GREEN)));
-        target.sendMessage(Component.text("Arena: ", NamedTextColor.GRAY)
-                .append(Component.text(arenaName, NamedTextColor.WHITE))
-                .append(Component.text(" | Kit: ", NamedTextColor.GRAY))
-                .append(Component.text(kit.getName(), NamedTextColor.WHITE)));
-        target.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN)
-                .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel accept " + player.getName()))
-                .append(Component.text("  "))
-                .append(Component.text("[DENY]", NamedTextColor.RED)
-                        .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel deny " + player.getName()))));
-        target.sendMessage(Component.text("Expires in 30 seconds!", NamedTextColor.GRAY));
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
-        target.sendMessage(Component.empty());
-
-        target.playSound(target.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+        player.closeInventory();
+        plugin.getGUIManager().finishChallengeWithArena(player, arena.getName());
     }
 
     private void handleKitListClick(Player player, ItemStack clicked) {
@@ -214,8 +242,6 @@ public class GUIListener implements Listener {
     private void handleKitEditClick(InventoryClickEvent event, Player player, String title) {
         int slot = event.getRawSlot();
 
-        // Allow interaction with the inventory contents (slots 0-52)
-        // But handle the save button (slot 53)
         if (slot == 53) {
             event.setCancelled(true);
 
@@ -229,21 +255,18 @@ public class GUIListener implements Listener {
 
             Inventory inv = event.getInventory();
 
-            // Read contents from slots 0-35
             ItemStack[] contents = new ItemStack[36];
             for (int i = 0; i < 36; i++) {
                 ItemStack item = inv.getItem(i);
                 contents[i] = item != null ? item.clone() : null;
             }
 
-            // Read armor from slots 36-39
             ItemStack[] armor = new ItemStack[4];
             for (int i = 0; i < 4; i++) {
                 ItemStack item = inv.getItem(36 + i);
                 armor[i] = item != null ? item.clone() : null;
             }
 
-            // Read offhand from slot 40
             ItemStack offHandItem = inv.getItem(40);
             ItemStack offHand = offHandItem != null ? offHandItem.clone() : null;
 

@@ -1,6 +1,7 @@
 package dev.epicduels.model;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.jetbrains.annotations.Nullable;
 
 public class Arena {
@@ -9,6 +10,7 @@ public class Arena {
     private @Nullable Location spawn1;
     private @Nullable Location spawn2;
     private boolean ready;
+    private @Nullable Material icon;
 
     public Arena(String name) {
         this.name = name;
@@ -45,5 +47,17 @@ public class Arena {
 
     public void setReady(boolean ready) {
         this.ready = ready;
+    }
+
+    public @Nullable Material getIcon() {
+        return icon;
+    }
+
+    public void setIcon(@Nullable Material icon) {
+        this.icon = icon;
+    }
+
+    public Material getDisplayIcon() {
+        return icon != null ? icon : Material.GRASS_BLOCK;
     }
 }

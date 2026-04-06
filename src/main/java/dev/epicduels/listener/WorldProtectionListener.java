@@ -1,6 +1,8 @@
 package dev.epicduels.listener;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.model.DuelInstance;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -21,12 +23,22 @@ public class WorldProtectionListener implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         String worldName = event.getBlock().getWorld().getName();
 
-        // Always allow in arena template worlds
+        // Always allow in arena template worlds (admin building)
         if (worldName.startsWith("arena_template_")) return;
 
-        // Block in instance worlds
+        // In instance worlds: allow breaking player-placed blocks, deny breaking original map blocks
         if (worldName.startsWith("arena_instance_")) {
-            event.setCancelled(true);
+            DuelInstance duel = plugin.getDuelManager().getDuelByWorld(worldName);
+            if (duel == null || !duel.isActive()) {
+                event.setCancelled(true);
+                return;
+            }
+
+            Block block = event.getBlock();
+            if (duel.isOriginalBlock(block.getX(), block.getY(), block.getZ())) {
+                event.setCancelled(true);
+            }
+            // Player-placed blocks can be broken
             return;
         }
 
@@ -40,12 +52,16 @@ public class WorldProtectionListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         String worldName = event.getBlock().getWorld().getName();
 
-        // Always allow in arena template worlds
+        // Always allow in arena template worlds (admin building)
         if (worldName.startsWith("arena_template_")) return;
 
-        // Block in instance worlds
+        // Allow placing blocks in active arena instance worlds
         if (worldName.startsWith("arena_instance_")) {
-            event.setCancelled(true);
+            DuelInstance duel = plugin.getDuelManager().getDuelByWorld(worldName);
+            if (duel == null || !duel.isActive()) {
+                event.setCancelled(true);
+            }
+            // Placing new blocks is always allowed during active duels
             return;
         }
 

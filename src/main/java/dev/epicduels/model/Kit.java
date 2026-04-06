@@ -1,5 +1,6 @@
 package dev.epicduels.model;
 
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,6 +10,7 @@ public class Kit {
     private ItemStack[] contents;
     private @Nullable ItemStack[] armorContents;
     private @Nullable ItemStack offHand;
+    private @Nullable Material icon;
 
     public Kit(String name, ItemStack[] contents, @Nullable ItemStack[] armorContents, @Nullable ItemStack offHand) {
         this.name = name;
@@ -43,5 +45,17 @@ public class Kit {
 
     public void setOffHand(@Nullable ItemStack offHand) {
         this.offHand = offHand;
+    }
+
+    public @Nullable Material getIcon() {
+        return icon;
+    }
+
+    public void setIcon(@Nullable Material icon) {
+        this.icon = icon;
+    }
+
+    public Material getDisplayIcon() {
+        return icon != null ? icon : Material.CHEST;
     }
 }

@@ -27,9 +27,9 @@ public class DuelTabCompleter implements TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("menu", "challenge", "c", "accept", "deny", "cancel", "stats"));
+            List<String> subs = new ArrayList<>(Arrays.asList("menu", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q"));
             if (sender.hasPermission("epicduels.admin")) {
-                subs.addAll(Arrays.asList("arena", "kit", "setlobby", "setlobbyspawn1", "setlobbyspawn2"));
+                subs.addAll(Arrays.asList("arena", "kit", "setlobby"));
             }
             return filter(subs, args[0]);
         }
@@ -38,12 +38,12 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "setspawn1", "setspawn2", "save", "list", "tp"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "setspawn1", "setspawn2", "save", "list", "tp", "seticon"), args[1]);
                     }
                 }
                 case "kit" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "list", "edit", "preview"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "list", "edit", "preview", "seticon"), args[1]);
                     }
                 }
                 case "challenge", "c", "accept", "deny" -> {
@@ -52,6 +52,11 @@ public class DuelTabCompleter implements TabCompleter {
                 case "stats" -> {
                     return filter(getOnlinePlayerNames(sender), args[1]);
                 }
+                case "queue", "q" -> {
+                    List<String> opts = new ArrayList<>(plugin.getKitManager().getKitNames());
+                    opts.add("leave");
+                    return filter(opts, args[1]);
+                }
             }
         }
 
@@ -59,7 +64,7 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("tp")) {
+                    if (action.equals("delete") || action.equals("tp") || action.equals("seticon")) {
                         List<String> names = new ArrayList<>();
                         plugin.getArenaManager().getAllArenas().forEach(a -> names.add(a.getName()));
                         return filter(names, args[2]);
@@ -67,7 +72,7 @@ public class DuelTabCompleter implements TabCompleter {
                 }
                 case "kit" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("edit") || action.equals("preview")) {
+                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon")) {
                         return filter(plugin.getKitManager().getKitNames(), args[2]);
                     }
                 }
