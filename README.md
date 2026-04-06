@@ -23,7 +23,7 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers.
 
 ## Installation
 
-1. Download `EpicDuels-0.2.0.jar` from the `release/` folder or build from source
+1. Download `EpicDuels-0.2.1.jar` from the `release/` folder or build from source
 2. Place it in your server's `plugins/` folder
 3. Restart the server
 4. (Optional) Add to `bukkit.yml` for true void lobby world:
@@ -107,7 +107,7 @@ gradle clean build
 mvn clean package
 ```
 
-Output JAR: `build/libs/EpicDuels-0.2.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Output JAR: `build/libs/EpicDuels-0.2.1.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
 ## License & Usage
 
