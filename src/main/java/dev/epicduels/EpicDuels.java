@@ -6,6 +6,7 @@ import dev.epicduels.listener.GUIListener;
 import dev.epicduels.listener.PlayerListener;
 import dev.epicduels.listener.WorldProtectionListener;
 import dev.epicduels.manager.*;
+import dev.epicduels.model.Arena;
 import dev.epicduels.world.VoidWorldGenerator;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
@@ -195,6 +196,17 @@ public class EpicDuels extends JavaPlugin {
                         world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
                         getLogger().info("Loaded arena world: " + worldName);
                     }
+                }
+                // Resolve spawn locations now that the world is loaded
+                String arenaName = dir.getName().substring("arena_template_".length());
+                Arena arena = arenaManager.getArena(arenaName);
+                if (arena != null) {
+                    arenaManager.resolveSpawnWorlds(arena);
+                    getLogger().info("Arena '" + arena.getName() + "' spawns resolved: spawn1="
+                            + (arena.getSpawn1() != null ? arena.getSpawn1() : "null")
+                            + ", spawn2=" + (arena.getSpawn2() != null ? arena.getSpawn2() : "null"));
+                } else {
+                    getLogger().warning("No arena config found for world: " + dir.getName());
                 }
             }
         }

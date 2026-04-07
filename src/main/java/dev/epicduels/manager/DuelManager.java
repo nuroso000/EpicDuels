@@ -163,6 +163,19 @@ public class DuelManager {
                 duel.setInstanceWorld(world);
                 duel.setActive(true);
 
+                // Validate spawn locations
+                if (arena.getSpawn1() == null || arena.getSpawn2() == null) {
+                    plugin.getLogger().severe("Arena '" + arena.getName() + "' has null spawn points! spawn1="
+                            + arena.getSpawn1() + ", spawn2=" + arena.getSpawn2());
+                    player1.sendMessage(Component.text("Arena spawn points are not configured! Please notify an admin.", NamedTextColor.RED));
+                    player2.sendMessage(Component.text("Arena spawn points are not configured! Please notify an admin.", NamedTextColor.RED));
+                    duel.setActive(false);
+                    activeDuels.remove(player1.getUniqueId());
+                    activeDuels.remove(player2.getUniqueId());
+                    plugin.getArenaManager().deleteInstanceWorld(duel.getInstanceWorldName());
+                    return;
+                }
+
                 // Calculate spawn locations in the instance world
                 Location spawn1 = arena.getSpawn1().clone();
                 spawn1.setWorld(world);
