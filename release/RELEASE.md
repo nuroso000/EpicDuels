@@ -2,6 +2,28 @@
 
 ---
 
+## v0.2.2 — Hotfix: Arena Spawn & Shutdown Stability
+
+**Date:** April 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+### Bug Fixes
+
+- **Fixed NullPointerException on arena spawn locations** — Arena spawn points could become `null` after a server restart because `deserializeLocation` required the `world` key to exist in `arenas.yml`. If the key was missing (e.g. due to a failed prior save), the entire spawn was dropped. Now the Location is always created (with null world) and resolved lazily once the arena template world loads.
+
+- **Fixed arena serialization crash with null world** — `serializeLocation` called `loc.getWorld().getName()` which threw a NullPointerException when the Location had a null world reference (possible between deserialization and world loading). Now uses the arena's template world name as fallback.
+
+- **Fixed "Plugin attempted to register task while disabled"** — `deleteInstanceWorld` used `runTaskAsynchronously` during `onDisable()`, which is forbidden by Bukkit. Now detects whether the plugin is still enabled and runs folder deletion synchronously during shutdown.
+
+- **Added null-spawn safety in duel start** — If an arena's spawn points are missing, the duel is cleanly aborted with an error message instead of crashing the server with an unhandled NPE.
+
+### Improvements
+
+- **Debug logging for arena loading** — On startup, the plugin now logs each arena's spawn state (`set` / `NOT SET`) and the resolved spawn coordinates after world loading, making it easier to diagnose configuration issues.
+
+---
+
 ## v0.2.1 — Patch Release
 
 **Date:** April 2026
