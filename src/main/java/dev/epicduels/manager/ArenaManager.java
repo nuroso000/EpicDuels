@@ -49,6 +49,9 @@ public class ArenaManager {
                 } catch (IllegalArgumentException ignored) {}
             }
             arenas.put(name.toLowerCase(), arena);
+            plugin.getLogger().info("Loaded arena '" + name + "': spawn1=" + (arena.getSpawn1() != null ? "set" : "NOT SET")
+                    + ", spawn2=" + (arena.getSpawn2() != null ? "set" : "NOT SET")
+                    + ", ready=" + arena.isReady());
         }
     }
 
@@ -57,10 +60,10 @@ public class ArenaManager {
         for (Arena arena : arenas.values()) {
             String name = arena.getName();
             if (arena.getSpawn1() != null) {
-                serializeLocation(config, name + ".spawn1", arena.getSpawn1());
+                serializeLocation(config, name + ".spawn1", arena.getSpawn1(), arena.getWorldName());
             }
             if (arena.getSpawn2() != null) {
-                serializeLocation(config, name + ".spawn2", arena.getSpawn2());
+                serializeLocation(config, name + ".spawn2", arena.getSpawn2(), arena.getWorldName());
             }
             config.set(name + ".ready", arena.isReady());
             if (arena.getIcon() != null) {
@@ -194,7 +197,6 @@ public class ArenaManager {
     public void deleteInstanceWorld(String worldName) {
         World world = Bukkit.getWorld(worldName);
         if (world != null) {
-            World fallback = Bukkit.getWorlds().get(0);
             for (Player p : world.getPlayers()) {
                 p.teleport(plugin.getLobbyLocation());
             }
@@ -204,27 +206,16 @@ public class ArenaManager {
             }
         }
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            File folder = new File(Bukkit.getWorldContainer(), worldName);
-            if (!folder.exists()) return;
-            try {
-                Files.walkFileTree(folder.toPath(), new SimpleFileVisitor<>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                    }
+        // Delete the world folder — async if plugin is enabled, sync otherwise (during onDisable)
+        Runnable deleteTask = () -> {
+            deleteWorldFolder(new File(Bukkit.getWorldContainer(), worldName));
+        };
 
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                        Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.WARNING, "Failed to delete instance world folder: " + worldName, e);
-            }
-        });
+        if (plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, deleteTask);
+        } else {
+            deleteTask.run();
+        }
     }
 
     public void ensureArenaWorldLoaded(Arena arena) {
@@ -279,8 +270,9 @@ public class ArenaManager {
         }
     }
 
-    private void serializeLocation(YamlConfiguration config, String path, Location loc) {
-        config.set(path + ".world", loc.getWorld().getName());
+    private void serializeLocation(YamlConfiguration config, String path, Location loc, String fallbackWorldName) {
+        String worldName = loc.getWorld() != null ? loc.getWorld().getName() : fallbackWorldName;
+        config.set(path + ".world", worldName);
         config.set(path + ".x", loc.getX());
         config.set(path + ".y", loc.getY());
         config.set(path + ".z", loc.getZ());
@@ -289,17 +281,33 @@ public class ArenaManager {
     }
 
     private Location deserializeLocation(YamlConfiguration config, String path) {
-        String worldName = config.getString(path + ".world");
-        if (worldName == null) return null;
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) return null;
+        // Check if coordinates exist — if not, there's no spawn data at all
+        if (!config.contains(path + ".x")) return null;
+        // Don't require the world to be loaded at load time — it may load later.
+        // Store with null world and resolve lazily via resolveSpawnWorlds().
         return new Location(
-                world,
+                null,
                 config.getDouble(path + ".x"),
                 config.getDouble(path + ".y"),
                 config.getDouble(path + ".z"),
                 (float) config.getDouble(path + ".yaw"),
                 (float) config.getDouble(path + ".pitch")
         );
+    }
+
+    /**
+     * Resolve spawn locations for an arena — looks up the world by the arena's
+     * template world name and assigns it to spawn1/spawn2 if they lack a world.
+     * Must be called after the arena's template world is loaded.
+     */
+    public void resolveSpawnWorlds(Arena arena) {
+        World world = Bukkit.getWorld(arena.getWorldName());
+        if (world == null) return;
+        if (arena.getSpawn1() != null && arena.getSpawn1().getWorld() == null) {
+            arena.getSpawn1().setWorld(world);
+        }
+        if (arena.getSpawn2() != null && arena.getSpawn2().getWorld() == null) {
+            arena.getSpawn2().setWorld(world);
+        }
     }
 }
