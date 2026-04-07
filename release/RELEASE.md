@@ -2,6 +2,26 @@
 
 ---
 
+## v0.2.3 — Lobby Safety & Rejoin Cleanup
+
+**Date:** April 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+### Bug Fixes
+
+- **Fixed duel items persisting after rejoin** — When a player disconnects mid-duel and rejoins, their inventory, armor, health, hunger, fire, and potion effects are now fully reset on join. No more leftover kit items in the lobby.
+
+### New Features
+
+- **Configurable lobby PvP protection** — PvP damage is now disabled outside of active duels by default. Players in the lobby can no longer attack each other. This can be toggled in `config.yml`:
+  ```yaml
+  lobby:
+    disable-pvp: true  # set to false to allow lobby PvP
+  ```
+
+---
+
 ## v0.2.2 — Hotfix: Arena Spawn & Shutdown Stability
 
 **Date:** April 2026
