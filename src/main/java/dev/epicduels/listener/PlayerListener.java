@@ -27,6 +27,13 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(null);
+        player.setHealth(player.getMaxHealth());
+        player.setFoodLevel(20);
+        player.setSaturation(20f);
+        player.setFireTicks(0);
+        player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
         player.teleport(plugin.getLobbyLocation());
     }
 
@@ -71,6 +78,18 @@ public class PlayerListener implements Listener {
 
         if (plugin.getDuelManager().isFrozen(damager.getUniqueId())) {
             event.setCancelled(true);
+            return;
+        }
+
+        // Disable PvP in lobby if configured
+        if (plugin.getConfig().getBoolean("lobby.disable-pvp", true)) {
+            if (event.getEntity() instanceof Player victim) {
+                boolean damagerInDuel = plugin.getDuelManager().isInDuel(damager.getUniqueId());
+                boolean victimInDuel = plugin.getDuelManager().isInDuel(victim.getUniqueId());
+                if (!damagerInDuel || !victimInDuel) {
+                    event.setCancelled(true);
+                }
+            }
         }
     }
 
