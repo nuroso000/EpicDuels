@@ -52,6 +52,7 @@ public class DuelCommand implements CommandExecutor {
             case "cancel" -> handleCancel(player);
             case "stats" -> handleStats(player, args);
             case "queue", "q" -> handleQueue(player, args);
+            case "spectate", "spec" -> handleSpectate(player, args);
             default -> sendHelp(player);
         }
 
@@ -326,7 +327,7 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            plugin.getGUIManager().openPlayerSelect(player);
+            plugin.getGUIManager().openDuelsMenu(player, 0);
             return;
         }
 
@@ -472,6 +473,43 @@ public class DuelCommand implements CommandExecutor {
         }
     }
 
+    private void handleSpectate(Player player, String[] args) {
+        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+            player.sendMessage(Component.text("You can't spectate while in a duel!", NamedTextColor.RED));
+            return;
+        }
+
+        // If already spectating, leave
+        if (plugin.getDuelManager().isSpectating(player.getUniqueId())) {
+            plugin.getDuelManager().removeSpectator(player.getUniqueId());
+            return;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /duel spectate <player>", NamedTextColor.YELLOW));
+            return;
+        }
+
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null || !target.isOnline()) {
+            player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
+            return;
+        }
+
+        var duel = plugin.getDuelManager().getDuel(target.getUniqueId());
+        if (duel == null || !duel.isActive()) {
+            player.sendMessage(Component.text(target.getName() + " is not in a duel.", NamedTextColor.RED));
+            return;
+        }
+
+        if (duel.getInstanceWorld() == null) {
+            player.sendMessage(Component.text("Duel arena is not ready yet.", NamedTextColor.RED));
+            return;
+        }
+
+        plugin.getDuelManager().addSpectator(player, duel);
+    }
+
     private void handleStats(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -520,6 +558,7 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel stats [player]", NamedTextColor.YELLOW).append(Component.text(" - View stats", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));

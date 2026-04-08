@@ -35,127 +35,74 @@ public class GUIListener implements Listener {
         String title = getInventoryTitle(event.getView().title());
         if (title == null) return;
 
+        // Kit edit is the only non-read-only GUI
         if (title.startsWith(GUIManager.KIT_EDIT_TITLE)) {
             handleKitEditClick(event, player, title);
             return;
         }
 
-        // All other GUIs are read-only
-        if (title.equals(GUIManager.MAIN_MENU_TITLE)
-                || title.equals(GUIManager.ARENA_SELECT_TITLE)
-                || title.equals(GUIManager.KIT_SELECT_TITLE)
-                || title.startsWith(GUIManager.KIT_PREVIEW_TITLE)
-                || title.equals(GUIManager.PLAYER_SELECT_TITLE)
-                || title.equals(GUIManager.QUEUE_KIT_SELECT_TITLE)
-                || title.equals("Kits")
-                || title.equals("Arenas")) {
+        // Check if this is one of our read-only GUIs
+        if (!isOurGUI(title)) return;
 
-            event.setCancelled(true);
+        event.setCancelled(true);
 
-            ItemStack clicked = event.getCurrentItem();
-            if (clicked == null || clicked.getType() == Material.AIR) return;
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+        if (clicked.getType().name().endsWith("STAINED_GLASS_PANE")) return;
 
-            // Skip border/divider panes
-            if (clicked.getType().name().endsWith("STAINED_GLASS_PANE")) return;
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
+        int slot = event.getSlot();
 
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
-
-            if (title.equals(GUIManager.MAIN_MENU_TITLE)) {
-                handleMainMenuClick(player, event.getSlot(), clicked);
-            } else if (title.equals(GUIManager.PLAYER_SELECT_TITLE)) {
-                handlePlayerSelectClick(player, clicked);
-            } else if (title.equals(GUIManager.KIT_SELECT_TITLE)) {
-                handleKitSelectClick(player, clicked);
-            } else if (title.equals(GUIManager.ARENA_SELECT_TITLE)) {
-                handleArenaSelectClick(player, clicked, event.getSlot(), event.getInventory());
-            } else if (title.equals("Kits")) {
-                handleKitListClick(player, clicked);
+        switch (title) {
+            case GUIManager.MAIN_MENU_TITLE -> handleMainMenuClick(player, slot);
+            case GUIManager.DUELS_MENU_TITLE -> handleDuelsMenuClick(player, slot, clicked);
+            case GUIManager.STATS_MENU_TITLE -> handleStatsMenuClick(player, slot);
+            case GUIManager.MATCHMAKING_TITLE -> handleMatchmakingClick(player, slot, clicked);
+            case GUIManager.KIT_SELECT_TITLE -> handleKitSelectClick(player, slot, clicked);
+            case GUIManager.ARENA_SELECT_TITLE -> handleArenaSelectClick(player, slot, clicked);
+            case GUIManager.KIT_LIST_TITLE -> handleKitListClick(player, slot, clicked);
+            default -> {
+                if (title.startsWith(GUIManager.KIT_PREVIEW_TITLE)) {
+                    // Preview is view-only, no action
+                }
             }
         }
     }
 
-    private void handleMainMenuClick(Player player, int slot, ItemStack clicked) {
-        // LEFT SECTION: Challenge (columns 0-2)
-        int col = slot % 9;
-        int row = slot / 9;
+    // ========== MAIN MENU ==========
 
-        // Challenge button area (left section)
-        if (col <= 2) {
-            if (!player.hasPermission("epicduels.duel")) {
-                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
-                return;
+    private void handleMainMenuClick(Player player, int slot) {
+        switch (slot) {
+            case 10 -> { // Diamond Sword — Duels
+                player.closeInventory();
+                plugin.getGUIManager().openDuelsMenu(player, 0);
             }
-            player.closeInventory();
-            plugin.getGUIManager().openPlayerSelect(player);
-            return;
+            case 13 -> { // Player Head — Stats
+                player.closeInventory();
+                plugin.getGUIManager().openStatsMenu(player);
+            }
+            case 16 -> { // Hopper — Matchmaking
+                player.closeInventory();
+                plugin.getGUIManager().openMatchmakingMenu(player, 0);
+            }
         }
-
-        // RIGHT SECTION: Queue (columns 6-8)
-        if (col >= 6) {
-            String itemName = getItemName(clicked);
-            if (itemName == null) return;
-
-            // Handle special buttons
-            if (itemName.equals("Random Kit")) {
-                handleQueueToggle(player, getRandomKitName());
-                return;
-            }
-            if (itemName.equals("No Kit")) {
-                handleQueueToggle(player, "__nokit__");
-                return;
-            }
-            if (itemName.equals("Queue / Matchmaking")) return;
-
-            // Regular kit queue button
-            Kit kit = plugin.getKitManager().getKit(itemName);
-            if (kit != null) {
-                handleQueueToggle(player, kit.getName());
-            }
-            return;
-        }
-
-        // MIDDLE SECTION: Stats (column 4) - no click action needed, stats are displayed inline
     }
 
-    private void handleQueueToggle(Player player, String kitName) {
-        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
-            return;
-        }
+    // ========== DUELS — PLAYER SELECT ==========
 
-        if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
-            plugin.getQueueManager().leaveQueue(player.getUniqueId());
-            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
-            player.sendActionBar(Component.empty());
+    private void handleDuelsMenuClick(Player player, int slot, ItemStack clicked) {
+        // Navigation
+        if (handlePagination(player, slot, GUIManager.DUELS_MENU_TITLE)) return;
+
+        // Back button
+        if (slot == GUIManager.BACK_SLOT) {
             player.closeInventory();
             plugin.getGUIManager().openMainMenu(player);
             return;
         }
 
-        if (kitName == null) {
-            player.sendMessage(Component.text("No kits available!", NamedTextColor.RED));
-            return;
-        }
-
-        boolean joined = plugin.getQueueManager().joinQueue(player.getUniqueId(), kitName);
-        if (joined) {
-            String displayName = kitName.equals("__nokit__") ? "No Kit" : kitName;
-            player.sendMessage(Component.text("You joined the queue for: " + displayName, NamedTextColor.GREEN));
-            player.closeInventory();
-        } else {
-            player.sendMessage(Component.text("Could not join queue. You may already be in a duel.", NamedTextColor.RED));
-        }
-    }
-
-    private String getRandomKitName() {
-        var kitNames = plugin.getKitManager().getKitNames();
-        if (kitNames.isEmpty()) return null;
-        return kitNames.get(new java.util.Random().nextInt(kitNames.size()));
-    }
-
-    private void handlePlayerSelectClick(Player player, ItemStack clicked) {
+        // Player head click
         if (clicked.getType() != Material.PLAYER_HEAD) return;
-
         SkullMeta meta = (SkullMeta) clicked.getItemMeta();
         if (meta.getOwningPlayer() == null) return;
 
@@ -173,11 +120,71 @@ public class GUIListener implements Listener {
         }
 
         player.closeInventory();
-        // After selecting player, open kit selection (new flow: player -> kit -> map)
         plugin.getGUIManager().openKitSelect(player, target.getUniqueId());
     }
 
-    private void handleKitSelectClick(Player player, ItemStack clicked) {
+    // ========== STATS ==========
+
+    private void handleStatsMenuClick(Player player, int slot) {
+        if (slot == 22) { // Back arrow
+            player.closeInventory();
+            plugin.getGUIManager().openMainMenu(player);
+        }
+    }
+
+    // ========== MATCHMAKING ==========
+
+    private void handleMatchmakingClick(Player player, int slot, ItemStack clicked) {
+        if (handlePagination(player, slot, GUIManager.MATCHMAKING_TITLE)) return;
+
+        if (slot == GUIManager.BACK_SLOT) {
+            player.closeInventory();
+            plugin.getGUIManager().openMainMenu(player);
+            return;
+        }
+
+        // Kit item click — toggle queue
+        String itemName = getItemName(clicked);
+        if (itemName == null) return;
+
+        Kit kit = plugin.getKitManager().getKit(itemName);
+        if (kit == null) return;
+
+        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+            return;
+        }
+
+        if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
+            plugin.getQueueManager().leaveQueue(player.getUniqueId());
+            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
+            player.sendActionBar(Component.empty());
+        } else {
+            boolean joined = plugin.getQueueManager().joinQueue(player.getUniqueId(), kit.getName());
+            if (joined) {
+                player.sendMessage(Component.text("You joined the queue for: " + kit.getName(), NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("Could not join queue.", NamedTextColor.RED));
+            }
+        }
+
+        // Refresh the menu to show updated queue status
+        player.closeInventory();
+        plugin.getGUIManager().openMatchmakingMenu(player,
+                plugin.getGUIManager().getPlayerPage(player.getUniqueId()));
+    }
+
+    // ========== KIT SELECT (challenge flow) ==========
+
+    private void handleKitSelectClick(Player player, int slot, ItemStack clicked) {
+        if (handlePagination(player, slot, GUIManager.KIT_SELECT_TITLE)) return;
+
+        if (slot == GUIManager.BACK_SLOT) {
+            player.closeInventory();
+            plugin.getGUIManager().openDuelsMenu(player, 0);
+            return;
+        }
+
         String itemName = getItemName(clicked);
         if (itemName == null) return;
 
@@ -195,12 +202,26 @@ public class GUIListener implements Listener {
         }
 
         player.closeInventory();
-        // After selecting kit, open map/arena selection
         plugin.getGUIManager().openArenaSelect(player, targetUUID, kit.getName());
     }
 
-    private void handleArenaSelectClick(Player player, ItemStack clicked, int slot, Inventory inv) {
-        // Check if this is the "Random Map" button (compass in last row center)
+    // ========== ARENA SELECT (challenge flow) ==========
+
+    private void handleArenaSelectClick(Player player, int slot, ItemStack clicked) {
+        if (handlePagination(player, slot, GUIManager.ARENA_SELECT_TITLE)) return;
+
+        if (slot == GUIManager.BACK_SLOT) {
+            UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+            player.closeInventory();
+            if (targetUUID != null) {
+                plugin.getGUIManager().openKitSelect(player, targetUUID);
+            } else {
+                plugin.getGUIManager().openDuelsMenu(player, 0);
+            }
+            return;
+        }
+
+        // Random Map compass
         if (clicked.getType() == Material.COMPASS) {
             String itemName = getItemName(clicked);
             if (itemName != null && itemName.equals("Random Map")) {
@@ -211,7 +232,6 @@ public class GUIListener implements Listener {
             }
         }
 
-        // Don't allow clicking during animation
         if (plugin.getGUIManager().isAnimating(player.getUniqueId())) return;
 
         String itemName = getItemName(clicked);
@@ -228,7 +248,16 @@ public class GUIListener implements Listener {
         plugin.getGUIManager().finishChallengeWithArena(player, arena.getName());
     }
 
-    private void handleKitListClick(Player player, ItemStack clicked) {
+    // ========== KIT LIST (admin) ==========
+
+    private void handleKitListClick(Player player, int slot, ItemStack clicked) {
+        if (handlePagination(player, slot, GUIManager.KIT_LIST_TITLE)) return;
+
+        if (slot == GUIManager.BACK_SLOT) {
+            player.closeInventory();
+            return;
+        }
+
         String itemName = getItemName(clicked);
         if (itemName == null) return;
 
@@ -238,6 +267,8 @@ public class GUIListener implements Listener {
         player.closeInventory();
         plugin.getGUIManager().openKitPreview(player, kit);
     }
+
+    // ========== KIT EDIT ==========
 
     private void handleKitEditClick(InventoryClickEvent event, Player player, String title) {
         int slot = event.getRawSlot();
@@ -279,6 +310,67 @@ public class GUIListener implements Listener {
             player.sendMessage(Component.text("Kit '" + kitName + "' saved!", NamedTextColor.GREEN));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.5f);
         }
+    }
+
+    // ========== PAGINATION ==========
+
+    /**
+     * Handles prev/next page clicks. Returns true if a nav button was clicked.
+     */
+    private boolean handlePagination(Player player, int slot, String menuTitle) {
+        int currentPage = plugin.getGUIManager().getPlayerPage(player.getUniqueId());
+
+        if (slot == GUIManager.PREV_SLOT) {
+            if (currentPage > 0) {
+                player.closeInventory();
+                openMenuAtPage(player, menuTitle, currentPage - 1);
+            }
+            return true;
+        }
+
+        if (slot == GUIManager.NEXT_SLOT) {
+            player.closeInventory();
+            openMenuAtPage(player, menuTitle, currentPage + 1);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void openMenuAtPage(Player player, String menuTitle, int page) {
+        switch (menuTitle) {
+            case GUIManager.DUELS_MENU_TITLE -> plugin.getGUIManager().openDuelsMenu(player, page);
+            case GUIManager.MATCHMAKING_TITLE -> plugin.getGUIManager().openMatchmakingMenu(player, page);
+            case GUIManager.KIT_SELECT_TITLE -> {
+                UUID target = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+                if (target != null) {
+                    plugin.getGUIManager().openKitSelect(player, target, page);
+                }
+            }
+            case GUIManager.ARENA_SELECT_TITLE -> {
+                UUID target = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+                String kit = plugin.getGUIManager().getChallengeKit(player.getUniqueId());
+                if (target != null && kit != null) {
+                    plugin.getGUIManager().openArenaSelect(player, target, kit, page);
+                }
+            }
+            case GUIManager.KIT_LIST_TITLE -> plugin.getGUIManager().openKitList(player, page);
+            case GUIManager.ARENA_LIST_TITLE -> plugin.getGUIManager().openArenaList(player, page);
+        }
+    }
+
+    // ========== Utility ==========
+
+    private boolean isOurGUI(String title) {
+        return title.equals(GUIManager.MAIN_MENU_TITLE)
+                || title.equals(GUIManager.DUELS_MENU_TITLE)
+                || title.equals(GUIManager.STATS_MENU_TITLE)
+                || title.equals(GUIManager.MATCHMAKING_TITLE)
+                || title.equals(GUIManager.KIT_SELECT_TITLE)
+                || title.equals(GUIManager.ARENA_SELECT_TITLE)
+                || title.equals(GUIManager.KIT_LIST_TITLE)
+                || title.equals(GUIManager.ARENA_LIST_TITLE)
+                || title.startsWith(GUIManager.KIT_PREVIEW_TITLE);
     }
 
     private String getInventoryTitle(Component title) {

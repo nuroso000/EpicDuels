@@ -21,192 +21,256 @@ import java.util.*;
 
 public class GUIManager {
 
-    public static final String MAIN_MENU_TITLE = "EpicDuels Menu";
-    public static final String ARENA_SELECT_TITLE = "Select Map";
+    // GUI title constants
+    public static final String MAIN_MENU_TITLE = "EpicDuels";
+    public static final String DUELS_MENU_TITLE = "Duels - Select Player";
+    public static final String STATS_MENU_TITLE = "Your Stats";
+    public static final String MATCHMAKING_TITLE = "Matchmaking";
     public static final String KIT_SELECT_TITLE = "Select Kit";
+    public static final String ARENA_SELECT_TITLE = "Select Map";
     public static final String KIT_EDIT_TITLE = "Edit Kit: ";
     public static final String KIT_PREVIEW_TITLE = "Preview Kit: ";
-    public static final String PLAYER_SELECT_TITLE = "Challenge Player";
-    public static final String QUEUE_KIT_SELECT_TITLE = "Queue - Select Kit";
+    public static final String KIT_LIST_TITLE = "Kits";
+    public static final String ARENA_LIST_TITLE = "Arenas";
+
+    // Paginated menu: item slots (rows 1-4, columns 1-7 in a 54-slot chest)
+    public static final int[] ITEM_SLOTS = {
+            10, 11, 12, 13, 14, 15, 16,
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34,
+            37, 38, 39, 40, 41, 42, 43
+    };
+    public static final int ITEMS_PER_PAGE = ITEM_SLOTS.length; // 28
+    public static final int PREV_SLOT = 45;
+    public static final int BACK_SLOT = 49;
+    public static final int NEXT_SLOT = 53;
 
     private final EpicDuels plugin;
 
-    // Track GUI state for challenge flow
+    // Challenge flow state
     private final Map<UUID, UUID> challengeTarget = new HashMap<>();
-    private final Map<UUID, String> challengeArena = new HashMap<>();
     private final Map<UUID, String> challengeKit = new HashMap<>();
 
-    // Track random map animation state
+    // Pagination state
+    private final Map<UUID, Integer> playerPage = new HashMap<>();
+
+    // Random map animation state
     private final Set<UUID> animatingPlayers = new HashSet<>();
 
     public GUIManager(EpicDuels plugin) {
         this.plugin = plugin;
     }
 
-    // ========== MAIN MENU (3-section layout in 54-slot chest) ==========
+    // ========== MAIN MENU (27 slots, 3 rows) ==========
 
     public void openMainMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, Component.text(MAIN_MENU_TITLE, NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(MAIN_MENU_TITLE, NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
 
-        // Fill entire inventory with dark glass
-        ItemStack darkPane = createPane(Material.GRAY_STAINED_GLASS_PANE);
-        for (int i = 0; i < 54; i++) {
-            inv.setItem(i, darkPane);
+        ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) {
+            inv.setItem(i, pane);
         }
 
-        // Section dividers (columns 3 and 6 - slots with index % 9 == 3 or 6)
-        ItemStack divider = createPane(Material.BLACK_STAINED_GLASS_PANE);
-        for (int row = 0; row < 6; row++) {
-            inv.setItem(row * 9 + 3, divider);
-            inv.setItem(row * 9 + 5, divider);
-        }
+        // Slot 10: Diamond Sword — Duels
+        inv.setItem(10, createItem(Material.DIAMOND_SWORD, "&a&lDuels",
+                "&7Challenge another player", "&7to a private duel!"));
 
-        // === LEFT SECTION: Challenge a Player (columns 0-2) ===
-        ItemStack leftHeader = createItem(Material.DIAMOND_SWORD, "&a&lChallenge a Player", "&7Click to challenge someone!");
-        inv.setItem(4 + 9 * 0, createItem(Material.NETHER_STAR, "&d&lEpicDuels", "&7Your one-stop duel menu"));
-
-        // Challenge button in center of left section
-        inv.setItem(9 + 1, leftHeader); // row 1, col 1
-        inv.setItem(18 + 1, createItem(Material.GOLDEN_SWORD, "&eSelect Player", "&7Pick an opponent to fight"));
-        inv.setItem(27 + 1, createItem(Material.IRON_SWORD, "&7Click above to begin", "&7a duel challenge!"));
-
-        // === MIDDLE SECTION: Stats (columns 4) ===
-        // Player head
-        ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta headMeta = (SkullMeta) playerHead.getItemMeta();
+        // Slot 13: Player Head — Stats
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta headMeta = (SkullMeta) head.getItemMeta();
         headMeta.setOwningPlayer(player);
-        headMeta.displayName(Component.text(player.getName(), NamedTextColor.GOLD, TextDecoration.BOLD).decoration(TextDecoration.ITALIC, false));
-        headMeta.lore(List.of(Component.text("Your Profile", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
-        playerHead.setItemMeta(headMeta);
-        inv.setItem(9 + 4, playerHead); // row 1, col 4
+        headMeta.displayName(Component.text("Stats", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .decoration(TextDecoration.ITALIC, false));
+        headMeta.lore(List.of(
+                Component.text("View your duel statistics", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        head.setItemMeta(headMeta);
+        inv.setItem(13, head);
 
-        // Stats book
-        PlayerStats stats = plugin.getStatsManager().getStats(player.getUniqueId());
-        ItemStack statsBook = new ItemStack(Material.BOOK);
-        ItemMeta bookMeta = statsBook.getItemMeta();
-        bookMeta.displayName(Component.text("Your Stats", NamedTextColor.GOLD, TextDecoration.BOLD).decoration(TextDecoration.ITALIC, false));
-        List<Component> statsLore = new ArrayList<>();
-        statsLore.add(Component.empty());
-        statsLore.add(Component.text("Wins: ", NamedTextColor.GRAY).append(Component.text(String.valueOf(stats.getWins()), NamedTextColor.GREEN)).decoration(TextDecoration.ITALIC, false));
-        statsLore.add(Component.text("Losses: ", NamedTextColor.GRAY).append(Component.text(String.valueOf(stats.getLosses()), NamedTextColor.RED)).decoration(TextDecoration.ITALIC, false));
-        statsLore.add(Component.text("Win Rate: ", NamedTextColor.GRAY).append(Component.text(String.format("%.1f%%", stats.getWinRate()), NamedTextColor.GOLD)).decoration(TextDecoration.ITALIC, false));
-        statsLore.add(Component.text("Total Duels: ", NamedTextColor.GRAY).append(Component.text(String.valueOf(stats.getTotalGames()), NamedTextColor.AQUA)).decoration(TextDecoration.ITALIC, false));
-        statsLore.add(Component.empty());
-        bookMeta.lore(statsLore);
-        statsBook.setItemMeta(bookMeta);
-        inv.setItem(27 + 4, statsBook); // row 3, col 4
-
-        // === RIGHT SECTION: Queue / Matchmaking (columns 6-8) ===
-        inv.setItem(9 + 7, createItem(Material.HOPPER, "&b&lQueue / Matchmaking", "&7Join a kit queue to", "&7auto-match with opponents"));
-
-        // Queue kit buttons
-        List<Kit> allKits = new ArrayList<>(plugin.getKitManager().getAllKits());
-        int[] queueSlots = {18 + 6, 18 + 7, 18 + 8, 27 + 6, 27 + 7, 27 + 8, 36 + 6, 36 + 7, 36 + 8};
-
-        int idx = 0;
-        for (Kit kit : allKits) {
-            if (idx >= queueSlots.length - 2) break; // Leave room for special buttons
-            int queueCount = plugin.getQueueManager().getQueueSize(kit.getName());
-            String queueStatus = plugin.getQueueManager().isInQueue(player.getUniqueId())
-                    && kit.getName().equalsIgnoreCase(plugin.getQueueManager().getQueuedKit(player.getUniqueId()))
-                    ? "&aQueued!" : "&7" + queueCount + " in queue";
-            inv.setItem(queueSlots[idx], createItem(kit.getDisplayIcon(), "&b" + kit.getName(), queueStatus, "&eClick to join/leave queue"));
-            idx++;
-        }
-
-        // Random Kit button
-        if (idx < queueSlots.length - 1) {
-            inv.setItem(queueSlots[queueSlots.length - 2], createItem(Material.ENDER_PEARL, "&dRandom Kit", "&7Queue with a random kit"));
-        }
-        // No Kit button
-        inv.setItem(queueSlots[queueSlots.length - 1], createItem(Material.BARRIER, "&cNo Kit", "&7Queue without a kit"));
+        // Slot 16: Hopper — Matchmaking
+        inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
+                "&7Join a queue to find", "&7an opponent automatically!"));
 
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
 
-    // ========== PLAYER SELECT ==========
+    // ========== DUELS — PLAYER SELECT (paginated, 54 slots) ==========
 
-    public void openPlayerSelect(Player player) {
-        List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
-        onlinePlayers.remove(player);
+    public void openDuelsMenu(Player player, int page) {
+        List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
+        online.remove(player);
+        online.removeIf(p -> plugin.getDuelManager().isInDuel(p.getUniqueId()));
 
-        int size = Math.min(54, Math.max(27, ((onlinePlayers.size() / 9) + 1) * 9 + 18));
-        Inventory inv = Bukkit.createInventory(null, size, Component.text(PLAYER_SELECT_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
+        int totalPages = Math.max(1, (int) Math.ceil((double) online.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(DUELS_MENU_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
         fillBorder(inv, Material.ORANGE_STAINED_GLASS_PANE);
 
-        int slot = 10;
-        for (Player target : onlinePlayers) {
-            if (slot >= size - 9) break;
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            SkullMeta meta = (SkullMeta) head.getItemMeta();
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < online.size(); i++) {
+            Player target = online.get(start + i);
+            ItemStack headItem = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) headItem.getItemMeta();
             meta.setOwningPlayer(target);
-            meta.displayName(Component.text(target.getName(), NamedTextColor.GREEN).decoration(TextDecoration.ITALIC, false));
-            meta.lore(List.of(Component.text("Click to challenge", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
-            head.setItemMeta(meta);
-            inv.setItem(slot, head);
-            slot++;
+            meta.displayName(Component.text(target.getName(), NamedTextColor.GREEN)
+                    .decoration(TextDecoration.ITALIC, false));
+            meta.lore(List.of(Component.text("Click to challenge", NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, false)));
+            headItem.setItemMeta(meta);
+            inv.setItem(ITEM_SLOTS[i], headItem);
         }
+
+        addNavigation(inv, page, totalPages);
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    // ========== STATS MENU (27 slots) ==========
+
+    public void openStatsMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(STATS_MENU_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
+
+        ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) {
+            inv.setItem(i, pane);
+        }
+
+        PlayerStats stats = plugin.getStatsManager().getStats(player.getUniqueId());
+
+        // Slot 4: Player head
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta headMeta = (SkullMeta) head.getItemMeta();
+        headMeta.setOwningPlayer(player);
+        headMeta.displayName(Component.text(player.getName(), NamedTextColor.GOLD, TextDecoration.BOLD)
+                .decoration(TextDecoration.ITALIC, false));
+        headMeta.lore(List.of(
+                Component.text("Your Duel Profile", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)
+        ));
+        head.setItemMeta(headMeta);
+        inv.setItem(4, head);
+
+        // Slot 10: Wins
+        inv.setItem(10, createItem(Material.EMERALD, "&a&lWins", "&7" + stats.getWins()));
+
+        // Slot 12: Overall
+        inv.setItem(12, createItem(Material.BOOK, "&6&lOverall",
+                "&7Total Duels: &f" + stats.getTotalGames(),
+                "&7Win Rate: &e" + String.format("%.1f%%", stats.getWinRate())));
+
+        // Slot 14: Losses
+        inv.setItem(14, createItem(Material.REDSTONE, "&c&lLosses", "&7" + stats.getLosses()));
+
+        // Slot 22: Back
+        inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to main menu"));
 
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
 
-    // ========== KIT SELECT (for challenge flow) ==========
+    // ========== MATCHMAKING MENU (paginated, 54 slots) ==========
 
-    public void openKitSelect(Player player, UUID targetPlayer) {
+    public void openMatchmakingMenu(Player player, int page) {
+        List<Kit> allKits = new ArrayList<>(plugin.getKitManager().getAllKits());
+
+        int totalPages = Math.max(1, (int) Math.ceil((double) allKits.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(MATCHMAKING_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
+        fillBorder(inv, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < allKits.size(); i++) {
+            Kit kit = allKits.get(start + i);
+            int queueCount = plugin.getQueueManager().getQueueSize(kit.getName());
+            boolean queued = plugin.getQueueManager().isInQueue(player.getUniqueId())
+                    && kit.getName().equalsIgnoreCase(plugin.getQueueManager().getQueuedKit(player.getUniqueId()));
+
+            String status = queued ? "&aQueued!" : "&7" + queueCount + " in queue";
+            String action = queued ? "&eClick to leave queue" : "&eClick to join queue";
+            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(), status, action));
+        }
+
+        addNavigation(inv, page, totalPages);
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    // ========== KIT SELECT — challenge flow (paginated) ==========
+
+    public void openKitSelect(Player player, UUID targetPlayer, int page) {
         challengeTarget.put(player.getUniqueId(), targetPlayer);
 
         List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
-        int size = Math.max(27, ((kits.size() / 7) + 1) * 9 + 18);
-        size = Math.min(54, size);
-        Inventory inv = Bukkit.createInventory(null, size, Component.text(KIT_SELECT_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
+        int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(KIT_SELECT_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
-        int slot = 10;
-        for (Kit kit : kits) {
-            if (slot >= size - 9) break;
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-
-            inv.setItem(slot, createItem(kit.getDisplayIcon(), "&b" + kit.getName(), "&7Click to select this kit"));
-            slot++;
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
+            Kit kit = kits.get(start + i);
+            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
+                    "&7Click to select this kit"));
         }
 
+        addNavigation(inv, page, totalPages);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
 
-    // ========== MAP/ARENA SELECT (after kit selection) ==========
+    public void openKitSelect(Player player, UUID targetPlayer) {
+        openKitSelect(player, targetPlayer, 0);
+    }
 
-    public void openArenaSelect(Player player, UUID targetPlayer, String kitName) {
+    // ========== ARENA / MAP SELECT — challenge flow (paginated) ==========
+
+    public void openArenaSelect(Player player, UUID targetPlayer, String kitName, int page) {
         challengeTarget.put(player.getUniqueId(), targetPlayer);
         challengeKit.put(player.getUniqueId(), kitName);
 
         List<Arena> readyArenas = plugin.getArenaManager().getReadyArenas();
-        int size = Math.max(27, ((readyArenas.size() / 7) + 2) * 9 + 18);
-        size = Math.min(54, size);
-        Inventory inv = Bukkit.createInventory(null, size, Component.text(ARENA_SELECT_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
+        // +1 for the "Random Map" entry
+        int totalItems = readyArenas.size() + 1;
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(ARENA_SELECT_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
         fillBorder(inv, Material.LIME_STAINED_GLASS_PANE);
 
-        int slot = 10;
+        // Build combined item list: arenas + Random Map compass
+        List<ItemStack> items = new ArrayList<>();
         for (Arena arena : readyArenas) {
-            if (slot >= size - 9) break;
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
+            items.add(createItem(arena.getDisplayIcon(), "&a" + arena.getName(), "&7Click to select this map"));
+        }
+        items.add(createItem(Material.COMPASS, "&e&lRandom Map", "&7Randomly picks a map",
+                "&7with a fun animation!"));
 
-            inv.setItem(slot, createItem(arena.getDisplayIcon(), "&a" + arena.getName(), "&7Click to select this map"));
-            slot++;
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < items.size(); i++) {
+            inv.setItem(ITEM_SLOTS[i], items.get(start + i));
         }
 
-        // Random Map button in last row center
-        inv.setItem(size - 5, createItem(Material.COMPASS, "&e&lRandom Map", "&7Randomly picks a map", "&7with a fun animation!"));
-
+        addNavigation(inv, page, totalPages);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    public void openArenaSelect(Player player, UUID targetPlayer, String kitName) {
+        openArenaSelect(player, targetPlayer, kitName, 0);
     }
 
     // ========== RANDOM MAP ANIMATION ==========
@@ -220,20 +284,14 @@ public class GUIManager {
         }
 
         animatingPlayers.add(player.getUniqueId());
-
-        // Choose the final arena
         Arena chosenArena = readyArenas.get(new Random().nextInt(readyArenas.size()));
 
         Inventory inv = player.getOpenInventory().getTopInventory();
-        int animSlot = inv.getSize() / 2; // Center slot
-
-        // Clear center area for animation
-        inv.setItem(animSlot, new ItemStack(Material.AIR));
+        int animSlot = 22; // center of rows 1-4
 
         new BukkitRunnable() {
             int ticks = 0;
-            int totalTicks = 50; // ~2.5 seconds at varying speed
-            int currentDelay = 2; // Start fast (100ms = 2 ticks)
+            int currentDelay = 2;
             int ticksSinceLastChange = 0;
             int arenaIndex = 0;
 
@@ -246,18 +304,16 @@ public class GUIManager {
                 }
 
                 ticksSinceLastChange++;
-
                 if (ticksSinceLastChange >= currentDelay) {
                     ticksSinceLastChange = 0;
                     Arena displayArena = readyArenas.get(arenaIndex % readyArenas.size());
                     arenaIndex++;
 
-                    inv.setItem(animSlot, createItem(displayArena.getDisplayIcon(), "&e" + displayArena.getName(), "&7Selecting..."));
+                    inv.setItem(animSlot, createItem(displayArena.getDisplayIcon(),
+                            "&e" + displayArena.getName(), "&7Selecting..."));
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.3f, 1.5f);
-
                     ticks++;
 
-                    // Gradually slow down
                     if (ticks > 15) currentDelay = 3;
                     if (ticks > 22) currentDelay = 4;
                     if (ticks > 27) currentDelay = 6;
@@ -265,21 +321,18 @@ public class GUIManager {
                     if (ticks > 33) currentDelay = 12;
 
                     if (ticks > 35) {
-                        // Final selection
-                        inv.setItem(animSlot, createItem(chosenArena.getDisplayIcon(), "&a&l" + chosenArena.getName(), "&aSelected!"));
+                        inv.setItem(animSlot, createItem(chosenArena.getDisplayIcon(),
+                                "&a&l" + chosenArena.getName(), "&aSelected!"));
                         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
                         animatingPlayers.remove(player.getUniqueId());
 
-                        // After a short delay, proceed with the challenge
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
                             if (player.isOnline()) {
                                 player.closeInventory();
                                 finishChallengeWithArena(player, chosenArena.getName());
                             }
                         }, 30L);
-
                         cancel();
-                        return;
                     }
                 }
             }
@@ -289,99 +342,86 @@ public class GUIManager {
     // ========== KIT EDIT / PREVIEW ==========
 
     public void openKitEdit(Player player, Kit kit) {
-        Inventory inv = Bukkit.createInventory(null, 54, Component.text(KIT_EDIT_TITLE + kit.getName(), NamedTextColor.GOLD, TextDecoration.BOLD));
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(KIT_EDIT_TITLE + kit.getName(), NamedTextColor.GOLD, TextDecoration.BOLD));
 
         ItemStack[] contents = kit.getContents();
         for (int i = 0; i < Math.min(contents.length, 36); i++) {
-            if (contents[i] != null) {
-                inv.setItem(i, contents[i].clone());
-            }
+            if (contents[i] != null) inv.setItem(i, contents[i].clone());
         }
-
         if (kit.getArmorContents() != null) {
             ItemStack[] armor = kit.getArmorContents();
             for (int i = 0; i < Math.min(armor.length, 4); i++) {
-                if (armor[i] != null) {
-                    inv.setItem(36 + i, armor[i].clone());
-                }
+                if (armor[i] != null) inv.setItem(36 + i, armor[i].clone());
             }
         }
-
-        if (kit.getOffHand() != null) {
-            inv.setItem(40, kit.getOffHand().clone());
-        }
-
+        if (kit.getOffHand() != null) inv.setItem(40, kit.getOffHand().clone());
         inv.setItem(53, createItem(Material.EMERALD, "&aSave Kit", "&7Click to save changes"));
 
         player.openInventory(inv);
     }
 
     public void openKitPreview(Player player, Kit kit) {
-        Inventory inv = Bukkit.createInventory(null, 54, Component.text(KIT_PREVIEW_TITLE + kit.getName(), NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(KIT_PREVIEW_TITLE + kit.getName(), NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
         fillBorder(inv, Material.GRAY_STAINED_GLASS_PANE);
 
         ItemStack[] contents = kit.getContents();
         for (int i = 0; i < Math.min(contents.length, 36); i++) {
-            if (contents[i] != null) {
-                inv.setItem(i + 9, contents[i].clone());
-            }
+            if (contents[i] != null) inv.setItem(i + 9, contents[i].clone());
         }
-
         if (kit.getArmorContents() != null) {
             ItemStack[] armor = kit.getArmorContents();
             for (int i = 0; i < Math.min(armor.length, 4); i++) {
-                if (armor[i] != null) {
-                    inv.setItem(45 + i, armor[i].clone());
-                }
+                if (armor[i] != null) inv.setItem(45 + i, armor[i].clone());
             }
         }
-
-        if (kit.getOffHand() != null) {
-            inv.setItem(49, kit.getOffHand().clone());
-        }
+        if (kit.getOffHand() != null) inv.setItem(49, kit.getOffHand().clone());
 
         player.openInventory(inv);
     }
 
-    public void openKitList(Player player) {
+    // ========== KIT LIST / ARENA LIST (paginated) ==========
+
+    public void openKitList(Player player, int page) {
         List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
-        int size = Math.max(27, ((kits.size() / 7) + 1) * 9 + 18);
-        size = Math.min(54, size);
-        Inventory inv = Bukkit.createInventory(null, size, Component.text("Kits", NamedTextColor.AQUA, TextDecoration.BOLD));
+        int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(KIT_LIST_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
-        int slot = 10;
-        for (Kit kit : kits) {
-            if (slot >= size - 9) break;
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-
-            inv.setItem(slot, createItem(kit.getDisplayIcon(), "&b" + kit.getName(), "&7Click to preview"));
-            slot++;
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
+            Kit kit = kits.get(start + i);
+            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(), "&7Click to preview"));
         }
 
+        addNavigation(inv, page, totalPages);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
 
-    public void openArenaList(Player player) {
-        Collection<Arena> arenas = plugin.getArenaManager().getAllArenas();
-        int size = Math.max(27, ((arenas.size() / 7) + 1) * 9 + 18);
-        size = Math.min(54, size);
-        Inventory inv = Bukkit.createInventory(null, size, Component.text("Arenas", NamedTextColor.GREEN, TextDecoration.BOLD));
+    public void openArenaList(Player player, int page) {
+        List<Arena> arenas = new ArrayList<>(plugin.getArenaManager().getAllArenas());
+        int totalPages = Math.max(1, (int) Math.ceil((double) arenas.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(ARENA_LIST_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
         fillBorder(inv, Material.LIME_STAINED_GLASS_PANE);
 
-        int slot = 10;
-        for (Arena arena : arenas) {
-            if (slot >= size - 9) break;
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < arenas.size(); i++) {
+            Arena arena = arenas.get(start + i);
             String status = arena.isReady() ? "&aReady" : "&cIncomplete";
-            inv.setItem(slot, createItem(arena.getDisplayIcon(), "&a" + arena.getName(), status));
-            slot++;
+            inv.setItem(ITEM_SLOTS[i], createItem(arena.getDisplayIcon(), "&a" + arena.getName(), status));
         }
 
+        addNavigation(inv, page, totalPages);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -391,7 +431,6 @@ public class GUIManager {
     public void finishChallengeWithArena(Player player, String arenaName) {
         UUID targetUUID = challengeTarget.get(player.getUniqueId());
         String kitName = challengeKit.get(player.getUniqueId());
-
         clearChallengeData(player.getUniqueId());
 
         if (targetUUID == null || kitName == null) return;
@@ -435,40 +474,55 @@ public class GUIManager {
         return challengeTarget.get(player);
     }
 
-    public String getChallengeArena(UUID player) {
-        return challengeArena.get(player);
-    }
-
     public String getChallengeKit(UUID player) {
         return challengeKit.get(player);
     }
 
-    public void setChallengeKit(UUID player, String kit) {
-        challengeKit.put(player, kit);
-    }
-
     public void clearChallengeData(UUID player) {
         challengeTarget.remove(player);
-        challengeArena.remove(player);
         challengeKit.remove(player);
         animatingPlayers.remove(player);
+        playerPage.remove(player);
     }
 
     public boolean isAnimating(UUID player) {
         return animatingPlayers.contains(player);
     }
 
-    // ========== Utility methods ==========
+    public int getPlayerPage(UUID playerId) {
+        return playerPage.getOrDefault(playerId, 0);
+    }
+
+    // ========== Navigation & Utility ==========
+
+    private void addNavigation(Inventory inv, int page, int totalPages) {
+        ItemStack navPane = createPane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 45; i < 54; i++) {
+            inv.setItem(i, navPane);
+        }
+
+        if (page > 0) {
+            inv.setItem(PREV_SLOT, createItem(Material.ARROW, "&ePrevious Page",
+                    "&7Page " + page + "/" + totalPages));
+        }
+
+        inv.setItem(BACK_SLOT, createItem(Material.BARRIER, "&cBack", "&7Return to previous menu"));
+
+        if (page < totalPages - 1) {
+            inv.setItem(NEXT_SLOT, createItem(Material.ARROW, "&eNext Page",
+                    "&7Page " + (page + 2) + "/" + totalPages));
+        }
+    }
+
+    private int clampPage(int page, int totalPages) {
+        return Math.max(0, Math.min(page, totalPages - 1));
+    }
 
     private void fillBorder(Inventory inv, Material pane) {
         ItemStack border = createPane(pane);
         int size = inv.getSize();
-        for (int i = 0; i < 9; i++) {
-            inv.setItem(i, border.clone());
-        }
-        for (int i = size - 9; i < size; i++) {
-            inv.setItem(i, border.clone());
-        }
+        for (int i = 0; i < 9; i++) inv.setItem(i, border.clone());
+        for (int i = size - 9; i < size; i++) inv.setItem(i, border.clone());
         for (int i = 9; i < size - 9; i += 9) {
             inv.setItem(i, border.clone());
             inv.setItem(i + 8, border.clone());

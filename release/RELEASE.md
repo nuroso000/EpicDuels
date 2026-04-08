@@ -2,23 +2,44 @@
 
 ---
 
-## v0.2.3 — Lobby Safety & Rejoin Cleanup
+## v0.2.3 — GUI Redesign, Spectator Mode & Lobby Safety
 
 **Date:** April 2026
 **Minecraft:** Paper 1.21.1+
 **Java:** 21
 
-### Bug Fixes
+### Major Changes
 
-- **Fixed duel items persisting after rejoin** — When a player disconnects mid-duel and rejoins, their inventory, armor, health, hunger, fire, and potion effects are now fully reset on join. No more leftover kit items in the lobby.
+- **Redesigned Main Menu** — The `/duel` menu is now a clean 27-slot (3-row) chest with three centered icons:
+  - **Slot 10 — Diamond Sword** → Opens the **Duels** sub-menu (player selection for private duels)
+  - **Slot 13 — Player Head** → Opens the **Stats** sub-menu (dedicated statistics view)
+  - **Slot 16 — Hopper** → Opens the **Matchmaking** sub-menu (kit-based queue selection)
+
+- **Separate Sub-Menus** — Duels, Stats, and Matchmaking each have their own dedicated GUI instead of being crammed into one screen. This keeps things clean and scalable.
+
+- **Pagination for all list GUIs** — Player select, kit select, arena/map select, matchmaking, kit list, and arena list all now support pagination with Previous/Next arrows and a Back button. Supports up to 28 items per page (4 rows × 7 columns).
+
+- **Stats Menu** — Dedicated 27-slot stats view with player head, emerald (wins), redstone (losses), and book (total duels + win rate).
 
 ### New Features
 
-- **Configurable lobby PvP protection** — PvP damage is now disabled outside of active duels by default. Players in the lobby can no longer attack each other. This can be toggled in `config.yml`:
+- **Spectate Command** — `/duel spectate <player>` (alias: `/d spec <player>`) teleports you to a player's active duel in Spectator mode. You are automatically returned to the lobby when the duel ends or when you disconnect. Run the command again (or `/d spectate`) to stop spectating.
+
+- **Configurable lobby PvP protection** — PvP damage is now disabled outside of active duels by default. Toggle in `config.yml`:
   ```yaml
   lobby:
     disable-pvp: true  # set to false to allow lobby PvP
   ```
+
+### Bug Fixes
+
+- **Fixed duel items persisting after rejoin** — Player inventory, armor, health, hunger, fire, and potion effects are fully reset on join.
+
+### Commands Added in v0.2.3
+
+| Command | Alias | Description | Permission |
+|---|---|---|---|
+| `/duel spectate <player>` | `/d spec <player>` | Spectate an active duel | `epicduels.duel` |
 
 ---
 

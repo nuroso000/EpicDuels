@@ -24,6 +24,8 @@ public class DuelManager {
     private final Map<UUID, DuelRequest> incomingRequests = new ConcurrentHashMap<>();
     private final Map<UUID, DuelInstance> activeDuels = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    // Spectator UUID -> the DuelInstance they are watching
+    private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
 
     public DuelManager(EpicDuels plugin) {
         this.plugin = plugin;
@@ -305,6 +307,9 @@ public class DuelManager {
             loser.showTitle(loseTitle);
         }
 
+        // Return spectators to lobby
+        removeSpectatorsForDuel(duel);
+
         String instanceWorldName = duel.getInstanceWorldName();
 
         // Wait 3 seconds then teleport and clean up
@@ -369,7 +374,58 @@ public class DuelManager {
         return null;
     }
 
+    // ========== Spectator methods ==========
+
+    public boolean addSpectator(Player spectator, DuelInstance duel) {
+        if (duel.getInstanceWorld() == null) return false;
+        spectators.put(spectator.getUniqueId(), duel);
+
+        // Teleport to the duel arena and set spectator mode
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Location spawnLoc = p1 != null ? p1.getLocation() : duel.getInstanceWorld().getSpawnLocation();
+        spectator.setGameMode(GameMode.SPECTATOR);
+        spectator.teleport(spawnLoc);
+        spectator.sendMessage(Component.text("You are now spectating a duel!", NamedTextColor.GREEN));
+        return true;
+    }
+
+    public void removeSpectator(UUID spectatorId) {
+        DuelInstance duel = spectators.remove(spectatorId);
+        if (duel == null) return;
+        Player spectator = Bukkit.getPlayer(spectatorId);
+        if (spectator != null && spectator.isOnline()) {
+            spectator.setGameMode(GameMode.SURVIVAL);
+            spectator.teleport(plugin.getLobbyLocation());
+            spectator.sendMessage(Component.text("You stopped spectating.", NamedTextColor.YELLOW));
+        }
+    }
+
+    public boolean isSpectating(UUID playerId) {
+        return spectators.containsKey(playerId);
+    }
+
+    private void removeSpectatorsForDuel(DuelInstance duel) {
+        Iterator<Map.Entry<UUID, DuelInstance>> it = spectators.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<UUID, DuelInstance> entry = it.next();
+            if (entry.getValue().getId().equals(duel.getId())) {
+                Player spectator = Bukkit.getPlayer(entry.getKey());
+                if (spectator != null && spectator.isOnline()) {
+                    spectator.setGameMode(GameMode.SURVIVAL);
+                    spectator.teleport(plugin.getLobbyLocation());
+                    spectator.sendMessage(Component.text("The duel has ended.", NamedTextColor.GRAY));
+                }
+                it.remove();
+            }
+        }
+    }
+
     public void cleanupAll() {
+        // Return all spectators to lobby
+        for (UUID specId : new HashSet<>(spectators.keySet())) {
+            removeSpectator(specId);
+        }
+
         for (DuelInstance duel : new HashSet<>(activeDuels.values())) {
             if (duel.isActive()) {
                 duel.setActive(false);
