@@ -2,6 +2,82 @@
 
 ---
 
+## v0.3.0 — Multi-Server Stats (Supabase & Firebase)
+
+**Date:** April 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+### Major Feature: Remote Stats Backends
+
+EpicDuels can now sync player statistics across multiple servers using **Supabase** (PostgreSQL) or **Firebase** Realtime Database. Configure the backend in `config.yml`:
+
+```yaml
+stats:
+  backend: "supabase"   # or "firebase" or "local" (default)
+```
+
+#### Supabase Setup
+
+1. Create a `player_stats` table in your Supabase SQL editor:
+   ```sql
+   CREATE TABLE IF NOT EXISTS player_stats (
+     uuid   TEXT PRIMARY KEY,
+     wins   INTEGER NOT NULL DEFAULT 0,
+     losses INTEGER NOT NULL DEFAULT 0
+   );
+   ```
+2. Fill in `config.yml`:
+   ```yaml
+   stats:
+     backend: "supabase"
+     supabase:
+       url: "https://your-project.supabase.co"
+       api-key: "your-anon-key"
+       table: "player_stats"
+   ```
+
+#### Firebase Setup
+
+1. Create a Firebase project and enable Realtime Database.
+2. Fill in `config.yml`:
+   ```yaml
+   stats:
+     backend: "firebase"
+     firebase:
+       database-url: "https://your-project-default-rtdb.firebaseio.com"
+       auth-token: ""   # optional database secret
+   ```
+
+### How It Works
+
+- **Local cache is always active** — `stats.yml` remains the primary cache. The plugin works normally even when the remote is unreachable.
+- **Async sync** — All remote reads/writes happen asynchronously and never block the main server thread.
+- **Merge on fetch** — When a player's stats are loaded from remote, the higher value for wins and losses is kept (local vs. remote), so no data is lost if two servers wrote different values.
+- **Push on change** — Every win/loss is pushed to the remote immediately after updating the local cache.
+- **Push on shutdown** — All cached stats are pushed to the remote during `onDisable` to ensure nothing is lost.
+
+### Architecture
+
+```
+StatsProvider (interface)
+├── SupabaseProvider  — PostgREST upsert via java.net.http
+└── FirebaseProvider  — Realtime Database REST via java.net.http
+```
+
+No external libraries required — uses Java 21's built-in `HttpClient`.
+
+### Other (included from v0.2.3)
+
+- Redesigned 27-slot main menu with Duels / Stats / Matchmaking sub-menus
+- Pagination for all list GUIs (28 items per page)
+- Dedicated Stats menu
+- `/duel spectate <player>` command
+- Configurable lobby PvP protection
+- Duel item cleanup on rejoin
+
+---
+
 ## v0.2.3 — GUI Redesign, Spectator Mode & Lobby Safety
 
 **Date:** April 2026

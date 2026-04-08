@@ -8,3 +8,42 @@ lobby:
   yaw: 0.0
   pitch: 0.0
   disable-pvp: true
+
+# ── Stats Backend ──────────────────────────────────────────
+# Controls where player statistics are stored.
+#
+#   "local"     — stats.yml only (default, single-server)
+#   "supabase"  — syncs with a Supabase (PostgreSQL) project
+#   "firebase"  — syncs with Firebase Realtime Database
+#
+# When a remote backend is active, stats.yml still acts as a
+# local cache so the plugin works even if the remote is down.
+# On every win/loss the data is pushed to the remote async.
+stats:
+  backend: "local"
+
+  # ── Supabase ───────────────────────────────────────────
+  # 1. Go to your Supabase project → SQL Editor and run:
+  #
+  #    CREATE TABLE IF NOT EXISTS player_stats (
+  #      uuid   TEXT PRIMARY KEY,
+  #      wins   INTEGER NOT NULL DEFAULT 0,
+  #      losses INTEGER NOT NULL DEFAULT 0
+  #    );
+  #
+  # 2. Copy your project URL and anon key from
+  #    Settings → API.
+  supabase:
+    url: ""
+    api-key: ""
+    table: "player_stats"
+
+  # ── Firebase ───────────────────────────────────────────
+  # 1. Create a Firebase project and enable Realtime Database.
+  # 2. Copy the database URL (e.g. https://my-project-default-rtdb.firebaseio.com).
+  # 3. (Optional) Set auth-token to your database secret for
+  #    authenticated writes, or leave empty if rules allow
+  #    public read/write.
+  firebase:
+    database-url: ""
+    auth-token: ""

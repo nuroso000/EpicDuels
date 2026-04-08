@@ -140,7 +140,10 @@ public class EpicDuels extends JavaPlugin {
         // Save all data
         if (arenaManager != null) arenaManager.saveArenas();
         if (kitManager != null) kitManager.saveKits();
-        if (statsManager != null) statsManager.saveStats();
+        if (statsManager != null) {
+            statsManager.saveStats();
+            statsManager.pushAllToRemote();
+        }
 
         getLogger().info("EpicDuels disabled!");
     }
