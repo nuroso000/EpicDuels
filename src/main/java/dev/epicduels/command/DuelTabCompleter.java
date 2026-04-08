@@ -27,7 +27,7 @@ public class DuelTabCompleter implements TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("menu", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec"));
+            List<String> subs = new ArrayList<>(Arrays.asList("menu", "duels", "matchmaking", "mm", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec"));
             if (sender.hasPermission("epicduels.admin")) {
                 subs.addAll(Arrays.asList("arena", "kit", "setlobby"));
             }

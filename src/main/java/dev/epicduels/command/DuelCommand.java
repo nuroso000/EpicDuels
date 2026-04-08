@@ -53,6 +53,20 @@ public class DuelCommand implements CommandExecutor {
             case "stats" -> handleStats(player, args);
             case "queue", "q" -> handleQueue(player, args);
             case "spectate", "spec" -> handleSpectate(player, args);
+            case "duels" -> {
+                if (!player.hasPermission("epicduels.duel")) {
+                    player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                    return true;
+                }
+                plugin.getGUIManager().openDuelsMenu(player, 0);
+            }
+            case "matchmaking", "mm" -> {
+                if (!player.hasPermission("epicduels.duel")) {
+                    player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                    return true;
+                }
+                plugin.getGUIManager().openMatchmakingMenu(player, 0);
+            }
             default -> sendHelp(player);
         }
 
@@ -516,26 +530,23 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        UUID targetUUID;
-        String targetName;
-
-        if (args.length >= 2) {
-            Player target = Bukkit.getPlayer(args[1]);
-            if (target == null) {
-                player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
-                return;
-            }
-            targetUUID = target.getUniqueId();
-            targetName = target.getName();
-        } else {
-            targetUUID = player.getUniqueId();
-            targetName = player.getName();
+        // No argument → open GUI stats menu for own profile
+        if (args.length < 2) {
+            plugin.getGUIManager().openStatsMenu(player);
+            return;
         }
 
-        PlayerStats stats = plugin.getStatsManager().getStats(targetUUID);
+        // With a player argument → show chat stats for that player
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null) {
+            player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
+            return;
+        }
+
+        PlayerStats stats = plugin.getStatsManager().getStats(target.getUniqueId());
 
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("=== " + targetName + "'s Stats ===", NamedTextColor.GOLD, TextDecoration.BOLD));
+        player.sendMessage(Component.text("=== " + target.getName() + "'s Stats ===", NamedTextColor.GOLD, TextDecoration.BOLD));
         player.sendMessage(Component.text(" Wins: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(stats.getWins()), NamedTextColor.GREEN)));
         player.sendMessage(Component.text(" Losses: ", NamedTextColor.GRAY)
@@ -551,11 +562,14 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("=== EpicDuels Help ===", NamedTextColor.GOLD, TextDecoration.BOLD));
         player.sendMessage(Component.text("/duel", NamedTextColor.YELLOW).append(Component.text(" - Open main menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel duels", NamedTextColor.YELLOW).append(Component.text(" - Open duels/player select menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel matchmaking", NamedTextColor.YELLOW).append(Component.text(" - Open matchmaking queue menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel stats", NamedTextColor.YELLOW).append(Component.text(" - Open stats menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel stats <player>", NamedTextColor.YELLOW).append(Component.text(" - View another player's stats in chat", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel challenge <player>", NamedTextColor.YELLOW).append(Component.text(" - Challenge a player", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel accept [player]", NamedTextColor.YELLOW).append(Component.text(" - Accept a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel deny [player]", NamedTextColor.YELLOW).append(Component.text(" - Deny a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel cancel", NamedTextColor.YELLOW).append(Component.text(" - Cancel outgoing request", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/duel stats [player]", NamedTextColor.YELLOW).append(Component.text(" - View stats", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
