@@ -3,6 +3,7 @@ package dev.epicduels;
 import dev.epicduels.command.DuelCommand;
 import dev.epicduels.command.DuelTabCompleter;
 import dev.epicduels.listener.GUIListener;
+import dev.epicduels.listener.LobbyProtectionListener;
 import dev.epicduels.listener.PlayerListener;
 import dev.epicduels.listener.WorldProtectionListener;
 import dev.epicduels.manager.*;
@@ -114,6 +115,7 @@ public class EpicDuels extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
+        getServer().getPluginManager().registerEvents(new LobbyProtectionListener(this), this);
 
         // Defer world operations to first tick (cannot create worlds during STARTUP phase)
         Bukkit.getScheduler().runTask(this, () -> {
