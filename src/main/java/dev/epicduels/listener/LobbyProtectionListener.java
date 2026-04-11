@@ -14,14 +14,18 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 
 /**
  * Applies lobby-world-only protections. The lobby world is any world that
- * is not an arena template or instance world. Admins keep their existing
- * bypass for block interaction so they can still set up the lobby.
+ * is not an arena template or instance world. Every handler is gated by
+ * a toggle under {@code lobby.protections.*} in config.yml so server
+ * admins can turn individual rules on or off.
  */
 public class LobbyProtectionListener implements Listener {
 
@@ -37,11 +41,16 @@ public class LobbyProtectionListener implements Listener {
         return !name.startsWith("arena_template_") && !name.startsWith("arena_instance_");
     }
 
+    private boolean enabled(String key) {
+        return plugin.getConfig().getBoolean("lobby.protections." + key, true);
+    }
+
     // --- Disable block interaction ---
     @EventHandler(priority = EventPriority.LOW)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
         if (!isLobby(event.getClickedBlock().getWorld())) return;
+        if (!enabled("block-interact")) return;
         if (event.getPlayer().hasPermission("epicduels.admin")) return;
         event.setCancelled(true);
     }
@@ -53,11 +62,11 @@ public class LobbyProtectionListener implements Listener {
         if (!isLobby(player.getWorld())) return;
 
         EntityDamageEvent.DamageCause cause = event.getCause();
-        if (cause == EntityDamageEvent.DamageCause.FALL) {
+        if (cause == EntityDamageEvent.DamageCause.FALL && enabled("fall-damage")) {
             event.setCancelled(true);
             return;
         }
-        if (cause == EntityDamageEvent.DamageCause.VOID) {
+        if (cause == EntityDamageEvent.DamageCause.VOID && enabled("void-death")) {
             event.setCancelled(true);
             if (plugin.getLobbyLocation() != null) {
                 player.teleport(plugin.getLobbyLocation());
@@ -69,6 +78,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent event) {
         if (!isLobby(event.getWorld())) return;
+        if (!enabled("weather")) return;
         if (event.toWeatherState()) event.setCancelled(true);
     }
 
@@ -77,6 +87,7 @@ public class LobbyProtectionListener implements Listener {
     public void onItemPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!isLobby(player.getWorld())) return;
+        if (!enabled("item-pickup")) return;
         event.setCancelled(true);
     }
 
@@ -84,6 +95,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onItemDrop(PlayerDropItemEvent event) {
         if (!isLobby(event.getPlayer().getWorld())) return;
+        if (!enabled("item-drop")) return;
         event.setCancelled(true);
     }
 
@@ -91,6 +103,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
         if (!isLobby(event.getLocation().getWorld())) return;
+        if (!enabled("mob-spawning")) return;
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
         // Allow admin/command-spawned entities
         if (reason == CreatureSpawnEvent.SpawnReason.COMMAND
@@ -105,6 +118,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onBlockSpread(BlockSpreadEvent event) {
         if (!isLobby(event.getBlock().getWorld())) return;
+        if (!enabled("fire-spread")) return;
         if (event.getNewState().getType().name().contains("FIRE")) {
             event.setCancelled(true);
         }
@@ -113,6 +127,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onBlockIgnite(BlockIgniteEvent event) {
         if (!isLobby(event.getBlock().getWorld())) return;
+        if (!enabled("fire-spread")) return;
         if (event.getCause() == BlockIgniteEvent.IgniteCause.SPREAD
                 || event.getCause() == BlockIgniteEvent.IgniteCause.LAVA) {
             event.setCancelled(true);
@@ -123,6 +138,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onBlockBurn(BlockBurnEvent event) {
         if (!isLobby(event.getBlock().getWorld())) return;
+        if (!enabled("block-burning")) return;
         event.setCancelled(true);
     }
 
@@ -130,6 +146,7 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (!isLobby(event.getEntity().getWorld())) return;
+        if (!enabled("death-messages")) return;
         event.deathMessage(null);
     }
 
@@ -137,6 +154,29 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onLeavesDecay(LeavesDecayEvent event) {
         if (!isLobby(event.getBlock().getWorld())) return;
+        if (!enabled("leaf-decay")) return;
+        event.setCancelled(true);
+    }
+
+    // --- Disable inventory movement (but allow plugin GUIs) ---
+    @EventHandler(priority = EventPriority.LOW)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!isLobby(player.getWorld())) return;
+        if (!enabled("inventory-movement")) return;
+        // Only block when no plugin GUI is open. When a chest GUI is
+        // open (main menu, kit edit, etc.) the top inventory type is
+        // CHEST — let GUIListener handle those.
+        if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) return;
+        event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!isLobby(player.getWorld())) return;
+        if (!enabled("inventory-movement")) return;
+        if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) return;
         event.setCancelled(true);
     }
 }

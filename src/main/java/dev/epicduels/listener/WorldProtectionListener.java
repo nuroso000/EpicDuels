@@ -38,7 +38,8 @@ public class WorldProtectionListener implements Listener {
             return;
         }
 
-        // Protect lobby for non-admins
+        // Protect lobby for non-admins (when enabled in config)
+        if (!plugin.getConfig().getBoolean("lobby.protections.block-place", true)) return;
         if (!event.getPlayer().hasPermission("epicduels.admin")) {
             event.setCancelled(true);
         }
@@ -69,7 +70,8 @@ public class WorldProtectionListener implements Listener {
             return;
         }
 
-        // Protect lobby for non-admins
+        // Protect lobby for non-admins (when enabled in config)
+        if (!plugin.getConfig().getBoolean("lobby.protections.block-break", true)) return;
         if (!event.getPlayer().hasPermission("epicduels.admin")) {
             event.setCancelled(true);
         }
@@ -80,9 +82,11 @@ public class WorldProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
         String worldName = player.getWorld().getName();
 
-        // Prevent hunger in lobby
+        // Prevent hunger in lobby (when enabled in config)
         if (!worldName.startsWith("arena_instance_") && !worldName.startsWith("arena_template_")) {
-            event.setCancelled(true);
+            if (plugin.getConfig().getBoolean("lobby.protections.hunger", true)) {
+                event.setCancelled(true);
+            }
         }
     }
 }
