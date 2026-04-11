@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class Arena {
 
-    private final String name;
+    private String name;
     private @Nullable Location spawn1;
     private @Nullable Location spawn2;
     private boolean ready;
@@ -19,6 +19,10 @@ public class Arena {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getWorldName() {

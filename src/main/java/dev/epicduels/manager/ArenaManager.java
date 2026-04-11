@@ -103,6 +103,70 @@ public class ArenaManager {
         return arena;
     }
 
+    /**
+     * Rename an arena. Renames the template world folder on disk, unloads
+     * the old world, reloads the new one, updates spawn Location world references,
+     * and saves arenas.yml. Returns null on success, or an error message on failure.
+     */
+    public String renameArena(String oldName, String newName) {
+        String oldKey = oldName.toLowerCase();
+        String newKey = newName.toLowerCase();
+
+        Arena arena = arenas.get(oldKey);
+        if (arena == null) return "Arena '" + oldName + "' not found.";
+        if (arenas.containsKey(newKey)) return "An arena named '" + newName + "' already exists.";
+        if (!newName.matches("[A-Za-z0-9_-]+")) return "Name may only contain letters, digits, underscore and dash.";
+
+        String oldWorldName = arena.getWorldName();
+        String newWorldName = "arena_template_" + newName;
+
+        // Evict any players currently in the old template world
+        World oldWorld = Bukkit.getWorld(oldWorldName);
+        if (oldWorld != null) {
+            Location fallback = plugin.getLobbyLocation();
+            if (fallback == null) fallback = Bukkit.getWorlds().get(0).getSpawnLocation();
+            for (Player p : oldWorld.getPlayers()) {
+                p.teleport(fallback);
+                p.setGameMode(GameMode.SURVIVAL);
+            }
+            boolean unloaded = Bukkit.unloadWorld(oldWorld, true);
+            if (!unloaded) {
+                return "Failed to unload world '" + oldWorldName + "'. Try again after no players are inside.";
+            }
+        }
+
+        // Rename the folder on disk
+        File oldDir = new File(Bukkit.getWorldContainer(), oldWorldName);
+        File newDir = new File(Bukkit.getWorldContainer(), newWorldName);
+        if (oldDir.exists()) {
+            if (newDir.exists()) {
+                return "Target world folder '" + newWorldName + "' already exists on disk.";
+            }
+            if (!oldDir.renameTo(newDir)) {
+                return "Failed to rename world folder on disk.";
+            }
+        }
+
+        // Drop any stale session.lock / uid.dat so Bukkit creates a fresh session
+        File sessionLock = new File(newDir, "session.lock");
+        if (sessionLock.exists()) sessionLock.delete();
+
+        // Update arena model + map
+        arenas.remove(oldKey);
+        arena.setName(newName);
+        // Clear spawn world references — they point at the now-unloaded old world
+        if (arena.getSpawn1() != null) arena.getSpawn1().setWorld(null);
+        if (arena.getSpawn2() != null) arena.getSpawn2().setWorld(null);
+        arenas.put(newKey, arena);
+
+        // Reload the template world under its new name and re-resolve spawns
+        ensureArenaWorldLoaded(arena);
+        resolveSpawnWorlds(arena);
+
+        saveArenas();
+        return null;
+    }
+
     public boolean deleteArena(String name) {
         String key = name.toLowerCase();
         Arena arena = arenas.remove(key);

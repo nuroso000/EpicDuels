@@ -38,12 +38,12 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "setspawn1", "setspawn2", "save", "list", "tp", "seticon"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "rename", "setspawn1", "setspawn2", "save", "list", "tp", "seticon"), args[1]);
                     }
                 }
                 case "kit" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "list", "edit", "preview", "seticon"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "rename", "list", "edit", "preview", "seticon"), args[1]);
                     }
                 }
                 case "challenge", "c", "accept", "deny", "spectate", "spec" -> {
@@ -64,7 +64,7 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("tp") || action.equals("seticon")) {
+                    if (action.equals("delete") || action.equals("tp") || action.equals("seticon") || action.equals("rename")) {
                         List<String> names = new ArrayList<>();
                         plugin.getArenaManager().getAllArenas().forEach(a -> names.add(a.getName()));
                         return filter(names, args[2]);
@@ -72,7 +72,7 @@ public class DuelTabCompleter implements TabCompleter {
                 }
                 case "kit" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon")) {
+                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon") || action.equals("rename")) {
                         return filter(plugin.getKitManager().getKitNames(), args[2]);
                     }
                 }

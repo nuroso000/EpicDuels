@@ -80,11 +80,13 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with multi-server 
 | `/duel arena setspawn2` | Set spawn point 2 (stand in arena world) | `epicduels.admin` |
 | `/duel arena save` | Save arena and mark as ready | `epicduels.admin` |
 | `/duel arena delete <name>` | Delete an arena | `epicduels.admin` |
+| `/duel arena rename <old> <new>` | Rename an arena (also renames its template world) | `epicduels.admin` |
 | `/duel arena list` | List all arenas with status | `epicduels.admin` |
 | `/duel arena tp <name>` | Teleport to arena template world | `epicduels.admin` |
 | `/duel arena seticon <name>` | Set arena icon (hold item in hand) | `epicduels.admin` |
 | `/duel kit create <name>` | Save current inventory as a kit | `epicduels.admin` |
 | `/duel kit delete <name>` | Delete a kit | `epicduels.admin` |
+| `/duel kit rename <old> <new>` | Rename a kit | `epicduels.admin` |
 | `/duel kit list` | List all kits | `epicduels.admin` |
 | `/duel kit edit <name>` | Edit kit in chest GUI | `epicduels.admin` |
 | `/duel kit preview <name>` | Preview kit contents (read-only) | `epicduels.admin` |

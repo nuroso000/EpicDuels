@@ -80,13 +80,25 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel arena <create|delete|setspawn1|setspawn2|save|list|tp|seticon> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel arena <create|delete|rename|setspawn1|setspawn2|save|list|tp|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
         String action = args[1].toLowerCase();
 
         switch (action) {
+            case "rename" -> {
+                if (args.length < 4) {
+                    player.sendMessage(Component.text("Usage: /duel arena rename <oldname> <newname>", NamedTextColor.YELLOW));
+                    return;
+                }
+                String error = plugin.getArenaManager().renameArena(args[2], args[3]);
+                if (error != null) {
+                    player.sendMessage(Component.text(error, NamedTextColor.RED));
+                } else {
+                    player.sendMessage(Component.text("Arena '" + args[2] + "' renamed to '" + args[3] + "'.", NamedTextColor.GREEN));
+                }
+            }
             case "create" -> {
                 if (args.length < 3) {
                     player.sendMessage(Component.text("Usage: /duel arena create <name>", NamedTextColor.YELLOW));
@@ -228,13 +240,25 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel kit <create|delete|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel kit <create|delete|rename|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
         String action = args[1].toLowerCase();
 
         switch (action) {
+            case "rename" -> {
+                if (args.length < 4) {
+                    player.sendMessage(Component.text("Usage: /duel kit rename <oldname> <newname>", NamedTextColor.YELLOW));
+                    return;
+                }
+                String error = plugin.getKitManager().renameKit(args[2], args[3]);
+                if (error != null) {
+                    player.sendMessage(Component.text(error, NamedTextColor.RED));
+                } else {
+                    player.sendMessage(Component.text("Kit '" + args[2] + "' renamed to '" + args[3] + "'.", NamedTextColor.GREEN));
+                }
+            }
             case "create" -> {
                 if (args.length < 3) {
                     player.sendMessage(Component.text("Usage: /duel kit create <name>", NamedTextColor.YELLOW));
