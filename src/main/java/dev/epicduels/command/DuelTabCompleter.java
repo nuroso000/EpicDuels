@@ -43,7 +43,7 @@ public class DuelTabCompleter implements TabCompleter {
                 }
                 case "kit" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "rename", "list", "edit", "preview", "seticon"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "rename", "give", "list", "edit", "preview", "seticon"), args[1]);
                     }
                 }
                 case "challenge", "c", "accept", "deny", "spectate", "spec" -> {
@@ -72,7 +72,7 @@ public class DuelTabCompleter implements TabCompleter {
                 }
                 case "kit" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon") || action.equals("rename")) {
+                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon") || action.equals("rename") || action.equals("give") || action.equals("copy") || action.equals("load")) {
                         return filter(plugin.getKitManager().getKitNames(), args[2]);
                     }
                 }

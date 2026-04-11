@@ -87,6 +87,7 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with multi-server 
 | `/duel kit create <name>` | Save current inventory as a kit | `epicduels.admin` |
 | `/duel kit delete <name>` | Delete a kit | `epicduels.admin` |
 | `/duel kit rename <old> <new>` | Rename a kit | `epicduels.admin` |
+| `/duel kit give <name>` | Copy a kit into your own inventory | `epicduels.admin` |
 | `/duel kit list` | List all kits | `epicduels.admin` |
 | `/duel kit edit <name>` | Edit kit in chest GUI | `epicduels.admin` |
 | `/duel kit preview <name>` | Preview kit contents (read-only) | `epicduels.admin` |

@@ -240,13 +240,49 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel kit <create|delete|rename|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel kit <create|delete|rename|give|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
         String action = args[1].toLowerCase();
 
         switch (action) {
+            case "give", "copy", "load" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Component.text("Usage: /duel kit give <name>", NamedTextColor.YELLOW));
+                    return;
+                }
+                Kit kit = plugin.getKitManager().getKit(args[2]);
+                if (kit == null) {
+                    player.sendMessage(Component.text("Kit not found.", NamedTextColor.RED));
+                    return;
+                }
+                // Clear current inventory first
+                player.getInventory().clear();
+                player.getInventory().setArmorContents(null);
+                player.getInventory().setItemInOffHand(null);
+
+                // Deep-copy so edits to the player's inventory don't mutate the kit
+                ItemStack[] src = kit.getContents();
+                ItemStack[] copy = new ItemStack[src.length];
+                for (int i = 0; i < src.length; i++) {
+                    copy[i] = src[i] != null ? src[i].clone() : null;
+                }
+                player.getInventory().setContents(copy);
+
+                if (kit.getArmorContents() != null) {
+                    ItemStack[] armorSrc = kit.getArmorContents();
+                    ItemStack[] armorCopy = new ItemStack[armorSrc.length];
+                    for (int i = 0; i < armorSrc.length; i++) {
+                        armorCopy[i] = armorSrc[i] != null ? armorSrc[i].clone() : null;
+                    }
+                    player.getInventory().setArmorContents(armorCopy);
+                }
+                if (kit.getOffHand() != null) {
+                    player.getInventory().setItemInOffHand(kit.getOffHand().clone());
+                }
+                player.sendMessage(Component.text("Kit '" + kit.getName() + "' copied into your inventory.", NamedTextColor.GREEN));
+            }
             case "rename" -> {
                 if (args.length < 4) {
                     player.sendMessage(Component.text("Usage: /duel kit rename <oldname> <newname>", NamedTextColor.YELLOW));
