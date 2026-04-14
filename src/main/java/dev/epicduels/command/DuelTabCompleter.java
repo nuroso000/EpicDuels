@@ -27,7 +27,7 @@ public class DuelTabCompleter implements TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("menu", "duels", "matchmaking", "mm", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec"));
+            List<String> subs = new ArrayList<>(Arrays.asList("menu", "duels", "matchmaking", "mm", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec", "leaderboard", "lb", "top"));
             if (sender.hasPermission("epicduels.admin")) {
                 subs.addAll(Arrays.asList("arena", "kit", "setlobby"));
             }
@@ -57,6 +57,13 @@ public class DuelTabCompleter implements TabCompleter {
                     opts.add("leave");
                     return filter(opts, args[1]);
                 }
+                case "leaderboard", "lb", "top" -> {
+                    List<String> opts = new ArrayList<>(Arrays.asList("wins", "score"));
+                    if (sender.hasPermission("epicduels.admin")) {
+                        opts.addAll(Arrays.asList("sethologram", "removehologram"));
+                    }
+                    return filter(opts, args[1]);
+                }
             }
         }
 
@@ -74,6 +81,12 @@ public class DuelTabCompleter implements TabCompleter {
                     String action = args[1].toLowerCase();
                     if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon") || action.equals("rename") || action.equals("give") || action.equals("copy") || action.equals("load")) {
                         return filter(plugin.getKitManager().getKitNames(), args[2]);
+                    }
+                }
+                case "leaderboard", "lb", "top" -> {
+                    String action = args[1].toLowerCase();
+                    if (action.equals("sethologram") || action.equals("removehologram")) {
+                        return filter(Arrays.asList("wins", "score"), args[2]);
                     }
                 }
             }

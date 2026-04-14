@@ -90,6 +90,7 @@ public class EpicDuels extends JavaPlugin {
     private QueueManager queueManager;
     private StatsManager statsManager;
     private GUIManager guiManager;
+    private HologramManager hologramManager;
 
     @Override
     public void onEnable() {
@@ -103,6 +104,7 @@ public class EpicDuels extends JavaPlugin {
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
         queueManager = new QueueManager(this);
+        hologramManager = new HologramManager(this);
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -121,6 +123,7 @@ public class EpicDuels extends JavaPlugin {
         Bukkit.getScheduler().runTask(this, () -> {
             setupVoidWorld();
             loadArenaWorlds();
+            hologramManager.load();
             getLogger().info("Arena worlds loaded.");
         });
 
@@ -137,6 +140,11 @@ public class EpicDuels extends JavaPlugin {
         // Cleanup queue
         if (queueManager != null) {
             queueManager.cleanup();
+        }
+
+        // Despawn leaderboard holograms
+        if (hologramManager != null) {
+            hologramManager.shutdown();
         }
 
         // Save all data
@@ -267,5 +275,9 @@ public class EpicDuels extends JavaPlugin {
 
     public GUIManager getGUIManager() {
         return guiManager;
+    }
+
+    public HologramManager getHologramManager() {
+        return hologramManager;
     }
 }

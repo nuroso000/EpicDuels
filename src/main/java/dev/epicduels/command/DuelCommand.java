@@ -67,6 +67,7 @@ public class DuelCommand implements CommandExecutor {
                 }
                 plugin.getGUIManager().openMatchmakingMenu(player, 0);
             }
+            case "leaderboard", "lb", "top" -> handleLeaderboard(player, args);
             default -> sendHelp(player);
         }
 
@@ -584,6 +585,105 @@ public class DuelCommand implements CommandExecutor {
         plugin.getDuelManager().addSpectator(player, duel);
     }
 
+    private void handleLeaderboard(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.stats")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
+        // Default: show wins leaderboard
+        String sub = args.length >= 2 ? args[1].toLowerCase() : "wins";
+
+        if (sub.equals("wins") || sub.equals("score")) {
+            printLeaderboard(player, sub);
+            return;
+        }
+
+        // Admin: /duel leaderboard sethologram <wins|score>
+        if (sub.equals("sethologram") || sub.equals("sethologramm")) {
+            if (!player.hasPermission("epicduels.admin")) {
+                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                return;
+            }
+            if (args.length < 3) {
+                player.sendMessage(Component.text("Usage: /duel leaderboard sethologram <wins|score>", NamedTextColor.YELLOW));
+                return;
+            }
+            dev.epicduels.manager.HologramManager.Type type = parseType(args[2]);
+            if (type == null) {
+                player.sendMessage(Component.text("Type must be 'wins' or 'score'.", NamedTextColor.RED));
+                return;
+            }
+            plugin.getHologramManager().setHologram(type, player.getLocation().clone().add(0, 2, 0));
+            player.sendMessage(Component.text(type.name() + " leaderboard hologram placed at your location.", NamedTextColor.GREEN));
+            return;
+        }
+
+        if (sub.equals("removehologram") || sub.equals("delhologram")) {
+            if (!player.hasPermission("epicduels.admin")) {
+                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                return;
+            }
+            if (args.length < 3) {
+                player.sendMessage(Component.text("Usage: /duel leaderboard removehologram <wins|score>", NamedTextColor.YELLOW));
+                return;
+            }
+            dev.epicduels.manager.HologramManager.Type type = parseType(args[2]);
+            if (type == null) {
+                player.sendMessage(Component.text("Type must be 'wins' or 'score'.", NamedTextColor.RED));
+                return;
+            }
+            if (plugin.getHologramManager().removeHologram(type)) {
+                player.sendMessage(Component.text(type.name() + " leaderboard hologram removed.", NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("No " + type.name() + " hologram was set.", NamedTextColor.RED));
+            }
+            return;
+        }
+
+        player.sendMessage(Component.text("Usage: /duel leaderboard <wins|score> [sethologram|removehologram <wins|score>]", NamedTextColor.YELLOW));
+    }
+
+    private dev.epicduels.manager.HologramManager.Type parseType(String s) {
+        return switch (s.toLowerCase()) {
+            case "wins", "win" -> dev.epicduels.manager.HologramManager.Type.WINS;
+            case "score" -> dev.epicduels.manager.HologramManager.Type.SCORE;
+            default -> null;
+        };
+    }
+
+    private void printLeaderboard(Player player, String type) {
+        boolean wins = type.equals("wins");
+        var entries = wins
+                ? plugin.getStatsManager().getTopByWins(10)
+                : plugin.getStatsManager().getTopByScore(10);
+
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("=== Top " + (wins ? "Wins" : "Score") + " ===", NamedTextColor.GOLD, TextDecoration.BOLD));
+        if (entries.isEmpty()) {
+            player.sendMessage(Component.text("  No data yet.", NamedTextColor.GRAY));
+            player.sendMessage(Component.empty());
+            return;
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(entry.uuid);
+            String name = op.getName() != null ? op.getName() : entry.uuid.toString().substring(0, 8);
+            int value = wins ? entry.wins : entry.score;
+            NamedTextColor rankColor = switch (i + 1) {
+                case 1 -> NamedTextColor.GOLD;
+                case 2 -> NamedTextColor.GRAY;
+                case 3 -> NamedTextColor.RED;
+                default -> NamedTextColor.WHITE;
+            };
+            player.sendMessage(Component.text("#" + (i + 1) + " ", rankColor, TextDecoration.BOLD)
+                    .append(Component.text(name, NamedTextColor.WHITE))
+                    .append(Component.text(" — ", NamedTextColor.GRAY))
+                    .append(Component.text(String.valueOf(value), NamedTextColor.YELLOW)));
+        }
+        player.sendMessage(Component.empty());
+    }
+
     private void handleStats(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -633,6 +733,7 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel leaderboard <wins|score>", NamedTextColor.YELLOW).append(Component.text(" - Show the top 10", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));

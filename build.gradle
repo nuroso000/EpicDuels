@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'dev.epicduels'
-version = '0.3.0'
+version = '1.0.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -28,6 +28,6 @@ tasks.withType(JavaCompile).configureEach {
 
 jar {
     archiveBaseName.set('EpicDuels')
-    archiveVersion.set('0.3.0')
+    archiveVersion.set('1.0.0')
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }

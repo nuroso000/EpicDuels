@@ -108,6 +108,17 @@ public class PlayerListener implements Listener {
         event.setKeepInventory(true);
         event.setKeepLevel(true);
 
+        // Instant respawn — Paper auto-respawn behavior — so players don't get
+        // stuck on the death screen when the respawn button is unresponsive.
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!deceased.isDead()) return;
+            try {
+                deceased.spigot().respawn();
+            } catch (Throwable ignored) {
+                // Fall back to next-tick attempt if respawn() is not available
+            }
+        });
+
         // End the duel - the opponent wins
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());
         plugin.getDuelManager().endDuel(duel, winnerId, deceased.getUniqueId());

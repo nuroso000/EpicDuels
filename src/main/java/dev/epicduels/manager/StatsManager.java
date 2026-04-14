@@ -9,7 +9,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -168,5 +171,62 @@ public class StatsManager {
             remoteProvider.push(entry.getKey(), entry.getValue());
         }
         plugin.getLogger().info("Pushed all stats to remote backend.");
+    }
+
+    // ========== Leaderboard ==========
+
+    /**
+     * Calculate a player's score.
+     * <p>
+     * Formula: {@code score = wins × winrate = wins² / (wins + losses)}, rounded.
+     * A player with 0 games has a score of 0.
+     */
+    public static int calculateScore(PlayerStats stats) {
+        if (stats == null) return 0;
+        int wins = stats.getWins();
+        int losses = stats.getLosses();
+        int total = wins + losses;
+        if (total == 0) return 0;
+        double score = (double) wins * wins / (double) total;
+        return (int) Math.round(score);
+    }
+
+    /** Snapshot of a leaderboard row — UUID + cached stats + derived score. */
+    public static final class LeaderboardEntry {
+        public final UUID uuid;
+        public final int wins;
+        public final int losses;
+        public final int score;
+
+        public LeaderboardEntry(UUID uuid, int wins, int losses, int score) {
+            this.uuid = uuid;
+            this.wins = wins;
+            this.losses = losses;
+            this.score = score;
+        }
+    }
+
+    /** Returns the top N players ordered by total wins (desc). */
+    public List<LeaderboardEntry> getTopByWins(int limit) {
+        return buildLeaderboard(Comparator.<LeaderboardEntry>comparingInt(e -> e.wins).reversed(), limit);
+    }
+
+    /** Returns the top N players ordered by score (desc). */
+    public List<LeaderboardEntry> getTopByScore(int limit) {
+        return buildLeaderboard(Comparator.<LeaderboardEntry>comparingInt(e -> e.score).reversed(), limit);
+    }
+
+    private List<LeaderboardEntry> buildLeaderboard(Comparator<LeaderboardEntry> order, int limit) {
+        List<LeaderboardEntry> all = new ArrayList<>(stats.size());
+        for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
+            PlayerStats s = entry.getValue();
+            if (s.getWins() == 0 && s.getLosses() == 0) continue;
+            all.add(new LeaderboardEntry(entry.getKey(), s.getWins(), s.getLosses(), calculateScore(s)));
+        }
+        all.sort(order);
+        if (all.size() > limit) {
+            return new ArrayList<>(all.subList(0, limit));
+        }
+        return all;
     }
 }

@@ -159,13 +159,18 @@ public class GUIManager {
         // Slot 10: Wins
         inv.setItem(10, createItem(Material.EMERALD, "&a&lWins", "&7" + stats.getWins()));
 
-        // Slot 12: Overall
-        inv.setItem(12, createItem(Material.BOOK, "&6&lOverall",
+        // Slot 12: Losses
+        inv.setItem(12, createItem(Material.REDSTONE, "&c&lLosses", "&7" + stats.getLosses()));
+
+        // Slot 14: Overall
+        inv.setItem(14, createItem(Material.BOOK, "&6&lOverall",
                 "&7Total Duels: &f" + stats.getTotalGames(),
                 "&7Win Rate: &e" + String.format("%.1f%%", stats.getWinRate())));
 
-        // Slot 14: Losses
-        inv.setItem(14, createItem(Material.REDSTONE, "&c&lLosses", "&7" + stats.getLosses()));
+        // Slot 16: Score
+        int score = dev.epicduels.manager.StatsManager.calculateScore(stats);
+        inv.setItem(16, createItem(Material.NETHER_STAR, "&e&lScore", "&7" + score,
+                "&8(wins" + "\u00b2" + " / (wins + losses))"));
 
         // Slot 22: Back
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to main menu"));

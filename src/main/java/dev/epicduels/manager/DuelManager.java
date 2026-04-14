@@ -146,6 +146,16 @@ public class DuelManager {
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
 
+        // Safety: ensure neither player is still sitting in a matchmaking queue
+        plugin.getQueueManager().removePlayer(player1.getUniqueId());
+        plugin.getQueueManager().removePlayer(player2.getUniqueId());
+
+        // Safety: cancel any outgoing/incoming duel requests for both players
+        cancelRequest(player1.getUniqueId());
+        cancelRequest(player2.getUniqueId());
+        denyRequest(player1.getUniqueId());
+        denyRequest(player2.getUniqueId());
+
         player1.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
         player2.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
 

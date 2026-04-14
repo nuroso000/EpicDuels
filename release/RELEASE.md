@@ -2,6 +2,122 @@
 
 ---
 
+## v1.0.0 — Full Release: Leaderboards, Holograms & Polish
+
+**Date:** April 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+This is the first **stable release** of EpicDuels. It brings a full leaderboard
+system with in-world holograms, two important stability fixes, and a long list
+of polished features carried over from the 0.2.x / 0.3.x series.
+
+### Major Feature — Leaderboards
+
+EpicDuels now ships with a complete leaderboard system:
+
+- **`/duel leaderboard wins`** — shows the top 10 players by total wins in chat
+- **`/duel leaderboard score`** — shows the top 10 players by **score** in chat
+- Both read from the same `StatsManager` that powers the Stats GUI, so local +
+  Supabase/Firebase-synced data is handled transparently.
+- Aliases: `/duel lb`, `/duel top`
+
+#### Score Formula
+
+The score rewards both activity *and* consistency:
+
+```
+score = wins × winrate = wins² / (wins + losses)
+```
+
+Example: a player with **21 wins / 9 losses** → winrate 70%, score ≈ 14.7 ≈ 15.
+Pure grinders with a low winrate score lower than players with fewer but more
+decisive wins.
+
+### Major Feature — Leaderboard Holograms
+
+Admins can place persistent in-world leaderboard holograms without installing
+any external plugin:
+
+- `/duel leaderboard sethologram wins` — places the Wins hologram at your head
+- `/duel leaderboard sethologram score` — places the Score hologram at your head
+- `/duel leaderboard removehologram <wins|score>` — deletes a hologram
+
+Under the hood:
+- Each hologram is a stack of invisible, marker, small ArmorStands tagged via
+  the Persistent Data Container so the plugin can clean them up even after a
+  crash or reload.
+- Positions are persisted in `leaderboards.yml`.
+- Holograms automatically refresh every **10 seconds** from the StatsManager,
+  so data stays fresh whether you're running local or remote stats.
+- Top 3 ranks are gold/gray/red, lines 4–10 are white. Each line shows
+  `#rank name — value`.
+
+### Bug Fixes
+
+- **Duel accept no longer keeps you in the queue** — When a player accepted a
+  duel request while sitting in matchmaking, they stayed queued and could get
+  matched into a second duel. `startDuel()` now proactively removes both
+  players from the queue, cancels any pending outgoing/incoming challenge
+  requests, and starts from a clean slate. Works for both challenge-based and
+  queue-based duels.
+
+- **Instant respawn in duels** — The death screen's "Respawn" button is
+  sometimes unresponsive on modded clients or when the server is briefly busy,
+  which left players stuck in the void. `PlayerDeathEvent` for duel
+  participants now schedules `player.spigot().respawn()` on the next tick, so
+  the losing player is immediately teleported back to the lobby.
+
+### Carried Forward from 0.3.x / 0.2.x
+
+All of the features from the 0.2.x and 0.3.x line are part of v1.0.0:
+
+- **Multi-server stats** — Supabase / Firebase REST-based sync, local YAML
+  cache as fallback (0.3.0).
+- **Direct menu commands** — `/duel duels`, `/duel matchmaking`, `/duel stats`
+  each open their sub-menu directly.
+- **Kit & Arena rename** — `/duel kit rename <old> <new>` and
+  `/duel arena rename <old> <new>` (also renames the template world on disk).
+- **/duel kit give** — admin command to copy a saved kit into the admin's
+  inventory for testing.
+- **Lobby-only protections** — 15 toggleable rules under `lobby.protections.*`
+  (block break/place/interact, fall damage, void death, weather, item
+  pickup/drop, hunger, mob spawning, fire spread, block burning, leaf decay,
+  death messages, inventory movement).
+- **Spectator mode** — `/duel spectate <player>`.
+- **Pagination** — 28 items per page across all list GUIs.
+- **GUI redesign** — 27-slot main menu with Duels / Stats / Matchmaking
+  sub-menus.
+- **Queue / Matchmaking** — Auto-match on same kit with action-bar time.
+- **Random map animation** — Slot-machine animation on random arena pick.
+- **Async world copy** — Every duel runs in its own disposable world.
+- **Block protection** — Per-duel original-block tracking.
+
+### Commands Added in v1.0.0
+
+| Command | Alias | Description | Permission |
+|---|---|---|---|
+| `/duel leaderboard wins` | `/d lb wins` | Top 10 by wins | `epicduels.stats` |
+| `/duel leaderboard score` | `/d lb score` | Top 10 by score | `epicduels.stats` |
+| `/duel leaderboard sethologram <wins\|score>` | | Create/move hologram at your location | `epicduels.admin` |
+| `/duel leaderboard removehologram <wins\|score>` | | Remove a leaderboard hologram | `epicduels.admin` |
+
+### Data Files Added
+
+| File | Contents |
+|---|---|
+| `leaderboards.yml` | Persistent hologram positions (per type) |
+
+### Upgrade Notes
+
+- Simply replace `EpicDuels-0.3.0.jar` with `EpicDuels-1.0.0.jar`. All existing
+  config, arenas, kits, stats and `.yml` files remain compatible.
+- Holograms are not created automatically — an admin must run
+  `/duel leaderboard sethologram wins` and `/duel leaderboard sethologram score`
+  once.
+
+---
+
 ## v0.3.0 — Multi-Server Stats (Supabase & Firebase)
 
 **Date:** April 2026
