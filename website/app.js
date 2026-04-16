@@ -26,9 +26,9 @@ function writeCache(cache) {
 // Strip dashes from UUID for skin APIs
 function rawUuid(uuid) { return uuid.replace(/-/g, ''); }
 
-// Build head image URL (crafatar with overlay)
+// Build head image URL — mc-heads.net renders custom player skins reliably
 function headUrl(uuid) {
-    return `https://crafatar.com/avatars/${rawUuid(uuid)}?size=48&overlay=true&default=MHF_Steve`;
+    return `https://mc-heads.net/avatar/${uuid}/44`;
 }
 
 // Fetch a single player name from playerdb.co with cache
@@ -72,15 +72,11 @@ async function fetchAllNames(uuids, concurrency = 4) {
     return results;
 }
 
-// ── Rank tier label from score ────────────────
-function rankTier(score) {
-    if (score >= 500) return { label: '✦ Legend',  cls: 'tier-legend'  };
-    if (score >= 300) return { label: '✦ Master',  cls: 'tier-master'  };
-    if (score >= 150) return { label: '◆ Diamond', cls: 'tier-diamond' };
-    if (score >= 75)  return { label: '★ Gold',    cls: 'tier-gold'    };
-    if (score >= 25)  return { label: '◈ Silver',  cls: 'tier-silver'  };
-    if (score >= 1)   return { label: '◉ Bronze',  cls: 'tier-bronze'  };
-    return               { label: 'Rookie',         cls: 'tier-rookie'  };
+// ── Score formula: wins × win_rate = wins² / (wins+losses) ──
+function calcScore(wins, losses) {
+    const total = wins + losses;
+    if (total === 0) return 0;
+    return Math.round((wins * wins) / total);
 }
 
 // ── Medal badge HTML ──────────────────────────
@@ -125,8 +121,7 @@ function skeletonRow(pos) {
         <div class="player-cell">
             <div class="player-head skel" style="width:44px;height:44px;"></div>
             <div class="player-info">
-                <div class="skel" style="width:120px;height:14px;margin-bottom:5px;"></div>
-                <div class="skel" style="width:70px;height:11px;"></div>
+                <div class="skel" style="width:120px;height:14px;"></div>
             </div>
         </div>
         <div class="col-wins skel" style="width:40px;height:13px;margin-left:auto;"></div>
@@ -140,9 +135,8 @@ function skeletonRow(pos) {
 function buildRow(player, pos, name) {
     const wins   = player.wins   ?? 0;
     const losses = player.losses ?? 0;
-    const score  = player.score  ?? wins * 10;   // no score column → derive from wins
+    const score  = calcScore(wins, losses);
     const { pct, str: wrStr } = winRate(wins, losses);
-    const tier   = rankTier(score);
     const rowCls = pos <= 3 ? `lb-row r${pos}` : 'lb-row';
     const uuid   = player.uuid;
 
@@ -154,10 +148,9 @@ function buildRow(player, pos, name) {
                  src="${headUrl(uuid)}"
                  alt="${esc(name)}"
                  loading="lazy"
-                 onerror="this.onerror=null;this.src='https://mc-heads.net/avatar/steve/48'">
+                 onerror="this.onerror=null;this.src='https://mc-heads.net/avatar/MHF_Steve/44'">
             <div class="player-info">
                 <div class="player-name">${esc(name)}</div>
-                <div class="player-tier ${tier.cls}">${tier.label}  ·  ${fmt(score)} Pkt.</div>
             </div>
         </div>
         <div class="col-wins">${fmt(wins)}</div>
@@ -174,7 +167,7 @@ function buildPodium(top3, names) {
     return top3.map((p, i) => {
         const wins   = p.wins   ?? 0;
         const losses = p.losses ?? 0;
-        const score  = p.score  ?? wins * 10;   // no score column → derive from wins
+        const score  = calcScore(wins, losses);
         const name   = names[i];
         return `
         <div class="podium-card ${classes[i]}">
@@ -237,23 +230,30 @@ async function loadLeaderboard() {
             return;
         }
 
-        // ── 2. Show skeletons immediately ────────
+        // ── 2. Sort by computed score (wins × win_rate) ──
+        data.sort((a, b) => {
+            const sa = calcScore(a.wins ?? 0, a.losses ?? 0);
+            const sb = calcScore(b.wins ?? 0, b.losses ?? 0);
+            return sb - sa;
+        });
+
+        // ── 3. Show skeletons immediately ────────
         elRows.innerHTML = data.map((_, i) => skeletonRow(i + 1)).join('');
 
-        // ── 3. Resolve names (concurrently, cached) ──
+        // ── 4. Resolve names (concurrently, cached) ──
         const uuids = data.map(p => p.uuid);
         const names = await fetchAllNames(uuids);
 
-        // ── 4. Render final rows ─────────────────
+        // ── 5. Render final rows ─────────────────
         elRows.innerHTML = data.map((p, i) => buildRow(p, i + 1, names[i])).join('');
 
-        // ── 5. Podium for top-3 ──────────────────
+        // ── 6. Podium for top-3 ──────────────────
         if (data.length >= 3) {
             elPodium.innerHTML = buildPodium(data.slice(0, 3), names.slice(0, 3));
             elPodium.hidden = false;
         }
 
-        // ── 6. Last-updated timestamp ────────────
+        // ── 7. Last-updated timestamp ────────────
         elUpdated.textContent = 'Stand: ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
     } catch (err) {
