@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EpicDuels – Leaderboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ── Navbar ── -->
+    <header class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="logo">
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M2 2l20 20"/><path d="M3 16l4 4"/>
+                </svg>
+                <span>EPIC<span class="logo-accent">DUELS</span></span>
+            </a>
+            <nav class="nav-links">
+                <a href="#" class="nav-link active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                    </svg>
+                    Rankings
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ── Hero ── -->
+    <div class="hero">
+        <div class="hero-inner">
+            <h1 class="hero-title">Leaderboard</h1>
+            <p class="hero-sub">Die besten Duellanten auf dem Server</p>
+        </div>
+    </div>
+
+    <!-- ── Content ── -->
+    <div class="content">
+
+        <!-- Top-3 Podium -->
+        <div class="podium" id="podium" hidden></div>
+
+        <!-- Table -->
+        <div class="lb-card">
+            <div class="lb-thead">
+                <span class="th-rank">#</span>
+                <span class="th-player">Spieler</span>
+                <span class="th-wins">Wins</span>
+                <span class="th-losses">Losses</span>
+                <span class="th-wr">Win Rate</span>
+                <span class="th-score">Score</span>
+            </div>
+
+            <div id="lb-body">
+                <!-- Loading -->
+                <div class="status-wrap" id="st-loading">
+                    <div class="spinner"></div>
+                    <p>Lade Spielerdaten…</p>
+                </div>
+                <!-- Error -->
+                <div class="status-wrap" id="st-error" hidden>
+                    <div class="status-emoji">⚠️</div>
+                    <p id="err-text">Verbindungsfehler.</p>
+                    <button class="retry-btn" onclick="loadLeaderboard()">Erneut versuchen</button>
+                </div>
+                <!-- Empty -->
+                <div class="status-wrap" id="st-empty" hidden>
+                    <div class="status-emoji">🎮</div>
+                    <p>Noch keine Spieler im Leaderboard.</p>
+                </div>
+                <!-- Rows injected here -->
+                <div id="lb-rows"></div>
+            </div>
+        </div>
+
+        <footer class="site-footer">
+            <span>EpicDuels Leaderboard</span>
+            <span class="dot">·</span>
+            <span>Powered by <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></span>
+            <span class="dot">·</span>
+            <span id="last-updated"></span>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
