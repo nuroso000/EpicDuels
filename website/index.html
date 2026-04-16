@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EpicDuels – Leaderboard</title>
+    <title>EuroPixel – Duels Leaderboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -15,10 +15,8 @@
     <header class="navbar">
         <div class="nav-inner">
             <a href="/" class="logo">
-                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M2 2l20 20"/><path d="M3 16l4 4"/>
-                </svg>
-                <span>EPIC<span class="logo-accent">DUELS</span></span>
+                <img src="https://i.ibb.co/Kc78nZPD/server-icon.png" alt="EuroPixel" class="logo-img">
+                <span>Euro<span class="logo-accent">Pixel</span></span>
             </a>
             <nav class="nav-links">
                 <a href="#" class="nav-link active">
@@ -35,7 +33,7 @@
     <div class="hero">
         <div class="hero-inner">
             <h1 class="hero-title">Leaderboard</h1>
-            <p class="hero-sub">Die besten Duellanten auf dem Server</p>
+            <p class="hero-sub">The best duelists on the server</p>
         </div>
     </div>
 
@@ -49,7 +47,7 @@
         <div class="lb-card">
             <div class="lb-thead">
                 <span class="th-rank">#</span>
-                <span class="th-player">Spieler</span>
+                <span class="th-player">Player</span>
                 <span class="th-wins">Wins</span>
                 <span class="th-losses">Losses</span>
                 <span class="th-wr">Win Rate</span>
@@ -60,18 +58,18 @@
                 <!-- Loading -->
                 <div class="status-wrap" id="st-loading">
                     <div class="spinner"></div>
-                    <p>Lade Spielerdaten…</p>
+                    <p>Loading player data…</p>
                 </div>
                 <!-- Error -->
                 <div class="status-wrap" id="st-error" hidden>
                     <div class="status-emoji">⚠️</div>
-                    <p id="err-text">Verbindungsfehler.</p>
-                    <button class="retry-btn" onclick="loadLeaderboard()">Erneut versuchen</button>
+                    <p id="err-text">Connection error.</p>
+                    <button class="retry-btn" onclick="loadLeaderboard()">Try again</button>
                 </div>
                 <!-- Empty -->
                 <div class="status-wrap" id="st-empty" hidden>
                     <div class="status-emoji">🎮</div>
-                    <p>Noch keine Spieler im Leaderboard.</p>
+                    <p>No players on the leaderboard yet.</p>
                 </div>
                 <!-- Rows injected here -->
                 <div id="lb-rows"></div>
@@ -79,7 +77,7 @@
         </div>
 
         <footer class="site-footer">
-            <span>EpicDuels Leaderboard</span>
+            <span>EuroPixel Duels Leaderboard</span>
             <span class="dot">·</span>
             <span>Powered by <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></span>
             <span class="dot">·</span>

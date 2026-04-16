@@ -254,15 +254,15 @@ async function loadLeaderboard() {
         }
 
         // ── 7. Last-updated timestamp ────────────
-        elUpdated.textContent = 'Stand: ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        elUpdated.textContent = 'Updated: ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
     } catch (err) {
         console.error('[EpicDuels LB]', err);
         elLoading.hidden = true;
         document.getElementById('err-text').textContent =
             err.message?.includes('fetch')
-                ? 'Supabase nicht erreichbar. Prüfe deine config.js.'
-                : `Fehler: ${err.message}`;
+                ? 'Cannot reach Supabase. Check your config.js.'
+                : `Error: ${err.message}`;
         elError.hidden = false;
     }
 }
