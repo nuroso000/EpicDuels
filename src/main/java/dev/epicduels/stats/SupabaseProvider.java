@@ -39,6 +39,32 @@ public class SupabaseProvider implements StatsProvider {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         this.logger = logger;
+        testConnection();
+    }
+
+    private void testConnection() {
+        String uri = baseUrl + "/rest/v1/" + table + "?select=uuid&limit=1";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(uri))
+                .header("apikey", apiKey)
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Accept", "application/json")
+                .GET()
+                .timeout(Duration.ofSeconds(10))
+                .build();
+        http.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() == 200) {
+                        logger.info("[Supabase] Connection test OK — table '" + table + "' is reachable.");
+                    } else {
+                        logger.severe("[Supabase] Connection test FAILED (HTTP " + response.statusCode() + "): " + response.body());
+                        logger.severe("[Supabase] If RLS is enabled, run: ALTER TABLE " + table + " DISABLE ROW LEVEL SECURITY;");
+                    }
+                })
+                .exceptionally(ex -> {
+                    logger.severe("[Supabase] Connection test FAILED — cannot reach " + baseUrl + ": " + ex.getMessage());
+                    return null;
+                });
     }
 
     @Override
@@ -85,8 +111,14 @@ public class SupabaseProvider implements StatsProvider {
 
         return http.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(response -> {
-                    if (response.statusCode() != 200 && response.statusCode() != 201) {
-                        logger.warning("[Supabase] UPSERT failed (" + response.statusCode() + "): " + response.body());
+                    int code = response.statusCode();
+                    if (code == 200 || code == 201 || code == 204) {
+                        logger.info("[Supabase] Pushed stats for " + playerId + " (" + stats.getWins() + "W/" + stats.getLosses() + "L)");
+                    } else {
+                        logger.warning("[Supabase] UPSERT failed (" + code + "): " + response.body());
+                        if (code == 401 || code == 403) {
+                            logger.warning("[Supabase] Check API key and RLS policies. Run: ALTER TABLE " + table + " DISABLE ROW LEVEL SECURITY;");
+                        }
                     }
                 })
                 .exceptionally(ex -> {

@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
@@ -167,10 +169,17 @@ public class StatsManager {
      */
     public void pushAllToRemote() {
         if (remoteProvider == null) return;
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
-            remoteProvider.push(entry.getKey(), entry.getValue());
+            futures.add(remoteProvider.push(entry.getKey(), entry.getValue()));
         }
-        plugin.getLogger().info("Pushed all stats to remote backend.");
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(15, TimeUnit.SECONDS);
+            plugin.getLogger().info("Pushed all stats to remote backend (" + futures.size() + " players).");
+        } catch (Exception e) {
+            plugin.getLogger().warning("Some stats may not have been pushed to remote: " + e.getMessage());
+        }
     }
 
     // ========== Leaderboard ==========
