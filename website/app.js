@@ -140,11 +140,11 @@ function skeletonRow(pos) {
 function buildRow(player, pos, name) {
     const wins   = player.wins   ?? 0;
     const losses = player.losses ?? 0;
-    const score  = player.score  ?? wins * 10;   // graceful fallback if no score column
+    const score  = player.score  ?? wins * 10;   // no score column → derive from wins
     const { pct, str: wrStr } = winRate(wins, losses);
     const tier   = rankTier(score);
     const rowCls = pos <= 3 ? `lb-row r${pos}` : 'lb-row';
-    const uuid   = player.player_uuid;
+    const uuid   = player.uuid;
 
     return `
     <div class="${rowCls}">
@@ -174,13 +174,13 @@ function buildPodium(top3, names) {
     return top3.map((p, i) => {
         const wins   = p.wins   ?? 0;
         const losses = p.losses ?? 0;
-        const score  = p.score  ?? wins * 10;
+        const score  = p.score  ?? wins * 10;   // no score column → derive from wins
         const name   = names[i];
         return `
         <div class="podium-card ${classes[i]}">
             <div class="podium-medal">${medals[i]}</div>
             <img class="podium-head"
-                 src="${headUrl(p.player_uuid)}"
+                 src="${headUrl(p.uuid)}"
                  alt="${esc(name)}"
                  loading="lazy"
                  onerror="this.onerror=null;this.src='https://mc-heads.net/avatar/steve/48'">
@@ -224,9 +224,8 @@ async function loadLeaderboard() {
         // ── 1. Fetch data from Supabase ──────────
         const { data, error } = await db
             .from(TABLE_NAME)
-            .select('player_uuid, wins, losses, score')
-            .order('score',  { ascending: false, nullsFirst: false })
-            .order('wins',   { ascending: false })
+            .select('uuid, wins, losses')
+            .order('wins', { ascending: false })
             .limit(100);
 
         if (error) throw error;
@@ -242,7 +241,7 @@ async function loadLeaderboard() {
         elRows.innerHTML = data.map((_, i) => skeletonRow(i + 1)).join('');
 
         // ── 3. Resolve names (concurrently, cached) ──
-        const uuids = data.map(p => p.player_uuid);
+        const uuids = data.map(p => p.uuid);
         const names = await fetchAllNames(uuids);
 
         // ── 4. Render final rows ─────────────────
