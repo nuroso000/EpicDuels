@@ -14,7 +14,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
@@ -22,33 +21,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
-/**
- * Manages leaderboard holograms made of stacked invisible ArmorStands.
- * <p>
- * Two holograms are supported: one ordered by {@link Type#WINS} and one by
- * {@link Type#SCORE}. Each hologram occupies a single configured location
- * and is periodically refreshed (every 10 seconds) from the StatsManager.
- * Positions persist to {@code leaderboards.yml}.
- */
 public class HologramManager {
 
-    /** Number of top entries shown per hologram. */
     private static final int TOP = 10;
-    /** Refresh interval in ticks (10 seconds). */
-    private static final long REFRESH_TICKS = 200L;
-    /** Vertical spacing between ArmorStand lines. */
-    private static final double LINE_HEIGHT = 0.28D;
-    /** Marker tag stored in ArmorStand persistent data container. */
+    private static final long REFRESH_TICKS = 1200L; // 60 seconds
+    private static final double LINE_HEIGHT = 0.3D;
     private static final String TAG_KEY = "epicduels_leaderboard";
 
     public enum Type {
         WINS, SCORE;
-
         public String key() { return name().toLowerCase(); }
     }
 
@@ -56,7 +43,8 @@ public class HologramManager {
     private final File dataFile;
     private final NamespacedKey tagKey;
     private final Map<Type, Location> locations = new EnumMap<>(Type.class);
-    private final Map<Type, List<UUID>> liveEntities = new EnumMap<>(Type.class);
+    private final Map<Type, List<ArmorStand>> liveEntities = new EnumMap<>(Type.class);
+    private final Map<UUID, String> nameCache = new HashMap<>();
     private BukkitTask refreshTask;
 
     public HologramManager(EpicDuels plugin) {
@@ -64,8 +52,6 @@ public class HologramManager {
         this.dataFile = new File(plugin.getDataFolder(), "leaderboards.yml");
         this.tagKey = new NamespacedKey(plugin, TAG_KEY);
     }
-
-    // ========== Lifecycle ==========
 
     public void load() {
         locations.clear();
@@ -81,20 +67,17 @@ public class HologramManager {
                     plugin.getLogger().warning("Leaderboard hologram world '" + worldName + "' not loaded — hologram skipped.");
                     continue;
                 }
-                Location loc = new Location(
+                locations.put(type, new Location(
                         world,
                         section.getDouble("x"),
                         section.getDouble("y"),
                         section.getDouble("z")
-                );
-                locations.put(type, loc);
+                ));
             }
         }
 
-        // Remove any leftover hologram entities from prior runs so we start clean
         removeOrphanEntities();
 
-        // Spawn the holograms at their configured locations
         for (Type type : locations.keySet()) {
             refresh(type);
         }
@@ -127,30 +110,25 @@ public class HologramManager {
         for (Type type : Type.values()) {
             removeEntities(type);
         }
+        liveEntities.clear();
+        nameCache.clear();
     }
 
     private void startRefreshTask() {
         if (refreshTask != null) refreshTask.cancel();
-        refreshTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Type type : Type.values()) {
-                    if (locations.containsKey(type)) refresh(type);
-                }
+        refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Type type : Type.values()) {
+                if (locations.containsKey(type)) refresh(type);
             }
-        }.runTaskTimer(plugin, REFRESH_TICKS, REFRESH_TICKS);
+        }, REFRESH_TICKS, REFRESH_TICKS);
     }
 
-    // ========== Public API ==========
-
-    /** Create or move a hologram to the given location. Saves config. */
     public void setHologram(Type type, Location location) {
         locations.put(type, location.clone());
         refresh(type);
         save();
     }
 
-    /** Remove a hologram (entities + persisted location). */
     public boolean removeHologram(Type type) {
         removeEntities(type);
         boolean had = locations.remove(type) != null;
@@ -162,35 +140,82 @@ public class HologramManager {
         return locations.containsKey(type);
     }
 
-    // ========== Rendering ==========
-
     private void refresh(Type type) {
         Location anchor = locations.get(type);
         if (anchor == null || anchor.getWorld() == null) return;
 
         List<Component> lines = buildLines(type);
+        List<ArmorStand> existing = liveEntities.get(type);
 
-        // Remove old entities first (simpler than in-place editing)
-        removeEntities(type);
+        if (existing != null && !existing.isEmpty() && existing.get(0).isValid()) {
+            updateInPlace(type, anchor, lines, existing);
+        } else {
+            removeEntities(type);
+            spawnFresh(type, anchor, lines);
+        }
+    }
 
-        List<UUID> created = new ArrayList<>();
-        for (int i = 0; i < lines.size(); i++) {
-            Location line = anchor.clone().add(0, -(i * LINE_HEIGHT), 0);
-            ArmorStand stand = anchor.getWorld().spawn(line, ArmorStand.class, as -> {
-                as.setVisible(false);
-                as.setGravity(false);
-                as.setMarker(true);
-                as.setSmall(true);
-                as.setCustomNameVisible(true);
-                as.setInvulnerable(true);
-                as.setPersistent(false);
-                as.setSilent(true);
-                as.getPersistentDataContainer().set(tagKey, PersistentDataType.STRING, type.key());
-            });
+    private void updateInPlace(Type type, Location anchor, List<Component> lines, List<ArmorStand> existing) {
+        int needed = lines.size();
+        int have = existing.size();
+
+        // Update existing stands
+        int toUpdate = Math.min(needed, have);
+        for (int i = 0; i < toUpdate; i++) {
+            ArmorStand stand = existing.get(i);
+            if (!stand.isValid()) {
+                removeEntities(type);
+                spawnFresh(type, anchor, lines);
+                return;
+            }
             stand.customName(lines.get(i));
-            created.add(stand.getUniqueId());
+            Location target = anchor.clone().add(0, -(i * LINE_HEIGHT), 0);
+            if (stand.getLocation().distanceSquared(target) > 0.01) {
+                stand.teleport(target);
+            }
+        }
+
+        // Remove extras
+        if (have > needed) {
+            for (int i = needed; i < have; i++) {
+                existing.get(i).remove();
+            }
+            liveEntities.put(type, new ArrayList<>(existing.subList(0, needed)));
+        }
+
+        // Spawn missing
+        if (needed > have) {
+            for (int i = have; i < needed; i++) {
+                Location loc = anchor.clone().add(0, -(i * LINE_HEIGHT), 0);
+                ArmorStand stand = spawnStand(anchor.getWorld(), loc, type, lines.get(i));
+                existing.add(stand);
+            }
+        }
+    }
+
+    private void spawnFresh(Type type, Location anchor, List<Component> lines) {
+        List<ArmorStand> created = new ArrayList<>(lines.size());
+        for (int i = 0; i < lines.size(); i++) {
+            Location loc = anchor.clone().add(0, -(i * LINE_HEIGHT), 0);
+            created.add(spawnStand(anchor.getWorld(), loc, type, lines.get(i)));
         }
         liveEntities.put(type, created);
+    }
+
+    private ArmorStand spawnStand(World world, Location loc, Type type, Component name) {
+        ArmorStand stand = world.spawn(loc, ArmorStand.class, as -> {
+            as.setVisible(false);
+            as.setGravity(false);
+            as.setMarker(true);
+            as.setSmall(true);
+            as.setCustomNameVisible(true);
+            as.setInvulnerable(true);
+            as.setPersistent(false);
+            as.setSilent(true);
+            as.getPersistentDataContainer().set(tagKey, PersistentDataType.STRING, type.key());
+        });
+        stand.customName(name);
+        return stand;
     }
 
     private List<Component> buildLines(Type type) {
@@ -198,7 +223,6 @@ public class HologramManager {
 
         String title = type == Type.WINS ? "Top Wins" : "Top Score";
         lines.add(Component.text("» " + title + " «", NamedTextColor.GOLD, TextDecoration.BOLD));
-        lines.add(Component.text(" "));
 
         List<StatsManager.LeaderboardEntry> top = type == Type.WINS
                 ? plugin.getStatsManager().getTopByWins(TOP)
@@ -211,8 +235,7 @@ public class HologramManager {
 
         for (int i = 0; i < top.size(); i++) {
             StatsManager.LeaderboardEntry entry = top.get(i);
-            OfflinePlayer op = Bukkit.getOfflinePlayer(entry.uuid);
-            String name = op.getName() != null ? op.getName() : entry.uuid.toString().substring(0, 8);
+            String name = resolvePlayerName(entry.uuid);
             int value = type == Type.WINS ? entry.wins : entry.score;
             NamedTextColor rankColor = rankColor(i + 1);
 
@@ -226,6 +249,16 @@ public class HologramManager {
         return lines;
     }
 
+    private String resolvePlayerName(UUID uuid) {
+        String cached = nameCache.get(uuid);
+        if (cached != null) return cached;
+
+        OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
+        String name = op.getName() != null ? op.getName() : uuid.toString().substring(0, 8);
+        nameCache.put(uuid, name);
+        return name;
+    }
+
     private NamedTextColor rankColor(int rank) {
         return switch (rank) {
             case 1 -> NamedTextColor.GOLD;
@@ -236,21 +269,18 @@ public class HologramManager {
     }
 
     private void removeEntities(Type type) {
-        List<UUID> ids = liveEntities.remove(type);
-        if (ids == null) return;
-        for (UUID id : ids) {
-            Entity entity = Bukkit.getEntity(id);
-            if (entity != null) entity.remove();
+        List<ArmorStand> entities = liveEntities.remove(type);
+        if (entities == null) return;
+        for (ArmorStand stand : entities) {
+            if (stand.isValid()) stand.remove();
         }
     }
 
-    /**
-     * Remove any leftover tagged ArmorStands in loaded worlds. Called on load
-     * so a server crash or reload never leaves orphan holograms around.
-     */
     private void removeOrphanEntities() {
-        for (World world : Bukkit.getWorlds()) {
-            Collection<ArmorStand> stands = world.getEntitiesByClass(ArmorStand.class);
+        for (Type type : Type.values()) {
+            Location loc = locations.get(type);
+            if (loc == null || loc.getWorld() == null) continue;
+            Collection<ArmorStand> stands = loc.getWorld().getEntitiesByClass(ArmorStand.class);
             for (ArmorStand stand : stands) {
                 if (stand.getPersistentDataContainer().has(tagKey, PersistentDataType.STRING)) {
                     stand.remove();

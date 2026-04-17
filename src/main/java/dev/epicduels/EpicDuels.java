@@ -121,6 +121,7 @@ public class EpicDuels extends JavaPlugin {
 
         // Defer world operations to first tick (cannot create worlds during STARTUP phase)
         Bukkit.getScheduler().runTask(this, () -> {
+            cleanupLeftoverInstances();
             setupVoidWorld();
             loadArenaWorlds();
             hologramManager.load();
@@ -161,6 +162,29 @@ public class EpicDuels extends JavaPlugin {
     @Override
     public @Nullable ChunkGenerator getDefaultWorldGenerator(@NotNull String worldName, @Nullable String id) {
         return new VoidWorldGenerator();
+    }
+
+    private void cleanupLeftoverInstances() {
+        File worldContainer = Bukkit.getWorldContainer();
+        File[] dirs = worldContainer.listFiles(File::isDirectory);
+        if (dirs == null) return;
+        int cleaned = 0;
+        for (File dir : dirs) {
+            if (dir.getName().startsWith("arena_instance_")) {
+                World w = Bukkit.getWorld(dir.getName());
+                if (w != null) {
+                    for (org.bukkit.entity.Player p : w.getPlayers()) {
+                        p.teleport(getLobbyLocation());
+                    }
+                    Bukkit.unloadWorld(w, false);
+                }
+                ArenaManager.deleteWorldFolder(dir);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            getLogger().info("Cleaned up " + cleaned + " leftover instance world(s) from previous run.");
+        }
     }
 
     private void setupVoidWorld() {

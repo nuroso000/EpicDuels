@@ -12,6 +12,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.*;
@@ -24,8 +25,8 @@ public class DuelManager {
     private final Map<UUID, DuelRequest> incomingRequests = new ConcurrentHashMap<>();
     private final Map<UUID, DuelInstance> activeDuels = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    // Spectator UUID -> the DuelInstance they are watching
     private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
+    private BukkitTask expirationTask;
 
     public DuelManager(EpicDuels plugin) {
         this.plugin = plugin;
@@ -33,7 +34,7 @@ public class DuelManager {
     }
 
     private void startExpirationTask() {
-        new BukkitRunnable() {
+        expirationTask = new BukkitRunnable() {
             @Override
             public void run() {
                 Iterator<Map.Entry<UUID, DuelRequest>> it = outgoingRequests.entrySet().iterator();
@@ -431,7 +432,11 @@ public class DuelManager {
     }
 
     public void cleanupAll() {
-        // Return all spectators to lobby
+        if (expirationTask != null) {
+            expirationTask.cancel();
+            expirationTask = null;
+        }
+
         for (UUID specId : new HashSet<>(spectators.keySet())) {
             removeSpectator(specId);
         }
@@ -448,6 +453,12 @@ public class DuelManager {
                 }
             }
         }
+
+        outgoingRequests.clear();
+        incomingRequests.clear();
+        activeDuels.clear();
+        frozenPlayers.clear();
+        spectators.clear();
     }
 
     private void preparePlayer(Player player) {

@@ -526,11 +526,11 @@ public class GUIManager {
     private void fillBorder(Inventory inv, Material pane) {
         ItemStack border = createPane(pane);
         int size = inv.getSize();
-        for (int i = 0; i < 9; i++) inv.setItem(i, border.clone());
-        for (int i = size - 9; i < size; i++) inv.setItem(i, border.clone());
+        for (int i = 0; i < 9; i++) inv.setItem(i, border);
+        for (int i = size - 9; i < size; i++) inv.setItem(i, border);
         for (int i = 9; i < size - 9; i += 9) {
-            inv.setItem(i, border.clone());
-            inv.setItem(i + 8, border.clone());
+            inv.setItem(i, border);
+            inv.setItem(i + 8, border);
         }
     }
 
