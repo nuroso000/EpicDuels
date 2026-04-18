@@ -29,7 +29,7 @@ public class DuelTabCompleter implements TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(Arrays.asList("menu", "duels", "matchmaking", "mm", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec", "leaderboard", "lb", "top"));
             if (sender.hasPermission("epicduels.admin")) {
-                subs.addAll(Arrays.asList("arena", "kit", "setlobby"));
+                subs.addAll(Arrays.asList("arena", "kit", "setlobby", "lobby"));
             }
             return filter(subs, args[0]);
         }
@@ -63,6 +63,11 @@ public class DuelTabCompleter implements TabCompleter {
                         opts.addAll(Arrays.asList("sethologram", "removehologram"));
                     }
                     return filter(opts, args[1]);
+                }
+                case "lobby" -> {
+                    if (sender.hasPermission("epicduels.admin")) {
+                        return filter(Arrays.asList("on", "off"), args[1]);
+                    }
                 }
             }
         }

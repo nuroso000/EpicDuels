@@ -2,6 +2,7 @@ package dev.epicduels.listener;
 
 import dev.epicduels.EpicDuels;
 import org.bukkit.World;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,6 +19,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 
@@ -42,6 +44,7 @@ public class LobbyProtectionListener implements Listener {
     }
 
     private boolean enabled(String key) {
+        if (!plugin.getConfig().getBoolean("lobby.protections.enabled", true)) return false;
         return plugin.getConfig().getBoolean("lobby.protections." + key, true);
     }
 
@@ -50,6 +53,15 @@ public class LobbyProtectionListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
         if (!isLobby(event.getClickedBlock().getWorld())) return;
+        if (!enabled("block-interact")) return;
+        if (event.getPlayer().hasPermission("epicduels.admin")) return;
+        event.setCancelled(true);
+    }
+
+    // --- Disable entity interaction (item frames, armor stands, etc.) ---
+    @EventHandler(priority = EventPriority.LOW)
+    public void onInteractEntity(PlayerInteractEntityEvent event) {
+        if (!isLobby(event.getPlayer().getWorld())) return;
         if (!enabled("block-interact")) return;
         if (event.getPlayer().hasPermission("epicduels.admin")) return;
         event.setCancelled(true);

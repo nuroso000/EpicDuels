@@ -68,6 +68,7 @@ public class DuelCommand implements CommandExecutor {
                 plugin.getGUIManager().openMatchmakingMenu(player, 0);
             }
             case "leaderboard", "lb", "top" -> handleLeaderboard(player, args);
+            case "lobby" -> handleLobby(player, args);
             default -> sendHelp(player);
         }
 
@@ -684,6 +685,35 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.empty());
     }
 
+    private void handleLobby(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.admin")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
+        if (args.length < 2) {
+            boolean current = plugin.getConfig().getBoolean("lobby.protections.enabled", true);
+            player.sendMessage(Component.text("Lobby protections are currently: ", NamedTextColor.GRAY)
+                    .append(Component.text(current ? "ON" : "OFF", current ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD)));
+            player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
+            return;
+        }
+
+        String toggle = args[1].toLowerCase();
+        if (toggle.equals("on")) {
+            plugin.getConfig().set("lobby.protections.enabled", true);
+            plugin.saveConfig();
+            player.sendMessage(Component.text("Lobby protections enabled.", NamedTextColor.GREEN));
+        } else if (toggle.equals("off")) {
+            plugin.getConfig().set("lobby.protections.enabled", false);
+            plugin.saveConfig();
+            player.sendMessage(Component.text("Lobby protections disabled.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Players can now interact, pick up items, move inventory, etc.", NamedTextColor.GRAY));
+        } else {
+            player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
+        }
+    }
+
     private void handleStats(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -738,6 +768,7 @@ public class DuelCommand implements CommandExecutor {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel setlobby", NamedTextColor.YELLOW).append(Component.text(" - Set lobby spawn", NamedTextColor.GRAY)));
+            player.sendMessage(Component.text("/duel lobby <on|off>", NamedTextColor.YELLOW).append(Component.text(" - Toggle lobby protections", NamedTextColor.GRAY)));
         }
         player.sendMessage(Component.empty());
     }
