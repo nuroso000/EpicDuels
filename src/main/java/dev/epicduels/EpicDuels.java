@@ -91,6 +91,7 @@ public class EpicDuels extends JavaPlugin {
     private StatsManager statsManager;
     private GUIManager guiManager;
     private HologramManager hologramManager;
+    private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
     public void onEnable() {
@@ -117,7 +118,8 @@ public class EpicDuels extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
-        getServer().getPluginManager().registerEvents(new LobbyProtectionListener(this), this);
+        lobbyProtectionListener = new LobbyProtectionListener(this);
+        getServer().getPluginManager().registerEvents(lobbyProtectionListener, this);
 
         // Defer world operations to first tick (cannot create worlds during STARTUP phase)
         Bukkit.getScheduler().runTask(this, () -> {
@@ -303,5 +305,9 @@ public class EpicDuels extends JavaPlugin {
 
     public HologramManager getHologramManager() {
         return hologramManager;
+    }
+
+    public LobbyProtectionListener getLobbyProtectionListener() {
+        return lobbyProtectionListener;
     }
 }

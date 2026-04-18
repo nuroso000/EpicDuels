@@ -14,7 +14,6 @@ lobby:
   # any world that is not an arena template or instance).
   # Set to false to allow the behavior in the lobby.
   protections:
-    enabled: true              # Master toggle — /duel lobby on|off
     block-break: true          # Cancel block breaking (admins bypass)
     block-place: true          # Cancel block placing (admins bypass)
     block-interact: true       # Cancel right/left click on blocks (admins bypass)

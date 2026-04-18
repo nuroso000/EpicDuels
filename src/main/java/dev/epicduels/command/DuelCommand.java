@@ -691,24 +691,24 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
+        var listener = plugin.getLobbyProtectionListener();
+
         if (args.length < 2) {
-            boolean current = plugin.getConfig().getBoolean("lobby.protections.enabled", true);
-            player.sendMessage(Component.text("Lobby protections are currently: ", NamedTextColor.GRAY)
-                    .append(Component.text(current ? "ON" : "OFF", current ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD)));
+            boolean bypassing = listener.isBypassing(player.getUniqueId());
+            player.sendMessage(Component.text("Lobby protections for you: ", NamedTextColor.GRAY)
+                    .append(Component.text(bypassing ? "OFF" : "ON", bypassing ? NamedTextColor.RED : NamedTextColor.GREEN, TextDecoration.BOLD)));
             player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
             return;
         }
 
         String toggle = args[1].toLowerCase();
         if (toggle.equals("on")) {
-            plugin.getConfig().set("lobby.protections.enabled", true);
-            plugin.saveConfig();
-            player.sendMessage(Component.text("Lobby protections enabled.", NamedTextColor.GREEN));
+            listener.setBypass(player.getUniqueId(), false);
+            player.sendMessage(Component.text("Lobby protections re-enabled for you.", NamedTextColor.GREEN));
         } else if (toggle.equals("off")) {
-            plugin.getConfig().set("lobby.protections.enabled", false);
-            plugin.saveConfig();
-            player.sendMessage(Component.text("Lobby protections disabled.", NamedTextColor.RED));
-            player.sendMessage(Component.text("Players can now interact, pick up items, move inventory, etc.", NamedTextColor.GRAY));
+            listener.setBypass(player.getUniqueId(), true);
+            player.sendMessage(Component.text("Lobby protections disabled for you.", NamedTextColor.RED));
+            player.sendMessage(Component.text("You can now interact, pick up items, move inventory, etc.", NamedTextColor.GRAY));
         } else {
             player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
         }

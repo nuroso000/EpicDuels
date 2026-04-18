@@ -4,6 +4,10 @@ import dev.epicduels.EpicDuels;
 import org.bukkit.World;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -32,9 +36,22 @@ import org.bukkit.event.weather.WeatherChangeEvent;
 public class LobbyProtectionListener implements Listener {
 
     private final EpicDuels plugin;
+    private final Set<UUID> bypassing = new HashSet<>();
 
     public LobbyProtectionListener(EpicDuels plugin) {
         this.plugin = plugin;
+    }
+
+    public void setBypass(UUID player, boolean bypass) {
+        if (bypass) {
+            bypassing.add(player);
+        } else {
+            bypassing.remove(player);
+        }
+    }
+
+    public boolean isBypassing(UUID player) {
+        return bypassing.contains(player);
     }
 
     private boolean isLobby(World world) {
@@ -44,7 +61,6 @@ public class LobbyProtectionListener implements Listener {
     }
 
     private boolean enabled(String key) {
-        if (!plugin.getConfig().getBoolean("lobby.protections.enabled", true)) return false;
         return plugin.getConfig().getBoolean("lobby.protections." + key, true);
     }
 
@@ -54,6 +70,7 @@ public class LobbyProtectionListener implements Listener {
         if (event.getClickedBlock() == null) return;
         if (!isLobby(event.getClickedBlock().getWorld())) return;
         if (!enabled("block-interact")) return;
+        if (bypassing.contains(event.getPlayer().getUniqueId())) return;
         if (event.getPlayer().hasPermission("epicduels.admin")) return;
         event.setCancelled(true);
     }
@@ -63,6 +80,7 @@ public class LobbyProtectionListener implements Listener {
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         if (!isLobby(event.getPlayer().getWorld())) return;
         if (!enabled("block-interact")) return;
+        if (bypassing.contains(event.getPlayer().getUniqueId())) return;
         if (event.getPlayer().hasPermission("epicduels.admin")) return;
         event.setCancelled(true);
     }
@@ -72,6 +90,7 @@ public class LobbyProtectionListener implements Listener {
     public void onDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!isLobby(player.getWorld())) return;
+        if (bypassing.contains(player.getUniqueId())) return;
 
         EntityDamageEvent.DamageCause cause = event.getCause();
         if (cause == EntityDamageEvent.DamageCause.FALL && enabled("fall-damage")) {
@@ -100,6 +119,7 @@ public class LobbyProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!isLobby(player.getWorld())) return;
         if (!enabled("item-pickup")) return;
+        if (bypassing.contains(player.getUniqueId())) return;
         event.setCancelled(true);
     }
 
@@ -108,6 +128,7 @@ public class LobbyProtectionListener implements Listener {
     public void onItemDrop(PlayerDropItemEvent event) {
         if (!isLobby(event.getPlayer().getWorld())) return;
         if (!enabled("item-drop")) return;
+        if (bypassing.contains(event.getPlayer().getUniqueId())) return;
         event.setCancelled(true);
     }
 
@@ -176,9 +197,7 @@ public class LobbyProtectionListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!isLobby(player.getWorld())) return;
         if (!enabled("inventory-movement")) return;
-        // Only block when no plugin GUI is open. When a chest GUI is
-        // open (main menu, kit edit, etc.) the top inventory type is
-        // CHEST — let GUIListener handle those.
+        if (bypassing.contains(player.getUniqueId())) return;
         if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) return;
         event.setCancelled(true);
     }
@@ -188,6 +207,7 @@ public class LobbyProtectionListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!isLobby(player.getWorld())) return;
         if (!enabled("inventory-movement")) return;
+        if (bypassing.contains(player.getUniqueId())) return;
         if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) return;
         event.setCancelled(true);
     }

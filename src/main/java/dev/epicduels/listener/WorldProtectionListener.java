@@ -40,6 +40,8 @@ public class WorldProtectionListener implements Listener {
 
         // Protect lobby for non-admins (when enabled in config)
         if (!plugin.getConfig().getBoolean("lobby.protections.block-place", true)) return;
+        if (plugin.getLobbyProtectionListener() != null
+                && plugin.getLobbyProtectionListener().isBypassing(event.getPlayer().getUniqueId())) return;
         if (!event.getPlayer().hasPermission("epicduels.admin")) {
             event.setCancelled(true);
         }
@@ -61,10 +63,8 @@ public class WorldProtectionListener implements Listener {
 
             Block b = event.getBlock();
             if (duel.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
-                // Player-placed block — allow and remove from tracking
                 duel.removePlayerBlock(b.getX(), b.getY(), b.getZ());
             } else {
-                // Original map block — deny
                 event.setCancelled(true);
             }
             return;
@@ -72,6 +72,8 @@ public class WorldProtectionListener implements Listener {
 
         // Protect lobby for non-admins (when enabled in config)
         if (!plugin.getConfig().getBoolean("lobby.protections.block-break", true)) return;
+        if (plugin.getLobbyProtectionListener() != null
+                && plugin.getLobbyProtectionListener().isBypassing(event.getPlayer().getUniqueId())) return;
         if (!event.getPlayer().hasPermission("epicduels.admin")) {
             event.setCancelled(true);
         }
@@ -82,9 +84,10 @@ public class WorldProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
         String worldName = player.getWorld().getName();
 
-        // Prevent hunger in lobby (when enabled in config)
         if (!worldName.startsWith("arena_instance_") && !worldName.startsWith("arena_template_")) {
             if (plugin.getConfig().getBoolean("lobby.protections.hunger", true)) {
+                if (plugin.getLobbyProtectionListener() != null
+                        && plugin.getLobbyProtectionListener().isBypassing(player.getUniqueId())) return;
                 event.setCancelled(true);
             }
         }
