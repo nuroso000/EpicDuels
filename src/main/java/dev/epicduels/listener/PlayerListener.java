@@ -34,6 +34,7 @@ public class PlayerListener implements Listener {
         player.setSaturation(20f);
         player.setFireTicks(0);
         player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+        player.setGameMode(org.bukkit.GameMode.ADVENTURE);
         player.teleport(plugin.getLobbyLocation());
     }
 

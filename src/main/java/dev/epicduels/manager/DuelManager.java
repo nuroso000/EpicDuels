@@ -334,6 +334,7 @@ public class DuelManager {
                     winner.setHealth(winner.getMaxHealth());
                     winner.setFoodLevel(20);
                     winner.setSaturation(20f);
+                    winner.setGameMode(GameMode.ADVENTURE);
                     winner.teleport(lobby);
                 }
                 if (loser != null && loser.isOnline()) {
@@ -341,6 +342,7 @@ public class DuelManager {
                     loser.setHealth(loser.getMaxHealth());
                     loser.setFoodLevel(20);
                     loser.setSaturation(20f);
+                    loser.setGameMode(GameMode.ADVENTURE);
                     loser.teleport(lobby);
                 }
 
@@ -405,7 +407,7 @@ public class DuelManager {
         if (duel == null) return;
         Player spectator = Bukkit.getPlayer(spectatorId);
         if (spectator != null && spectator.isOnline()) {
-            spectator.setGameMode(GameMode.SURVIVAL);
+            spectator.setGameMode(GameMode.ADVENTURE);
             spectator.teleport(plugin.getLobbyLocation());
             spectator.sendMessage(Component.text("You stopped spectating.", NamedTextColor.YELLOW));
         }
@@ -422,7 +424,7 @@ public class DuelManager {
             if (entry.getValue().getId().equals(duel.getId())) {
                 Player spectator = Bukkit.getPlayer(entry.getKey());
                 if (spectator != null && spectator.isOnline()) {
-                    spectator.setGameMode(GameMode.SURVIVAL);
+                    spectator.setGameMode(GameMode.ADVENTURE);
                     spectator.teleport(plugin.getLobbyLocation());
                     spectator.sendMessage(Component.text("The duel has ended.", NamedTextColor.GRAY));
                 }

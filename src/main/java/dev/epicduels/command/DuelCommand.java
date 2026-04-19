@@ -704,9 +704,11 @@ public class DuelCommand implements CommandExecutor {
         String toggle = args[1].toLowerCase();
         if (toggle.equals("on")) {
             listener.setBypass(player.getUniqueId(), false);
+            player.setGameMode(org.bukkit.GameMode.ADVENTURE);
             player.sendMessage(Component.text("Lobby protections re-enabled for you.", NamedTextColor.GREEN));
         } else if (toggle.equals("off")) {
             listener.setBypass(player.getUniqueId(), true);
+            player.setGameMode(org.bukkit.GameMode.CREATIVE);
             player.sendMessage(Component.text("Lobby protections disabled for you.", NamedTextColor.RED));
             player.sendMessage(Component.text("You can now interact, pick up items, move inventory, etc.", NamedTextColor.GRAY));
         } else {
