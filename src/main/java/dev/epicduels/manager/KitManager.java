@@ -87,6 +87,25 @@ public class KitManager {
         return kit;
     }
 
+    /**
+     * Rename a kit. Returns null on success, or an error message on failure.
+     */
+    public String renameKit(String oldName, String newName) {
+        String oldKey = oldName.toLowerCase();
+        String newKey = newName.toLowerCase();
+
+        Kit kit = kits.get(oldKey);
+        if (kit == null) return "Kit '" + oldName + "' not found.";
+        if (kits.containsKey(newKey)) return "A kit named '" + newName + "' already exists.";
+        if (!newName.matches("[A-Za-z0-9_-]+")) return "Name may only contain letters, digits, underscore and dash.";
+
+        kits.remove(oldKey);
+        kit.setName(newName);
+        kits.put(newKey, kit);
+        saveKits();
+        return null;
+    }
+
     public boolean deleteKit(String name) {
         Kit removed = kits.remove(name.toLowerCase());
         if (removed == null) return false;

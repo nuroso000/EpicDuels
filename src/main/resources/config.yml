@@ -8,3 +8,63 @@ lobby:
   yaw: 0.0
   pitch: 0.0
   disable-pvp: true
+
+  # ── Lobby protections ──────────────────────────────────
+  # These toggles apply only inside the lobby world (i.e.
+  # any world that is not an arena template or instance).
+  # Set to false to allow the behavior in the lobby.
+  protections:
+    block-break: true          # Cancel block breaking (admins bypass)
+    block-place: true          # Cancel block placing (admins bypass)
+    block-interact: true       # Cancel right/left click on blocks (admins bypass)
+    fall-damage: true          # Cancel fall damage
+    void-death: true           # Cancel void damage and teleport to lobby spawn
+    weather: true              # Cancel weather changes (keep it sunny)
+    item-pickup: true          # Cancel item pickups
+    item-drop: true            # Cancel item drops
+    hunger: true               # Cancel food level decrease
+    mob-spawning: true         # Cancel natural mob spawns
+    fire-spread: true          # Cancel fire spread / ignite from spread/lava
+    block-burning: true        # Cancel block burning
+    death-messages: true       # Suppress death messages for lobby deaths
+    leaf-decay: true           # Cancel leaf decay
+    inventory-movement: true   # Cancel inventory clicks/drags when no plugin GUI is open
+
+# ── Stats Backend ──────────────────────────────────────────
+# Controls where player statistics are stored.
+#
+#   "local"     — stats.yml only (default, single-server)
+#   "supabase"  — syncs with a Supabase (PostgreSQL) project
+#   "firebase"  — syncs with Firebase Realtime Database
+#
+# When a remote backend is active, stats.yml still acts as a
+# local cache so the plugin works even if the remote is down.
+# On every win/loss the data is pushed to the remote async.
+stats:
+  backend: "local"
+
+  # ── Supabase ───────────────────────────────────────────
+  # 1. Go to your Supabase project → SQL Editor and run:
+  #
+  #    CREATE TABLE IF NOT EXISTS player_stats (
+  #      uuid   TEXT PRIMARY KEY,
+  #      wins   INTEGER NOT NULL DEFAULT 0,
+  #      losses INTEGER NOT NULL DEFAULT 0
+  #    );
+  #
+  # 2. Copy your project URL and anon key from
+  #    Settings → API.
+  supabase:
+    url: ""
+    api-key: ""
+    table: "player_stats"
+
+  # ── Firebase ───────────────────────────────────────────
+  # 1. Create a Firebase project and enable Realtime Database.
+  # 2. Copy the database URL (e.g. https://my-project-default-rtdb.firebaseio.com).
+  # 3. (Optional) Set auth-token to your database secret for
+  #    authenticated writes, or leave empty if rules allow
+  #    public read/write.
+  firebase:
+    database-url: ""
+    auth-token: ""

@@ -9,7 +9,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class QueueManager {
@@ -21,7 +27,9 @@ public class QueueManager {
     private final Map<UUID, String> playerQueue = new ConcurrentHashMap<>();
     // player UUID -> timestamp when they joined queue
     private final Map<UUID, Long> queueJoinTime = new ConcurrentHashMap<>();
+    private static final Random RANDOM = new Random();
     private BukkitTask actionBarTask;
+    private BukkitTask matchmakingTask;
 
     public QueueManager(EpicDuels plugin) {
         this.plugin = plugin;
@@ -72,16 +80,22 @@ public class QueueManager {
         actionBarTask = new BukkitRunnable() {
             @Override
             public void run() {
-                for (Map.Entry<UUID, String> entry : playerQueue.entrySet()) {
+                Iterator<Map.Entry<UUID, String>> it = playerQueue.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<UUID, String> entry = it.next();
                     Player player = Bukkit.getPlayer(entry.getKey());
                     if (player == null || !player.isOnline()) {
+                        it.remove();
+                        queueJoinTime.remove(entry.getKey());
+                        String kit = entry.getValue();
+                        List<UUID> q = queues.get(kit);
+                        if (q != null) q.remove(entry.getKey());
                         continue;
                     }
                     String kitName = entry.getValue();
                     long joinTime = queueJoinTime.getOrDefault(entry.getKey(), System.currentTimeMillis());
                     long seconds = (System.currentTimeMillis() - joinTime) / 1000;
 
-                    // Get display name from kit manager
                     var kit = plugin.getKitManager().getKit(kitName);
                     String displayKit = kit != null ? kit.getName() : kitName;
 
@@ -92,7 +106,7 @@ public class QueueManager {
     }
 
     private void startMatchmakingTask() {
-        new BukkitRunnable() {
+        matchmakingTask = new BukkitRunnable() {
             @Override
             public void run() {
                 for (Map.Entry<String, List<UUID>> entry : queues.entrySet()) {
@@ -137,7 +151,7 @@ public class QueueManager {
                         continue;
                     }
 
-                    String arenaName = readyArenas.get(new Random().nextInt(readyArenas.size()));
+                    String arenaName = readyArenas.get(RANDOM.nextInt(readyArenas.size()));
 
                     p1.sendActionBar(Component.empty());
                     p2.sendActionBar(Component.empty());
@@ -157,6 +171,11 @@ public class QueueManager {
     public void cleanup() {
         if (actionBarTask != null) {
             actionBarTask.cancel();
+            actionBarTask = null;
+        }
+        if (matchmakingTask != null) {
+            matchmakingTask.cancel();
+            matchmakingTask = null;
         }
         queues.clear();
         playerQueue.clear();

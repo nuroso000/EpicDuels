@@ -27,9 +27,9 @@ public class DuelTabCompleter implements TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("menu", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q"));
+            List<String> subs = new ArrayList<>(Arrays.asList("menu", "duels", "matchmaking", "mm", "challenge", "c", "accept", "deny", "cancel", "stats", "queue", "q", "spectate", "spec", "leaderboard", "lb", "top"));
             if (sender.hasPermission("epicduels.admin")) {
-                subs.addAll(Arrays.asList("arena", "kit", "setlobby"));
+                subs.addAll(Arrays.asList("arena", "kit", "setlobby", "lobby"));
             }
             return filter(subs, args[0]);
         }
@@ -38,15 +38,15 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "setspawn1", "setspawn2", "save", "list", "tp", "seticon"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "rename", "setspawn1", "setspawn2", "save", "list", "tp", "seticon"), args[1]);
                     }
                 }
                 case "kit" -> {
                     if (sender.hasPermission("epicduels.admin")) {
-                        return filter(Arrays.asList("create", "delete", "list", "edit", "preview", "seticon"), args[1]);
+                        return filter(Arrays.asList("create", "delete", "rename", "give", "list", "edit", "preview", "seticon"), args[1]);
                     }
                 }
-                case "challenge", "c", "accept", "deny" -> {
+                case "challenge", "c", "accept", "deny", "spectate", "spec" -> {
                     return filter(getOnlinePlayerNames(sender), args[1]);
                 }
                 case "stats" -> {
@@ -57,6 +57,18 @@ public class DuelTabCompleter implements TabCompleter {
                     opts.add("leave");
                     return filter(opts, args[1]);
                 }
+                case "leaderboard", "lb", "top" -> {
+                    List<String> opts = new ArrayList<>(Arrays.asList("wins", "score"));
+                    if (sender.hasPermission("epicduels.admin")) {
+                        opts.addAll(Arrays.asList("sethologram", "removehologram"));
+                    }
+                    return filter(opts, args[1]);
+                }
+                case "lobby" -> {
+                    if (sender.hasPermission("epicduels.admin")) {
+                        return filter(Arrays.asList("on", "off"), args[1]);
+                    }
+                }
             }
         }
 
@@ -64,7 +76,7 @@ public class DuelTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "arena" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("tp") || action.equals("seticon")) {
+                    if (action.equals("delete") || action.equals("tp") || action.equals("seticon") || action.equals("rename")) {
                         List<String> names = new ArrayList<>();
                         plugin.getArenaManager().getAllArenas().forEach(a -> names.add(a.getName()));
                         return filter(names, args[2]);
@@ -72,8 +84,14 @@ public class DuelTabCompleter implements TabCompleter {
                 }
                 case "kit" -> {
                     String action = args[1].toLowerCase();
-                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon")) {
+                    if (action.equals("delete") || action.equals("edit") || action.equals("preview") || action.equals("seticon") || action.equals("rename") || action.equals("give") || action.equals("copy") || action.equals("load")) {
                         return filter(plugin.getKitManager().getKitNames(), args[2]);
+                    }
+                }
+                case "leaderboard", "lb", "top" -> {
+                    String action = args[1].toLowerCase();
+                    if (action.equals("sethologram") || action.equals("removehologram")) {
+                        return filter(Arrays.asList("wins", "score"), args[2]);
                     }
                 }
             }

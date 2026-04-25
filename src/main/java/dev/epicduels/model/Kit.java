@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class Kit {
 
-    private final String name;
+    private String name;
     private ItemStack[] contents;
     private @Nullable ItemStack[] armorContents;
     private @Nullable ItemStack offHand;
@@ -21,6 +21,10 @@ public class Kit {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public ItemStack[] getContents() {

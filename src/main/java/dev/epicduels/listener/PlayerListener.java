@@ -34,6 +34,7 @@ public class PlayerListener implements Listener {
         player.setSaturation(20f);
         player.setFireTicks(0);
         player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+        player.setGameMode(org.bukkit.GameMode.ADVENTURE);
         player.teleport(plugin.getLobbyLocation());
     }
 
@@ -42,6 +43,8 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         // Handle disconnect during duel
         plugin.getDuelManager().handleDisconnect(player.getUniqueId());
+        // Remove from spectating
+        plugin.getDuelManager().removeSpectator(player.getUniqueId());
         // Remove from queue
         plugin.getQueueManager().removePlayer(player.getUniqueId());
         // Cancel any pending requests
@@ -105,6 +108,17 @@ public class PlayerListener implements Listener {
         event.setDroppedExp(0);
         event.setKeepInventory(true);
         event.setKeepLevel(true);
+
+        // Instant respawn — Paper auto-respawn behavior — so players don't get
+        // stuck on the death screen when the respawn button is unresponsive.
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!deceased.isDead()) return;
+            try {
+                deceased.spigot().respawn();
+            } catch (Throwable ignored) {
+                // Fall back to next-tick attempt if respawn() is not available
+            }
+        });
 
         // End the duel - the opponent wins
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());

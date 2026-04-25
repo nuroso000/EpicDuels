@@ -12,6 +12,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.*;
@@ -24,6 +25,8 @@ public class DuelManager {
     private final Map<UUID, DuelRequest> incomingRequests = new ConcurrentHashMap<>();
     private final Map<UUID, DuelInstance> activeDuels = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
+    private BukkitTask expirationTask;
 
     public DuelManager(EpicDuels plugin) {
         this.plugin = plugin;
@@ -31,7 +34,7 @@ public class DuelManager {
     }
 
     private void startExpirationTask() {
-        new BukkitRunnable() {
+        expirationTask = new BukkitRunnable() {
             @Override
             public void run() {
                 Iterator<Map.Entry<UUID, DuelRequest>> it = outgoingRequests.entrySet().iterator();
@@ -143,6 +146,16 @@ public class DuelManager {
         DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName());
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
+
+        // Safety: ensure neither player is still sitting in a matchmaking queue
+        plugin.getQueueManager().removePlayer(player1.getUniqueId());
+        plugin.getQueueManager().removePlayer(player2.getUniqueId());
+
+        // Safety: cancel any outgoing/incoming duel requests for both players
+        cancelRequest(player1.getUniqueId());
+        cancelRequest(player2.getUniqueId());
+        denyRequest(player1.getUniqueId());
+        denyRequest(player2.getUniqueId());
 
         player1.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
         player2.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
@@ -305,6 +318,9 @@ public class DuelManager {
             loser.showTitle(loseTitle);
         }
 
+        // Return spectators to lobby
+        removeSpectatorsForDuel(duel);
+
         String instanceWorldName = duel.getInstanceWorldName();
 
         // Wait 3 seconds then teleport and clean up
@@ -318,6 +334,7 @@ public class DuelManager {
                     winner.setHealth(winner.getMaxHealth());
                     winner.setFoodLevel(20);
                     winner.setSaturation(20f);
+                    winner.setGameMode(GameMode.ADVENTURE);
                     winner.teleport(lobby);
                 }
                 if (loser != null && loser.isOnline()) {
@@ -325,6 +342,7 @@ public class DuelManager {
                     loser.setHealth(loser.getMaxHealth());
                     loser.setFoodLevel(20);
                     loser.setSaturation(20f);
+                    loser.setGameMode(GameMode.ADVENTURE);
                     loser.teleport(lobby);
                 }
 
@@ -369,7 +387,62 @@ public class DuelManager {
         return null;
     }
 
+    // ========== Spectator methods ==========
+
+    public boolean addSpectator(Player spectator, DuelInstance duel) {
+        if (duel.getInstanceWorld() == null) return false;
+        spectators.put(spectator.getUniqueId(), duel);
+
+        // Teleport to the duel arena and set spectator mode
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Location spawnLoc = p1 != null ? p1.getLocation() : duel.getInstanceWorld().getSpawnLocation();
+        spectator.setGameMode(GameMode.SPECTATOR);
+        spectator.teleport(spawnLoc);
+        spectator.sendMessage(Component.text("You are now spectating a duel!", NamedTextColor.GREEN));
+        return true;
+    }
+
+    public void removeSpectator(UUID spectatorId) {
+        DuelInstance duel = spectators.remove(spectatorId);
+        if (duel == null) return;
+        Player spectator = Bukkit.getPlayer(spectatorId);
+        if (spectator != null && spectator.isOnline()) {
+            spectator.setGameMode(GameMode.ADVENTURE);
+            spectator.teleport(plugin.getLobbyLocation());
+            spectator.sendMessage(Component.text("You stopped spectating.", NamedTextColor.YELLOW));
+        }
+    }
+
+    public boolean isSpectating(UUID playerId) {
+        return spectators.containsKey(playerId);
+    }
+
+    private void removeSpectatorsForDuel(DuelInstance duel) {
+        Iterator<Map.Entry<UUID, DuelInstance>> it = spectators.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<UUID, DuelInstance> entry = it.next();
+            if (entry.getValue().getId().equals(duel.getId())) {
+                Player spectator = Bukkit.getPlayer(entry.getKey());
+                if (spectator != null && spectator.isOnline()) {
+                    spectator.setGameMode(GameMode.ADVENTURE);
+                    spectator.teleport(plugin.getLobbyLocation());
+                    spectator.sendMessage(Component.text("The duel has ended.", NamedTextColor.GRAY));
+                }
+                it.remove();
+            }
+        }
+    }
+
     public void cleanupAll() {
+        if (expirationTask != null) {
+            expirationTask.cancel();
+            expirationTask = null;
+        }
+
+        for (UUID specId : new HashSet<>(spectators.keySet())) {
+            removeSpectator(specId);
+        }
+
         for (DuelInstance duel : new HashSet<>(activeDuels.values())) {
             if (duel.isActive()) {
                 duel.setActive(false);
@@ -382,6 +455,12 @@ public class DuelManager {
                 }
             }
         }
+
+        outgoingRequests.clear();
+        incomingRequests.clear();
+        activeDuels.clear();
+        frozenPlayers.clear();
+        spectators.clear();
     }
 
     private void preparePlayer(Player player) {

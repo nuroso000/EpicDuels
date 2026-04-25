@@ -52,6 +52,23 @@ public class DuelCommand implements CommandExecutor {
             case "cancel" -> handleCancel(player);
             case "stats" -> handleStats(player, args);
             case "queue", "q" -> handleQueue(player, args);
+            case "spectate", "spec" -> handleSpectate(player, args);
+            case "duels" -> {
+                if (!player.hasPermission("epicduels.duel")) {
+                    player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                    return true;
+                }
+                plugin.getGUIManager().openDuelsMenu(player, 0);
+            }
+            case "matchmaking", "mm" -> {
+                if (!player.hasPermission("epicduels.duel")) {
+                    player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                    return true;
+                }
+                plugin.getGUIManager().openMatchmakingMenu(player, 0);
+            }
+            case "leaderboard", "lb", "top" -> handleLeaderboard(player, args);
+            case "lobby" -> handleLobby(player, args);
             default -> sendHelp(player);
         }
 
@@ -65,13 +82,25 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel arena <create|delete|setspawn1|setspawn2|save|list|tp|seticon> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel arena <create|delete|rename|setspawn1|setspawn2|save|list|tp|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
         String action = args[1].toLowerCase();
 
         switch (action) {
+            case "rename" -> {
+                if (args.length < 4) {
+                    player.sendMessage(Component.text("Usage: /duel arena rename <oldname> <newname>", NamedTextColor.YELLOW));
+                    return;
+                }
+                String error = plugin.getArenaManager().renameArena(args[2], args[3]);
+                if (error != null) {
+                    player.sendMessage(Component.text(error, NamedTextColor.RED));
+                } else {
+                    player.sendMessage(Component.text("Arena '" + args[2] + "' renamed to '" + args[3] + "'.", NamedTextColor.GREEN));
+                }
+            }
             case "create" -> {
                 if (args.length < 3) {
                     player.sendMessage(Component.text("Usage: /duel arena create <name>", NamedTextColor.YELLOW));
@@ -213,13 +242,61 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel kit <create|delete|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Usage: /duel kit <create|delete|rename|give|list|edit|preview|seticon> [name]", NamedTextColor.YELLOW));
             return;
         }
 
         String action = args[1].toLowerCase();
 
         switch (action) {
+            case "give", "copy", "load" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Component.text("Usage: /duel kit give <name>", NamedTextColor.YELLOW));
+                    return;
+                }
+                Kit kit = plugin.getKitManager().getKit(args[2]);
+                if (kit == null) {
+                    player.sendMessage(Component.text("Kit not found.", NamedTextColor.RED));
+                    return;
+                }
+                // Clear current inventory first
+                player.getInventory().clear();
+                player.getInventory().setArmorContents(null);
+                player.getInventory().setItemInOffHand(null);
+
+                // Deep-copy so edits to the player's inventory don't mutate the kit
+                ItemStack[] src = kit.getContents();
+                ItemStack[] copy = new ItemStack[src.length];
+                for (int i = 0; i < src.length; i++) {
+                    copy[i] = src[i] != null ? src[i].clone() : null;
+                }
+                player.getInventory().setContents(copy);
+
+                if (kit.getArmorContents() != null) {
+                    ItemStack[] armorSrc = kit.getArmorContents();
+                    ItemStack[] armorCopy = new ItemStack[armorSrc.length];
+                    for (int i = 0; i < armorSrc.length; i++) {
+                        armorCopy[i] = armorSrc[i] != null ? armorSrc[i].clone() : null;
+                    }
+                    player.getInventory().setArmorContents(armorCopy);
+                }
+                if (kit.getOffHand() != null) {
+                    player.getInventory().setItemInOffHand(kit.getOffHand().clone());
+                }
+                player.sendMessage(Component.text("Kit '" + kit.getName() + "' copied into your inventory.", NamedTextColor.GREEN));
+            }
+            case "rename" -> {
+                if (args.length < 4) {
+                    player.sendMessage(Component.text("Usage: /duel kit rename <oldname> <newname>", NamedTextColor.YELLOW));
+                    return;
+                }
+                String error = plugin.getKitManager().renameKit(args[2], args[3]);
+                if (error != null) {
+                    player.sendMessage(Component.text(error, NamedTextColor.RED));
+                } else {
+                    player.sendMessage(Component.text("Kit '" + args[2] + "' renamed to '" + args[3] + "'.", NamedTextColor.GREEN));
+                }
+            }
             case "create" -> {
                 if (args.length < 3) {
                     player.sendMessage(Component.text("Usage: /duel kit create <name>", NamedTextColor.YELLOW));
@@ -326,7 +403,7 @@ public class DuelCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            plugin.getGUIManager().openPlayerSelect(player);
+            plugin.getGUIManager().openDuelsMenu(player, 0);
             return;
         }
 
@@ -472,32 +549,196 @@ public class DuelCommand implements CommandExecutor {
         }
     }
 
+    private void handleSpectate(Player player, String[] args) {
+        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+            player.sendMessage(Component.text("You can't spectate while in a duel!", NamedTextColor.RED));
+            return;
+        }
+
+        // If already spectating, leave
+        if (plugin.getDuelManager().isSpectating(player.getUniqueId())) {
+            plugin.getDuelManager().removeSpectator(player.getUniqueId());
+            return;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /duel spectate <player>", NamedTextColor.YELLOW));
+            return;
+        }
+
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null || !target.isOnline()) {
+            player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
+            return;
+        }
+
+        var duel = plugin.getDuelManager().getDuel(target.getUniqueId());
+        if (duel == null || !duel.isActive()) {
+            player.sendMessage(Component.text(target.getName() + " is not in a duel.", NamedTextColor.RED));
+            return;
+        }
+
+        if (duel.getInstanceWorld() == null) {
+            player.sendMessage(Component.text("Duel arena is not ready yet.", NamedTextColor.RED));
+            return;
+        }
+
+        plugin.getDuelManager().addSpectator(player, duel);
+    }
+
+    private void handleLeaderboard(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.stats")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
+        // Default: show wins leaderboard
+        String sub = args.length >= 2 ? args[1].toLowerCase() : "wins";
+
+        if (sub.equals("wins") || sub.equals("score")) {
+            printLeaderboard(player, sub);
+            return;
+        }
+
+        // Admin: /duel leaderboard sethologram <wins|score>
+        if (sub.equals("sethologram") || sub.equals("sethologramm")) {
+            if (!player.hasPermission("epicduels.admin")) {
+                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                return;
+            }
+            if (args.length < 3) {
+                player.sendMessage(Component.text("Usage: /duel leaderboard sethologram <wins|score>", NamedTextColor.YELLOW));
+                return;
+            }
+            dev.epicduels.manager.HologramManager.Type type = parseType(args[2]);
+            if (type == null) {
+                player.sendMessage(Component.text("Type must be 'wins' or 'score'.", NamedTextColor.RED));
+                return;
+            }
+            plugin.getHologramManager().setHologram(type, player.getLocation().clone().add(0, 2, 0));
+            player.sendMessage(Component.text(type.name() + " leaderboard hologram placed at your location.", NamedTextColor.GREEN));
+            return;
+        }
+
+        if (sub.equals("removehologram") || sub.equals("delhologram")) {
+            if (!player.hasPermission("epicduels.admin")) {
+                player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                return;
+            }
+            if (args.length < 3) {
+                player.sendMessage(Component.text("Usage: /duel leaderboard removehologram <wins|score>", NamedTextColor.YELLOW));
+                return;
+            }
+            dev.epicduels.manager.HologramManager.Type type = parseType(args[2]);
+            if (type == null) {
+                player.sendMessage(Component.text("Type must be 'wins' or 'score'.", NamedTextColor.RED));
+                return;
+            }
+            if (plugin.getHologramManager().removeHologram(type)) {
+                player.sendMessage(Component.text(type.name() + " leaderboard hologram removed.", NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("No " + type.name() + " hologram was set.", NamedTextColor.RED));
+            }
+            return;
+        }
+
+        player.sendMessage(Component.text("Usage: /duel leaderboard <wins|score> [sethologram|removehologram <wins|score>]", NamedTextColor.YELLOW));
+    }
+
+    private dev.epicduels.manager.HologramManager.Type parseType(String s) {
+        return switch (s.toLowerCase()) {
+            case "wins", "win" -> dev.epicduels.manager.HologramManager.Type.WINS;
+            case "score" -> dev.epicduels.manager.HologramManager.Type.SCORE;
+            default -> null;
+        };
+    }
+
+    private void printLeaderboard(Player player, String type) {
+        boolean wins = type.equals("wins");
+        var entries = wins
+                ? plugin.getStatsManager().getTopByWins(10)
+                : plugin.getStatsManager().getTopByScore(10);
+
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("=== Top " + (wins ? "Wins" : "Score") + " ===", NamedTextColor.GOLD, TextDecoration.BOLD));
+        if (entries.isEmpty()) {
+            player.sendMessage(Component.text("  No data yet.", NamedTextColor.GRAY));
+            player.sendMessage(Component.empty());
+            return;
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(entry.uuid);
+            String name = op.getName() != null ? op.getName() : entry.uuid.toString().substring(0, 8);
+            int value = wins ? entry.wins : entry.score;
+            NamedTextColor rankColor = switch (i + 1) {
+                case 1 -> NamedTextColor.GOLD;
+                case 2 -> NamedTextColor.GRAY;
+                case 3 -> NamedTextColor.RED;
+                default -> NamedTextColor.WHITE;
+            };
+            player.sendMessage(Component.text("#" + (i + 1) + " ", rankColor, TextDecoration.BOLD)
+                    .append(Component.text(name, NamedTextColor.WHITE))
+                    .append(Component.text(" — ", NamedTextColor.GRAY))
+                    .append(Component.text(String.valueOf(value), NamedTextColor.YELLOW)));
+        }
+        player.sendMessage(Component.empty());
+    }
+
+    private void handleLobby(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.admin")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
+        var listener = plugin.getLobbyProtectionListener();
+
+        if (args.length < 2) {
+            boolean bypassing = listener.isBypassing(player.getUniqueId());
+            player.sendMessage(Component.text("Lobby protections for you: ", NamedTextColor.GRAY)
+                    .append(Component.text(bypassing ? "OFF" : "ON", bypassing ? NamedTextColor.RED : NamedTextColor.GREEN, TextDecoration.BOLD)));
+            player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
+            return;
+        }
+
+        String toggle = args[1].toLowerCase();
+        if (toggle.equals("on")) {
+            listener.setBypass(player.getUniqueId(), false);
+            player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+            player.sendMessage(Component.text("Lobby protections re-enabled for you.", NamedTextColor.GREEN));
+        } else if (toggle.equals("off")) {
+            listener.setBypass(player.getUniqueId(), true);
+            player.setGameMode(org.bukkit.GameMode.CREATIVE);
+            player.sendMessage(Component.text("Lobby protections disabled for you.", NamedTextColor.RED));
+            player.sendMessage(Component.text("You can now interact, pick up items, move inventory, etc.", NamedTextColor.GRAY));
+        } else {
+            player.sendMessage(Component.text("Usage: /duel lobby <on|off>", NamedTextColor.YELLOW));
+        }
+    }
+
     private void handleStats(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
             return;
         }
 
-        UUID targetUUID;
-        String targetName;
-
-        if (args.length >= 2) {
-            Player target = Bukkit.getPlayer(args[1]);
-            if (target == null) {
-                player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
-                return;
-            }
-            targetUUID = target.getUniqueId();
-            targetName = target.getName();
-        } else {
-            targetUUID = player.getUniqueId();
-            targetName = player.getName();
+        // No argument → open GUI stats menu for own profile
+        if (args.length < 2) {
+            plugin.getGUIManager().openStatsMenu(player);
+            return;
         }
 
-        PlayerStats stats = plugin.getStatsManager().getStats(targetUUID);
+        // With a player argument → show chat stats for that player
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null) {
+            player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
+            return;
+        }
+
+        PlayerStats stats = plugin.getStatsManager().getStats(target.getUniqueId());
 
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("=== " + targetName + "'s Stats ===", NamedTextColor.GOLD, TextDecoration.BOLD));
+        player.sendMessage(Component.text("=== " + target.getName() + "'s Stats ===", NamedTextColor.GOLD, TextDecoration.BOLD));
         player.sendMessage(Component.text(" Wins: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(stats.getWins()), NamedTextColor.GREEN)));
         player.sendMessage(Component.text(" Losses: ", NamedTextColor.GRAY)
@@ -513,17 +754,23 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("=== EpicDuels Help ===", NamedTextColor.GOLD, TextDecoration.BOLD));
         player.sendMessage(Component.text("/duel", NamedTextColor.YELLOW).append(Component.text(" - Open main menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel duels", NamedTextColor.YELLOW).append(Component.text(" - Open duels/player select menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel matchmaking", NamedTextColor.YELLOW).append(Component.text(" - Open matchmaking queue menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel stats", NamedTextColor.YELLOW).append(Component.text(" - Open stats menu", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel stats <player>", NamedTextColor.YELLOW).append(Component.text(" - View another player's stats in chat", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel challenge <player>", NamedTextColor.YELLOW).append(Component.text(" - Challenge a player", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel accept [player]", NamedTextColor.YELLOW).append(Component.text(" - Accept a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel deny [player]", NamedTextColor.YELLOW).append(Component.text(" - Deny a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel cancel", NamedTextColor.YELLOW).append(Component.text(" - Cancel outgoing request", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/duel stats [player]", NamedTextColor.YELLOW).append(Component.text(" - View stats", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel leaderboard <wins|score>", NamedTextColor.YELLOW).append(Component.text(" - Show the top 10", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel setlobby", NamedTextColor.YELLOW).append(Component.text(" - Set lobby spawn", NamedTextColor.GRAY)));
+            player.sendMessage(Component.text("/duel lobby <on|off>", NamedTextColor.YELLOW).append(Component.text(" - Toggle lobby protections", NamedTextColor.GRAY)));
         }
         player.sendMessage(Component.empty());
     }

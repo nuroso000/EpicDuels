@@ -3,6 +3,7 @@ package dev.epicduels;
 import dev.epicduels.command.DuelCommand;
 import dev.epicduels.command.DuelTabCompleter;
 import dev.epicduels.listener.GUIListener;
+import dev.epicduels.listener.LobbyProtectionListener;
 import dev.epicduels.listener.PlayerListener;
 import dev.epicduels.listener.WorldProtectionListener;
 import dev.epicduels.manager.*;
@@ -89,6 +90,8 @@ public class EpicDuels extends JavaPlugin {
     private QueueManager queueManager;
     private StatsManager statsManager;
     private GUIManager guiManager;
+    private HologramManager hologramManager;
+    private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
     public void onEnable() {
@@ -102,6 +105,7 @@ public class EpicDuels extends JavaPlugin {
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
         queueManager = new QueueManager(this);
+        hologramManager = new HologramManager(this);
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -114,11 +118,15 @@ public class EpicDuels extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
+        lobbyProtectionListener = new LobbyProtectionListener(this);
+        getServer().getPluginManager().registerEvents(lobbyProtectionListener, this);
 
         // Defer world operations to first tick (cannot create worlds during STARTUP phase)
         Bukkit.getScheduler().runTask(this, () -> {
+            cleanupLeftoverInstances();
             setupVoidWorld();
             loadArenaWorlds();
+            hologramManager.load();
             getLogger().info("Arena worlds loaded.");
         });
 
@@ -137,10 +145,18 @@ public class EpicDuels extends JavaPlugin {
             queueManager.cleanup();
         }
 
+        // Despawn leaderboard holograms
+        if (hologramManager != null) {
+            hologramManager.shutdown();
+        }
+
         // Save all data
         if (arenaManager != null) arenaManager.saveArenas();
         if (kitManager != null) kitManager.saveKits();
-        if (statsManager != null) statsManager.saveStats();
+        if (statsManager != null) {
+            statsManager.saveStats();
+            statsManager.pushAllToRemote();
+        }
 
         getLogger().info("EpicDuels disabled!");
     }
@@ -148,6 +164,29 @@ public class EpicDuels extends JavaPlugin {
     @Override
     public @Nullable ChunkGenerator getDefaultWorldGenerator(@NotNull String worldName, @Nullable String id) {
         return new VoidWorldGenerator();
+    }
+
+    private void cleanupLeftoverInstances() {
+        File worldContainer = Bukkit.getWorldContainer();
+        File[] dirs = worldContainer.listFiles(File::isDirectory);
+        if (dirs == null) return;
+        int cleaned = 0;
+        for (File dir : dirs) {
+            if (dir.getName().startsWith("arena_instance_")) {
+                World w = Bukkit.getWorld(dir.getName());
+                if (w != null) {
+                    for (org.bukkit.entity.Player p : w.getPlayers()) {
+                        p.teleport(getLobbyLocation());
+                    }
+                    Bukkit.unloadWorld(w, false);
+                }
+                ArenaManager.deleteWorldFolder(dir);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            getLogger().info("Cleaned up " + cleaned + " leftover instance world(s) from previous run.");
+        }
     }
 
     private void setupVoidWorld() {
@@ -262,5 +301,13 @@ public class EpicDuels extends JavaPlugin {
 
     public GUIManager getGUIManager() {
         return guiManager;
+    }
+
+    public HologramManager getHologramManager() {
+        return hologramManager;
+    }
+
+    public LobbyProtectionListener getLobbyProtectionListener() {
+        return lobbyProtectionListener;
     }
 }
