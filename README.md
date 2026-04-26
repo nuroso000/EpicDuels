@@ -11,12 +11,15 @@
   </a>
 </p>
 
-A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with leaderboards, in-world holograms, and multi-server stats via Supabase or Firebase.
+A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, **party-based team duels (2v2/3v3/4v4)**, **single-elimination tournaments**, leaderboards, in-world holograms, and multi-server stats via Supabase or Firebase.
+
+> **v2.0.0 — Party Update**: Group up with friends and play team duels or run a tournament bracket through your party. See [Party System](#party-system) below.
 
 ---
 
 ## Features
 
+- **Party System (NEW in v2.0)** — Create a party (2–8 players), invite friends, and choose between **Team Duels** (2v2 / 3v3 / 4v4 with friendly fire disabled) or a **Single-Elimination Tournament** (1v1 bracket, eliminated players auto-spectate live matches). Tournament winners are announced only inside the party, not server-wide.
 - **Arena System** — Create void-world arenas with a simple setup wizard. Each duel runs in its own isolated world copy that gets deleted after the match.
 - **Kit System** — Save, edit, rename, and preview kits with full armor, offhand, and inventory support. Admins can copy any saved kit directly into their own inventory for testing.
 - **Duel Challenges** — Challenge players through an interactive GUI (pick player → kit → map) or via commands. Requests expire after 30 seconds with clickable Accept/Deny buttons.
@@ -39,7 +42,7 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with leaderboards,
 
 ## Installation
 
-1. Download `EpicDuels-1.0.0.jar` from the `release/` folder or build from source
+1. Download `EpicDuels-2.0.0.jar` from the `release/` folder or build from source
 2. Place it in your server's `plugins/` folder
 3. Restart the server
 4. (Optional) Add to `bukkit.yml` for true void lobby world:
@@ -74,6 +77,19 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with leaderboards,
 | `/duel spectate <player>` | `/d spec <player>` | Spectate an active duel | `epicduels.duel` |
 | `/duel leaderboard wins` | `/d lb wins` | Show top 10 players by wins | `epicduels.stats` |
 | `/duel leaderboard score` | `/d lb score` | Show top 10 players by score | `epicduels.stats` |
+
+### Party Commands
+
+| Command | Alias | Description | Permission |
+|---|---|---|---|
+| `/party create` | `/p create` | Create a new party (you become owner) | `epicduels.party` |
+| `/party invite <player>` | `/p invite <player>` | Invite a player (auto-creates party if needed) | `epicduels.party` |
+| `/party accept [player]` | `/p accept [player]` | Accept a pending invite | `epicduels.party` |
+| `/party deny [player]` | `/p deny [player]` | Deny a pending invite | `epicduels.party` |
+| `/party leave` | `/p leave` | Leave your party (owner role transfers) | `epicduels.party` |
+| `/party disband` | `/p disband` | Disband your party (owner only) | `epicduels.party` |
+| `/party list` | `/p list` | Show party members | `epicduels.party` |
+| `/party start` | `/p start` | Open the mode-select GUI (owner only) | `epicduels.party` |
 
 ### Admin Commands
 
@@ -110,6 +126,7 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with leaderboards,
 | `epicduels.admin` | All admin commands (arena, kit, setlobby, seticon) | OP |
 | `epicduels.duel` | Challenge players, accept/deny duels, join queue | Everyone |
 | `epicduels.stats` | View stats | Everyone |
+| `epicduels.party` | Use party commands (create, invite, start, etc.) | Everyone |
 
 ## Quick Start Guide
 
@@ -120,6 +137,52 @@ A full-featured 1v1 Duels plugin for Paper 1.21.1 servers — with leaderboards,
 5. **Create a kit:** Equip the gear you want, then `/duel kit create pvp`
 6. **Set icons (optional):** Hold an item and run `/duel arena seticon myarena` or `/duel kit seticon pvp`
 7. **Duel!** Open the menu with `/duel` — challenge a player, check your stats, or join the matchmaking queue
+
+## Party System
+
+Parties let 2–8 players group up to play together. The party owner picks the mode and configures it through GUI menus.
+
+### Creating & Inviting
+
+```text
+/party create                  # become party owner
+/party invite <player>         # send a 30-second invite (auto-creates a party if you don't have one yet)
+/party accept <player>         # accept an invite (player optional if only one)
+/party deny <player>           # deny an invite
+/party list                    # see members + owner
+/party leave                   # leave (owner role transfers to next member)
+/party disband                 # owner-only: dissolve the party
+```
+
+If the owner leaves, ownership transfers to the next member. Below 2 members the party auto-disbands.
+
+### Starting a Game
+
+When the owner runs `/party start`, a GUI opens with two modes:
+
+#### Team Duel (2v2 / 3v3 / 4v4)
+
+- The owner picks a team size (only options that fit the current party size are enabled).
+- Members are **shuffled** and split into two equal teams (Team A on `spawn1`, Team B on `spawn2`).
+- Per-player **spawn offsets** distribute teammates in a small circle around each spawn so they don't collide.
+- The owner then picks a **kit** that is applied to all players.
+- **Friendly fire is disabled** — you cannot damage your own teammates (also covers projectiles).
+- When a player dies, they auto-spectate the rest of the match. The last team standing wins.
+- Winners gain `+1 win`, losers `+1 loss` (per player) in the normal stats system.
+
+#### Tournament
+
+- Single-elimination 1v1 bracket built from all party members.
+- Odd player counts get **byes** in the first round (the bye player advances automatically).
+- Each match is a normal 1v1 duel using the existing `DuelManager` — same arena copy, countdown, and cleanup.
+- **Eliminated players are automatically teleported as spectators into another live tournament match**, switching to the next live match when their current one ends. They go to the lobby only when no live match remains.
+- The tournament winner is announced **only to party members** via chat + a victory title (no global broadcast).
+
+### Limits
+
+- Party size: **2 (min)** to **8 (max)** players.
+- Invites expire after 30 seconds.
+- Members in an active duel/tournament cannot start a new party game.
 
 ## Multi-Server Stats
 
@@ -240,7 +303,7 @@ gradle clean build
 mvn clean package
 ```
 
-Output JAR: `build/libs/EpicDuels-1.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Output JAR: `build/libs/EpicDuels-2.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
 ## License & Usage
 
