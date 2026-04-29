@@ -1,5 +1,5 @@
 name: EpicDuels
-version: 1.0.0
+version: 2.0.0
 main: dev.epicduels.EpicDuels
 api-version: '1.21'
 load: STARTUP
@@ -10,10 +10,15 @@ commands:
   duel:
     description: Main duel command
     aliases: [d]
+  party:
+    description: Manage your party
+    aliases: [p]
 permissions:
   epicduels.admin:
     default: op
   epicduels.duel:
     default: true
   epicduels.stats:
+    default: true
+  epicduels.party:
     default: true

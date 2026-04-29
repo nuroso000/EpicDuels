@@ -32,6 +32,10 @@ public class GUIManager {
     public static final String KIT_PREVIEW_TITLE = "Preview Kit: ";
     public static final String KIT_LIST_TITLE = "Kits";
     public static final String ARENA_LIST_TITLE = "Arenas";
+    public static final String PARTY_MODE_TITLE = "Party - Choose Mode";
+    public static final String PARTY_TEAM_SIZE_TITLE = "Party - Team Size";
+    public static final String PARTY_KIT_TITLE = "Party - Select Kit";
+    public static final String PARTY_CONFIRM_TITLE = "Party - Confirm";
 
     // Paginated menu: item slots (rows 1-4, columns 1-7 in a 54-slot chest)
     public static final int[] ITEM_SLOTS = {
@@ -56,6 +60,11 @@ public class GUIManager {
 
     // Random map animation state
     private final Set<UUID> animatingPlayers = new HashSet<>();
+
+    // Party flow state (per owner)
+    private final Map<UUID, dev.epicduels.model.PartyMode> partyFlowMode = new HashMap<>();
+    private final Map<UUID, dev.epicduels.model.TeamSize> partyFlowTeamSize = new HashMap<>();
+    private final Map<UUID, String> partyFlowKit = new HashMap<>();
 
     public GUIManager(EpicDuels plugin) {
         this.plugin = plugin;
@@ -488,6 +497,143 @@ public class GUIManager {
         challengeKit.remove(player);
         animatingPlayers.remove(player);
         playerPage.remove(player);
+        partyFlowMode.remove(player);
+        partyFlowTeamSize.remove(player);
+        partyFlowKit.remove(player);
+    }
+
+    // ========== PARTY FLOW GUIs ==========
+
+    public void openPartyModeMenu(Player owner) {
+        partyFlowMode.remove(owner.getUniqueId());
+        partyFlowTeamSize.remove(owner.getUniqueId());
+        partyFlowKit.remove(owner.getUniqueId());
+
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(PARTY_MODE_TITLE, NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
+        ItemStack pane = createPane(Material.PURPLE_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) inv.setItem(i, pane);
+
+        inv.setItem(11, createItem(Material.DIAMOND_SWORD, "&9&lTeam Duel",
+                "&7Split your party into two teams", "&7and fight on a normal arena.",
+                "", "&eClick to choose"));
+        inv.setItem(15, createItem(Material.GOLDEN_HORSE_ARMOR, "&6&lTournament",
+                "&7Single-elimination 1v1 bracket", "&7with all party members.",
+                "", "&eClick to choose"));
+
+        owner.openInventory(inv);
+        owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    public void openPartyTeamSizeMenu(Player owner) {
+        partyFlowMode.put(owner.getUniqueId(), dev.epicduels.model.PartyMode.TEAM_DUEL);
+
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(PARTY_TEAM_SIZE_TITLE, NamedTextColor.BLUE, TextDecoration.BOLD));
+        ItemStack pane = createPane(Material.BLUE_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) inv.setItem(i, pane);
+
+        int partySize = 0;
+        dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(owner.getUniqueId());
+        if (party != null) partySize = party.size();
+
+        inv.setItem(11, sizeOption(Material.IRON_SWORD, "2v2", 4, partySize));
+        inv.setItem(13, sizeOption(Material.GOLDEN_SWORD, "3v3", 6, partySize));
+        inv.setItem(15, sizeOption(Material.DIAMOND_SWORD, "4v4", 8, partySize));
+        inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to mode selection"));
+
+        owner.openInventory(inv);
+        owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    private ItemStack sizeOption(Material mat, String label, int required, int partySize) {
+        if (partySize >= required) {
+            return createItem(mat, "&a&l" + label, "&7Requires " + required + " players",
+                    "&aYour party: " + partySize + " players", "", "&eClick to select");
+        } else {
+            return createItem(Material.BARRIER, "&c&l" + label,
+                    "&7Requires " + required + " players",
+                    "&cYour party: " + partySize + " players");
+        }
+    }
+
+    public void openPartyKitMenu(Player owner, int page) {
+        List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
+        int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+        playerPage.put(owner.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                Component.text(PARTY_KIT_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
+        fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
+
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
+            Kit kit = kits.get(start + i);
+            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
+                    "&7Click to select this kit"));
+        }
+        addNavigation(inv, page, totalPages);
+        owner.openInventory(inv);
+        owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    public void openPartyConfirmMenu(Player owner) {
+        dev.epicduels.model.PartyMode mode = partyFlowMode.get(owner.getUniqueId());
+        String kitName = partyFlowKit.get(owner.getUniqueId());
+        dev.epicduels.model.TeamSize size = partyFlowTeamSize.get(owner.getUniqueId());
+        dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(owner.getUniqueId());
+
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(PARTY_CONFIRM_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
+        ItemStack pane = createPane(Material.LIME_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) inv.setItem(i, pane);
+
+        String modeLabel = mode == dev.epicduels.model.PartyMode.TOURNAMENT
+                ? "Tournament" : ("Team Duel " + (size != null ? size.getLabel() : ""));
+        int partySize = party != null ? party.size() : 0;
+
+        inv.setItem(13, createItem(Material.PAPER, "&a&l" + modeLabel,
+                "&7Kit: &f" + (kitName != null ? kitName : "?"),
+                "&7Players: &f" + partySize));
+
+        inv.setItem(11, createItem(Material.LIME_WOOL, "&a&lConfirm & Start",
+                "&7Click to launch!"));
+        inv.setItem(15, createItem(Material.RED_WOOL, "&c&lCancel",
+                "&7Close this menu"));
+
+        owner.openInventory(inv);
+        owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    public void setPartyFlowMode(UUID owner, dev.epicduels.model.PartyMode mode) {
+        partyFlowMode.put(owner, mode);
+    }
+
+    public void setPartyFlowTeamSize(UUID owner, dev.epicduels.model.TeamSize size) {
+        partyFlowTeamSize.put(owner, size);
+    }
+
+    public void setPartyFlowKit(UUID owner, String kitName) {
+        partyFlowKit.put(owner, kitName);
+    }
+
+    public dev.epicduels.model.PartyMode getPartyFlowMode(UUID owner) {
+        return partyFlowMode.get(owner);
+    }
+
+    public dev.epicduels.model.TeamSize getPartyFlowTeamSize(UUID owner) {
+        return partyFlowTeamSize.get(owner);
+    }
+
+    public String getPartyFlowKit(UUID owner) {
+        return partyFlowKit.get(owner);
+    }
+
+    public void clearPartyFlow(UUID owner) {
+        partyFlowMode.remove(owner);
+        partyFlowTeamSize.remove(owner);
+        partyFlowKit.remove(owner);
     }
 
     public boolean isAnimating(UUID player) {

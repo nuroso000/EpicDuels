@@ -211,9 +211,13 @@ public class ArenaManager {
     }
 
     public CompletableFuture<World> createInstanceWorld(Arena arena, DuelInstance duelInstance) {
+        return createInstanceWorld(arena, duelInstance.getInstanceWorldName());
+    }
+
+    public CompletableFuture<World> createInstanceWorld(Arena arena, String instanceWorldName) {
         return CompletableFuture.supplyAsync(() -> {
             String templateWorldName = arena.getWorldName();
-            String instanceName = duelInstance.getInstanceWorldName();
+            String instanceName = instanceWorldName;
 
             File templateDir = new File(Bukkit.getWorldContainer(), templateWorldName);
             File instanceDir = new File(Bukkit.getWorldContainer(), instanceName);

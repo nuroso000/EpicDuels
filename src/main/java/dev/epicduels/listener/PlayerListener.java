@@ -16,6 +16,8 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
+import java.util.UUID;
+
 public class PlayerListener implements Listener {
 
     private final EpicDuels plugin;
@@ -52,11 +54,16 @@ public class PlayerListener implements Listener {
         plugin.getDuelManager().denyRequest(player.getUniqueId());
         // Clear GUI data
         plugin.getGUIManager().clearChallengeData(player.getUniqueId());
+        // Party / team duel / tournament cleanup
+        if (plugin.getTeamDuelManager() != null) plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
+        if (plugin.getTournamentManager() != null) plugin.getTournamentManager().handleDisconnect(player.getUniqueId());
+        if (plugin.getPartyManager() != null) plugin.getPartyManager().handleDisconnect(player.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (!plugin.getDuelManager().isFrozen(event.getPlayer().getUniqueId())) return;
+        UUID id = event.getPlayer().getUniqueId();
+        if (!plugin.getDuelManager().isFrozen(id) && !plugin.getTeamDuelManager().isFrozen(id)) return;
 
         // Allow head rotation but not movement
         if (event.getFrom().getBlockX() != event.getTo().getBlockX()
@@ -70,7 +77,8 @@ public class PlayerListener implements Listener {
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
 
-        if (plugin.getDuelManager().isFrozen(player.getUniqueId())) {
+        if (plugin.getDuelManager().isFrozen(player.getUniqueId())
+                || plugin.getTeamDuelManager().isFrozen(player.getUniqueId())) {
             event.setCancelled(true);
         }
     }
@@ -79,7 +87,8 @@ public class PlayerListener implements Listener {
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player damager)) return;
 
-        if (plugin.getDuelManager().isFrozen(damager.getUniqueId())) {
+        if (plugin.getDuelManager().isFrozen(damager.getUniqueId())
+                || plugin.getTeamDuelManager().isFrozen(damager.getUniqueId())) {
             event.setCancelled(true);
             return;
         }
@@ -87,8 +96,10 @@ public class PlayerListener implements Listener {
         // Disable PvP in lobby if configured
         if (plugin.getConfig().getBoolean("lobby.disable-pvp", true)) {
             if (event.getEntity() instanceof Player victim) {
-                boolean damagerInDuel = plugin.getDuelManager().isInDuel(damager.getUniqueId());
-                boolean victimInDuel = plugin.getDuelManager().isInDuel(victim.getUniqueId());
+                boolean damagerInDuel = plugin.getDuelManager().isInDuel(damager.getUniqueId())
+                        || plugin.getTeamDuelManager().isInTeamDuel(damager.getUniqueId());
+                boolean victimInDuel = plugin.getDuelManager().isInDuel(victim.getUniqueId())
+                        || plugin.getTeamDuelManager().isInTeamDuel(victim.getUniqueId());
                 if (!damagerInDuel || !victimInDuel) {
                     event.setCancelled(true);
                 }
@@ -100,27 +111,33 @@ public class PlayerListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player deceased = event.getEntity();
         DuelInstance duel = plugin.getDuelManager().getDuel(deceased.getUniqueId());
-        if (duel == null || !duel.isActive()) return;
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager() != null
+                ? plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId()) : null;
 
-        // Suppress death message and drops in duels
+        if ((duel == null || !duel.isActive()) && (teamDuel == null || !teamDuel.isActive())) return;
+
+        // Suppress death message and drops
         event.deathMessage(null);
         event.getDrops().clear();
         event.setDroppedExp(0);
         event.setKeepInventory(true);
         event.setKeepLevel(true);
 
-        // Instant respawn — Paper auto-respawn behavior — so players don't get
-        // stuck on the death screen when the respawn button is unresponsive.
+        // Instant respawn so players don't get stuck on the death screen
         org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
             if (!deceased.isDead()) return;
             try {
                 deceased.spigot().respawn();
             } catch (Throwable ignored) {
-                // Fall back to next-tick attempt if respawn() is not available
             }
         });
 
-        // End the duel - the opponent wins
+        if (teamDuel != null && teamDuel.isActive()) {
+            plugin.getTeamDuelManager().handleDeath(deceased);
+            return;
+        }
+
+        // End the 1v1 duel - the opponent wins
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());
         plugin.getDuelManager().endDuel(duel, winnerId, deceased.getUniqueId());
     }

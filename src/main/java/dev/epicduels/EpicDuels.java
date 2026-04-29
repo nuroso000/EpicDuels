@@ -2,6 +2,9 @@ package dev.epicduels;
 
 import dev.epicduels.command.DuelCommand;
 import dev.epicduels.command.DuelTabCompleter;
+import dev.epicduels.command.PartyCommand;
+import dev.epicduels.command.PartyTabCompleter;
+import dev.epicduels.listener.FriendlyFireListener;
 import dev.epicduels.listener.GUIListener;
 import dev.epicduels.listener.LobbyProtectionListener;
 import dev.epicduels.listener.PlayerListener;
@@ -91,6 +94,9 @@ public class EpicDuels extends JavaPlugin {
     private StatsManager statsManager;
     private GUIManager guiManager;
     private HologramManager hologramManager;
+    private PartyManager partyManager;
+    private TeamDuelManager teamDuelManager;
+    private TournamentManager tournamentManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
@@ -106,6 +112,9 @@ public class EpicDuels extends JavaPlugin {
         duelManager = new DuelManager(this);
         queueManager = new QueueManager(this);
         hologramManager = new HologramManager(this);
+        partyManager = new PartyManager(this);
+        teamDuelManager = new TeamDuelManager(this);
+        tournamentManager = new TournamentManager(this);
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -113,11 +122,17 @@ public class EpicDuels extends JavaPlugin {
             duelCmd.setExecutor(new DuelCommand(this));
             duelCmd.setTabCompleter(new DuelTabCompleter(this));
         }
+        PluginCommand partyCmd = getCommand("party");
+        if (partyCmd != null) {
+            partyCmd.setExecutor(new PartyCommand(this));
+            partyCmd.setTabCompleter(new PartyTabCompleter());
+        }
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
+        getServer().getPluginManager().registerEvents(new FriendlyFireListener(this), this);
         lobbyProtectionListener = new LobbyProtectionListener(this);
         getServer().getPluginManager().registerEvents(lobbyProtectionListener, this);
 
@@ -135,6 +150,11 @@ public class EpicDuels extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Tear down party-related managers first so callbacks don't fire mid-shutdown
+        if (tournamentManager != null) tournamentManager.cleanupAll();
+        if (teamDuelManager != null) teamDuelManager.cleanupAll();
+        if (partyManager != null) partyManager.cleanup();
+
         // End all active duels
         if (duelManager != null) {
             duelManager.cleanupAll();
@@ -309,5 +329,17 @@ public class EpicDuels extends JavaPlugin {
 
     public LobbyProtectionListener getLobbyProtectionListener() {
         return lobbyProtectionListener;
+    }
+
+    public PartyManager getPartyManager() {
+        return partyManager;
+    }
+
+    public TeamDuelManager getTeamDuelManager() {
+        return teamDuelManager;
+    }
+
+    public TournamentManager getTournamentManager() {
+        return tournamentManager;
     }
 }

@@ -61,6 +61,10 @@ public class GUIListener implements Listener {
             case GUIManager.KIT_SELECT_TITLE -> handleKitSelectClick(player, slot, clicked);
             case GUIManager.ARENA_SELECT_TITLE -> handleArenaSelectClick(player, slot, clicked);
             case GUIManager.KIT_LIST_TITLE -> handleKitListClick(player, slot, clicked);
+            case GUIManager.PARTY_MODE_TITLE -> handlePartyModeClick(player, slot);
+            case GUIManager.PARTY_TEAM_SIZE_TITLE -> handlePartyTeamSizeClick(player, slot);
+            case GUIManager.PARTY_KIT_TITLE -> handlePartyKitClick(player, slot, clicked);
+            case GUIManager.PARTY_CONFIRM_TITLE -> handlePartyConfirmClick(player, slot);
             default -> {
                 if (title.startsWith(GUIManager.KIT_PREVIEW_TITLE)) {
                     // Preview is view-only, no action
@@ -370,7 +374,148 @@ public class GUIListener implements Listener {
                 || title.equals(GUIManager.ARENA_SELECT_TITLE)
                 || title.equals(GUIManager.KIT_LIST_TITLE)
                 || title.equals(GUIManager.ARENA_LIST_TITLE)
+                || title.equals(GUIManager.PARTY_MODE_TITLE)
+                || title.equals(GUIManager.PARTY_TEAM_SIZE_TITLE)
+                || title.equals(GUIManager.PARTY_KIT_TITLE)
+                || title.equals(GUIManager.PARTY_CONFIRM_TITLE)
                 || title.startsWith(GUIManager.KIT_PREVIEW_TITLE);
+    }
+
+    // ========== PARTY FLOW HANDLERS ==========
+
+    private void handlePartyModeClick(Player player, int slot) {
+        if (slot == 11) {
+            player.closeInventory();
+            plugin.getGUIManager().openPartyTeamSizeMenu(player);
+        } else if (slot == 15) {
+            player.closeInventory();
+            plugin.getGUIManager().setPartyFlowMode(player.getUniqueId(),
+                    dev.epicduels.model.PartyMode.TOURNAMENT);
+            plugin.getGUIManager().openPartyKitMenu(player, 0);
+        }
+    }
+
+    private void handlePartyTeamSizeClick(Player player, int slot) {
+        if (slot == 22) {
+            player.closeInventory();
+            plugin.getGUIManager().openPartyModeMenu(player);
+            return;
+        }
+        dev.epicduels.model.TeamSize size = switch (slot) {
+            case 11 -> dev.epicduels.model.TeamSize.TWO_VS_TWO;
+            case 13 -> dev.epicduels.model.TeamSize.THREE_VS_THREE;
+            case 15 -> dev.epicduels.model.TeamSize.FOUR_VS_FOUR;
+            default -> null;
+        };
+        if (size == null) return;
+
+        dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(player.getUniqueId());
+        if (party == null || party.size() < size.getTotalPlayers()) {
+            player.sendMessage(Component.text("Not enough party members for " + size.getLabel() + ".",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        plugin.getGUIManager().setPartyFlowMode(player.getUniqueId(),
+                dev.epicduels.model.PartyMode.TEAM_DUEL);
+        plugin.getGUIManager().setPartyFlowTeamSize(player.getUniqueId(), size);
+        player.closeInventory();
+        plugin.getGUIManager().openPartyKitMenu(player, 0);
+    }
+
+    private void handlePartyKitClick(Player player, int slot, ItemStack clicked) {
+        if (slot == GUIManager.PREV_SLOT) {
+            int p = plugin.getGUIManager().getPlayerPage(player.getUniqueId());
+            if (p > 0) {
+                player.closeInventory();
+                plugin.getGUIManager().openPartyKitMenu(player, p - 1);
+            }
+            return;
+        }
+        if (slot == GUIManager.NEXT_SLOT) {
+            int p = plugin.getGUIManager().getPlayerPage(player.getUniqueId());
+            player.closeInventory();
+            plugin.getGUIManager().openPartyKitMenu(player, p + 1);
+            return;
+        }
+        if (slot == GUIManager.BACK_SLOT) {
+            player.closeInventory();
+            dev.epicduels.model.PartyMode mode = plugin.getGUIManager()
+                    .getPartyFlowMode(player.getUniqueId());
+            if (mode == dev.epicduels.model.PartyMode.TEAM_DUEL) {
+                plugin.getGUIManager().openPartyTeamSizeMenu(player);
+            } else {
+                plugin.getGUIManager().openPartyModeMenu(player);
+            }
+            return;
+        }
+        String itemName = getItemName(clicked);
+        if (itemName == null) return;
+        dev.epicduels.model.Kit kit = plugin.getKitManager().getKit(itemName);
+        if (kit == null) {
+            player.sendMessage(Component.text("Kit not available.", NamedTextColor.RED));
+            return;
+        }
+        plugin.getGUIManager().setPartyFlowKit(player.getUniqueId(), kit.getName());
+        player.closeInventory();
+        plugin.getGUIManager().openPartyConfirmMenu(player);
+    }
+
+    private void handlePartyConfirmClick(Player player, int slot) {
+        if (slot == 15) { // Cancel
+            player.closeInventory();
+            plugin.getGUIManager().clearPartyFlow(player.getUniqueId());
+            player.sendMessage(Component.text("Cancelled.", NamedTextColor.YELLOW));
+            return;
+        }
+        if (slot != 11) return; // Only confirm slot
+
+        dev.epicduels.model.PartyMode mode = plugin.getGUIManager().getPartyFlowMode(player.getUniqueId());
+        String kitName = plugin.getGUIManager().getPartyFlowKit(player.getUniqueId());
+        dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(player.getUniqueId());
+
+        if (mode == null || kitName == null || party == null) {
+            player.sendMessage(Component.text("Missing data — restart with /party start.", NamedTextColor.RED));
+            player.closeInventory();
+            return;
+        }
+        if (!party.isOwner(player.getUniqueId())) {
+            player.sendMessage(Component.text("Only the party owner can start.", NamedTextColor.RED));
+            player.closeInventory();
+            return;
+        }
+        dev.epicduels.model.Kit kit = plugin.getKitManager().getKit(kitName);
+        if (kit == null) {
+            player.sendMessage(Component.text("Kit no longer exists.", NamedTextColor.RED));
+            player.closeInventory();
+            return;
+        }
+
+        player.closeInventory();
+
+        if (mode == dev.epicduels.model.PartyMode.TEAM_DUEL) {
+            dev.epicduels.model.TeamSize size = plugin.getGUIManager().getPartyFlowTeamSize(player.getUniqueId());
+            if (size == null) {
+                player.sendMessage(Component.text("No team size selected.", NamedTextColor.RED));
+                return;
+            }
+            java.util.List<dev.epicduels.model.Arena> ready = plugin.getArenaManager().getReadyArenas();
+            if (ready.isEmpty()) {
+                party.messageAll(Component.text("No ready arenas available!", NamedTextColor.RED));
+                return;
+            }
+            dev.epicduels.model.Arena arena = ready.get(new java.util.Random().nextInt(ready.size()));
+            boolean ok = plugin.getTeamDuelManager().startTeamDuel(party.getMembers(), size, arena, kit);
+            if (!ok) {
+                party.messageAll(Component.text("Failed to start team duel.", NamedTextColor.RED));
+            }
+        } else {
+            boolean ok = plugin.getTournamentManager().startTournament(party, kit);
+            if (!ok) {
+                party.messageAll(Component.text("Failed to start tournament.", NamedTextColor.RED));
+            }
+        }
+        plugin.getGUIManager().clearPartyFlow(player.getUniqueId());
     }
 
     private String getInventoryTitle(Component title) {

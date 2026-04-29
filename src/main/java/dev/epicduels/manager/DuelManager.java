@@ -17,6 +17,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 
 public class DuelManager {
 
@@ -26,6 +27,7 @@ public class DuelManager {
     private final Map<UUID, DuelInstance> activeDuels = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
+    private final Map<UUID, BiConsumer<UUID, UUID>> endCallbacks = new ConcurrentHashMap<>();
     private BukkitTask expirationTask;
 
     public DuelManager(EpicDuels plugin) {
@@ -142,7 +144,23 @@ public class DuelManager {
         startDuel(player1, player2, arena, kit);
     }
 
-    private void startDuel(Player player1, Player player2, Arena arena, Kit kit) {
+    public DuelInstance startQueueDuelWithCallback(Player player1, Player player2, String arenaName, String kitName,
+                                                    BiConsumer<UUID, UUID> onEnd) {
+        Arena arena = plugin.getArenaManager().getArena(arenaName);
+        Kit kit = plugin.getKitManager().getKit(kitName);
+        if (arena == null || kit == null) {
+            player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            return null;
+        }
+        DuelInstance duel = startDuel(player1, player2, arena, kit);
+        if (duel != null && onEnd != null) {
+            endCallbacks.put(duel.getId(), onEnd);
+        }
+        return duel;
+    }
+
+    private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit) {
         DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName());
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
@@ -215,6 +233,7 @@ public class DuelManager {
                 startCountdown(duel);
             });
         });
+        return duel;
     }
 
     private void startCountdown(DuelInstance duel) {
@@ -321,6 +340,16 @@ public class DuelManager {
         // Return spectators to lobby
         removeSpectatorsForDuel(duel);
 
+        // Fire end callback (e.g. tournament bracket advancement)
+        BiConsumer<UUID, UUID> cb = endCallbacks.remove(duel.getId());
+        if (cb != null) {
+            try {
+                cb.accept(winnerId, loserId);
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Duel end callback threw: " + t.getMessage());
+            }
+        }
+
         String instanceWorldName = duel.getInstanceWorldName();
 
         // Wait 3 seconds then teleport and clean up
@@ -383,6 +412,14 @@ public class DuelManager {
             if (duel.getInstanceWorldName().equals(worldName)) {
                 return duel;
             }
+        }
+        return null;
+    }
+
+    public DuelInstance getDuelById(UUID duelId) {
+        if (duelId == null) return null;
+        for (DuelInstance duel : activeDuels.values()) {
+            if (duel.getId().equals(duelId)) return duel;
         }
         return null;
     }
@@ -461,6 +498,7 @@ public class DuelManager {
         activeDuels.clear();
         frozenPlayers.clear();
         spectators.clear();
+        endCallbacks.clear();
     }
 
     private void preparePlayer(Player player) {

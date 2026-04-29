@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class DuelInstance {
+public class DuelInstance implements BattleInstance {
 
     private final UUID id;
     private final UUID player1;
