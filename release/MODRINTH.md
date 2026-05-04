@@ -1,6 +1,22 @@
 # EpicDuels
+<p align="center">
+  <img src="https://i.ibb.co/VYNPYwxK/Neues-Projekt.png" width="100" alt="Logo">
+</p>
 
-**A full-featured Duels plugin for Paper 1.21.1 — no external dependencies required.**
+<p align="center">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1+-green">
+  <img src="https://img.shields.io/badge/Java-21-orange">
+  <a href="https://modrinth.com/plugin/epicduels">
+    <img src="https://img.shields.io/badge/Modrinth-EpicDuels-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth">
+  </a>
+  <a href="https://discordapp.com/users/1245992673677017119">
+    <img src="https://img.shields.io/badge/Discord-Profile-5865f2?style=flat&logo=discord&logoColor=white" alt="Discord Profile">
+  </a>
+</p>
+
+---
+
+**A full-featured Duels plugin for Paper 1.21.1+ — no external dependencies required.**
 
 Challenge players 1v1, group up with friends for team duels or tournaments, track stats across multiple servers, and keep your lobby perfectly pristine — all out of the box.
 
@@ -8,7 +24,7 @@ Challenge players 1v1, group up with friends for team duels or tournaments, trac
 
 ## Features
 
-### Party System (New in v2.0)
+### Party System
 
 Create a party with `/party create`, invite friends, and launch a game with `/party start`. The party owner selects a kit once; arenas are chosen randomly per match.
 
