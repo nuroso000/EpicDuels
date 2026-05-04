@@ -219,31 +219,4 @@ worlds:
 
 ---
 
-## Changelog
-
-### v2.0.0 — Party System, Lobby Hardening & Stability
-- **Party System** — Team Duel (2v2/3v3/4v4 with friendly fire off) and Single-Elimination Tournament with auto-spectate routing for eliminated players
-- **Adventure mode** in lobby — players cannot break blocks or interact with item frames/armor stands
-- **Per-admin lobby bypass** — `/duel lobby off/on` suspends protections for that admin only
-- **Memory leaks fixed** — stored BukkitTask refs, startup leftover-world cleanup, ghost queue entries removed
-- **Hologram rewrite** — in-place ArmorStand updates, 60s refresh, better line spacing, player name cache
-- **Supabase** — accept HTTP 204, startup connection test, RLS hint on 401/403, await shutdown flush
-
-### v1.0.0 — Leaderboards & Holograms
-- Top 10 leaderboards in chat + persistent in-world holograms (no external plugin)
-- Score formula: `wins² / (wins + losses)`
-- Instant respawn fix, duel/queue double-start fix
-
-### v0.3.0 — Multi-Server Stats
-- Supabase (PostgreSQL) and Firebase Realtime Database backends
-- Async sync with local YAML fallback
-
-### v0.2.x — Queue, GUI, Spectate & Polish
-- Kit-based matchmaking queue with action bar timer
-- 3-icon main menu with sub-menus and pagination
-- Spectate, configurable lobby PvP, random map slot-machine animation
-- Async world copy, per-duel block protection
-
----
-
 *Licensed under CC BY-NC-SA 4.0 — free to use on any server, including revenue-generating ones. Not for resale.*
