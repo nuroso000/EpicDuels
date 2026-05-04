@@ -2,6 +2,165 @@
 
 ---
 
+## v2.0.0 — Party System, Lobby Hardening & Stability
+
+**Date:** May 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+### Major Feature — Party System
+
+EpicDuels now supports **group play** through a full party system. Create a
+party with `/party create`, invite friends with `/party invite <player>`, and
+launch a game with `/party start`. The party owner selects a kit once at the
+start; the arena is picked randomly per match. Supports 2–8 players.
+
+#### Mode 1 — Team Duel (2v2 / 3v3 / 4v4)
+
+- Teams are shuffled randomly at match start.
+- All teammates spawn at the same arena spawn point with small circular offsets
+  so nobody overlaps.
+- **Friendly fire is disabled** — team members cannot damage each other.
+- Eliminated players automatically spectate the ongoing battle until their team
+  is wiped.
+- The last team with a surviving member wins.
+
+#### Mode 2 — Single-Elimination Tournament
+
+- All party members compete in **1v1 bracket matches** using the existing duel
+  system.
+- Byes are inserted automatically for party sizes that are not a power of 2.
+- Eliminated players are **auto-routed to spectate** a random live tournament
+  match so nobody is left waiting in the lobby. When their spectated match ends
+  they are re-routed to another live match if one is still running.
+- The final winner is announced **only to party members** — no server-wide
+  broadcast.
+
+#### Party Commands
+
+| Command | Alias | Description | Permission |
+|---|---|---|---|
+| `/party create` | `/p create` | Create a party | `epicduels.party` |
+| `/party invite <player>` | `/p invite <player>` | Invite a player | `epicduels.party` |
+| `/party accept [player]` | `/p accept` | Accept an invite | `epicduels.party` |
+| `/party deny [player]` | `/p deny` | Deny an invite | `epicduels.party` |
+| `/party leave` | `/p leave` | Leave your party | `epicduels.party` |
+| `/party disband` | `/p disband` | Disband (owner only) | `epicduels.party` |
+| `/party list` | `/p list` | Show members | `epicduels.party` |
+| `/party start` | `/p start` | Open mode-select GUI (owner only) | `epicduels.party` |
+
+#### New Permission
+
+| Permission | Description | Default |
+|---|---|---|
+| `epicduels.party` | Use all party commands | Everyone |
+
+#### New Files
+
+| File | Purpose |
+|---|---|
+| `Party.java` / `PartyInvite.java` / `PartyMode.java` / `TeamSize.java` | Party model layer |
+| `TeamDuelInstance.java` / `Tournament.java` / `BattleInstance.java` | Match model layer |
+| `PartyManager.java` | Invite, party lifecycle, member management |
+| `TeamDuelManager.java` | Team composition, arena spawn offsets, friendly fire, winner detection |
+| `TournamentManager.java` | Bracket generation, match scheduling, spectator routing |
+| `FriendlyFireListener.java` | Cancels damage between teammates during team duels |
+| `PartyCommand.java` / `PartyTabCompleter.java` | Command handling |
+
+---
+
+### Major Change — Adventure Mode in Lobby
+
+All players now join and stay in **Adventure mode** inside the lobby world. This
+prevents them from breaking or placing blocks — which is especially important for
+servers running external plugins like **ImageFrame** whose maps/images would
+otherwise be destroyed by any player in Survival/Creative.
+
+- Players are set to `ADVENTURE` on join and on return from a duel.
+- Spectators are also returned to `ADVENTURE` when they stop spectating.
+- Admins with `epicduels.admin` are unaffected — see "Per-Admin Bypass" below.
+
+### Major Feature — Item Frame & Armor Stand Protection
+
+A new `PlayerInteractEntityEvent` handler prevents non-admin players from
+interacting with item frames and armor stands in the lobby, closing the last
+bypass that Adventure mode alone did not cover (right-clicking an item frame
+still works in Adventure mode without a tool).
+
+### Major Feature — Per-Admin Lobby Bypass
+
+Admins can now switch their own lobby protections off temporarily for building
+without touching the global config or affecting other players.
+
+| Command | Description |
+|---|---|
+| `/duel lobby off` | Puts *you* in Creative mode and suspends all lobby protections for your session |
+| `/duel lobby on` | Restores *your* Adventure mode and re-enables all lobby protections for you |
+
+The bypass is **per-player** — every other player keeps full protections while an
+admin is in build mode.
+
+### Bug Fixes
+
+#### Memory Leaks
+
+- **BukkitTask references** — `DuelManager`'s request-expiration repeating task
+  and `QueueManager`'s matchmaking loop both lacked stored `BukkitTask`
+  references. On plugin reload, these tasks kept running in the background,
+  slowly eating RAM. Both now store their `BukkitTask` and cancel it on
+  `cleanupAll()` / `cleanup()`.
+
+- **Leftover instance worlds** — Arena instance worlds (`arena_instance_*`) left
+  behind by a previous crash or hard shutdown were never cleaned up. The plugin
+  now scans for and deletes them on the first server tick after startup.
+
+- **Ghost queue entries** — Players who disconnected while in the matchmaking
+  queue were previously skipped on the action-bar update but kept in the queue
+  maps indefinitely. They are now removed immediately when the next tick detects
+  they are offline.
+
+#### Supabase Sync
+
+- The plugin now runs a **connection test on startup** so misconfiguration
+  (wrong URL or key) is caught immediately rather than silently failing on the
+  first win.
+- PostgREST returns **HTTP 204 No Content** on a successful upsert; this was
+  previously treated as an error and the push was silently dropped. Now accepted.
+- **HTTP 401 / 403** responses print an actionable hint: `"Check your Row-Level
+  Security policy in the Supabase dashboard"`.
+- `StatsManager.pushAllToRemote()` during `onDisable` now properly awaits all
+  async futures (up to 15 s) so no stats are lost on shutdown.
+
+### Performance Improvements — Hologram Efficiency Rewrite
+
+The `HologramManager` was re-written to eliminate the biggest source of entity
+churn on leaderboard servers:
+
+| Metric | Before | After |
+|---|---|---|
+| Update strategy | Delete all ArmorStands, re-spawn | Update text in-place |
+| Refresh interval | 200 ticks (10 s) | 1 200 ticks (60 s) |
+| Orphan scan scope | All loaded worlds | Hologram worlds only |
+| Player name lookups | `Bukkit.getOfflinePlayer()` per line every tick | Cached per refresh cycle |
+| Line spacing | 0.28 blocks (causes overlap at small fonts) | 0.30 blocks |
+
+The old approach spawned and killed 20 ArmorStand entities every 10 seconds per
+hologram. On a server with two holograms this meant 240 entity-create/destroy
+operations per minute — causing noticeable lag spikes. The new approach touches
+only existing entities' metadata.
+
+### Upgrade Notes
+
+- Replace `EpicDuels-1.0.0.jar` with `EpicDuels-2.0.0.jar`. All existing
+  config, arenas, kits, stats, and `.yml` files remain fully compatible.
+- No config changes are required — new features work out of the box.
+- The new `epicduels.party` permission defaults to `true` (all players). If you
+  want to restrict party creation, add it to your permissions plugin.
+- Admins who had custom lobby protections toggled off in `config.yml` should
+  review whether the per-player bypass (`/duel lobby off`) is a better fit.
+
+---
+
 ## v1.0.0 — Full Release: Leaderboards, Holograms & Polish
 
 **Date:** April 2026
