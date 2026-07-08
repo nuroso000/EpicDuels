@@ -39,7 +39,7 @@ public class QueueManager {
 
     public boolean joinQueue(UUID playerId, String kitName) {
         if (playerQueue.containsKey(playerId)) return false;
-        if (plugin.getDuelManager().isInDuel(playerId)) return false;
+        if (plugin.getDuelManager().isBusy(playerId)) return false;
 
         queues.computeIfAbsent(kitName.toLowerCase(), k -> Collections.synchronizedList(new ArrayList<>())).add(playerId);
         playerQueue.put(playerId, kitName.toLowerCase());

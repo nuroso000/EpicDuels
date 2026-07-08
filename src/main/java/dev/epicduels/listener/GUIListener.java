@@ -117,8 +117,14 @@ public class GUIListener implements Listener {
             return;
         }
 
-        if (plugin.getDuelManager().isInDuel(target.getUniqueId())) {
-            player.sendMessage(Component.text("That player is already in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a match!", NamedTextColor.RED));
+            player.closeInventory();
+            return;
+        }
+
+        if (plugin.getDuelManager().isBusy(target.getUniqueId())) {
+            player.sendMessage(Component.text("That player is already in a match!", NamedTextColor.RED));
             player.closeInventory();
             return;
         }
@@ -154,8 +160,8 @@ public class GUIListener implements Listener {
         Kit kit = plugin.getKitManager().getKit(itemName);
         if (kit == null) return;
 
-        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a match!", NamedTextColor.RED));
             return;
         }
 

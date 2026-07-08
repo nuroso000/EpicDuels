@@ -23,7 +23,8 @@ public class DuelManager {
 
     private final EpicDuels plugin;
     private final Map<UUID, DuelRequest> outgoingRequests = new ConcurrentHashMap<>();
-    private final Map<UUID, DuelRequest> incomingRequests = new ConcurrentHashMap<>();
+    // receiver -> (sender -> request), so multiple players can challenge the same target
+    private final Map<UUID, Map<UUID, DuelRequest>> incomingRequests = new ConcurrentHashMap<>();
     private final Map<UUID, DuelInstance> activeDuels = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
@@ -45,7 +46,7 @@ public class DuelManager {
                     DuelRequest request = entry.getValue();
                     if (request.isExpired()) {
                         it.remove();
-                        incomingRequests.remove(request.getReceiver());
+                        removeIncoming(request.getReceiver(), request.getSender());
 
                         Player sender = Bukkit.getPlayer(request.getSender());
                         Player receiver = Bukkit.getPlayer(request.getReceiver());
@@ -61,39 +62,69 @@ public class DuelManager {
         }.runTaskTimer(plugin, 20L, 20L);
     }
 
+    /**
+     * True if the player is in any kind of match: 1v1 duel, team duel or tournament.
+     */
+    public boolean isBusy(UUID playerId) {
+        if (isInDuel(playerId)) return true;
+        if (plugin.getTeamDuelManager() != null && plugin.getTeamDuelManager().isInTeamDuel(playerId)) return true;
+        return plugin.getTournamentManager() != null && plugin.getTournamentManager().isInTournament(playerId);
+    }
+
     public boolean sendRequest(UUID sender, UUID receiver, String arenaName, String kitName) {
         if (outgoingRequests.containsKey(sender)) return false;
-        if (isInDuel(sender) || isInDuel(receiver)) return false;
+        if (isBusy(sender) || isBusy(receiver)) return false;
 
         DuelRequest request = new DuelRequest(sender, receiver, arenaName, kitName);
         outgoingRequests.put(sender, request);
-        incomingRequests.put(receiver, request);
+        incomingRequests.computeIfAbsent(receiver, k -> new ConcurrentHashMap<>()).put(sender, request);
         return true;
     }
 
-    public DuelRequest getIncomingRequest(UUID receiver) {
-        DuelRequest request = incomingRequests.get(receiver);
-        if (request != null && request.isExpired()) {
-            incomingRequests.remove(receiver);
-            outgoingRequests.remove(request.getSender());
-            return null;
+    /**
+     * All non-expired incoming requests for a player. Expired entries are pruned.
+     */
+    public List<DuelRequest> getIncomingRequests(UUID receiver) {
+        Map<UUID, DuelRequest> map = incomingRequests.get(receiver);
+        if (map == null) return List.of();
+        List<DuelRequest> valid = new ArrayList<>();
+        for (DuelRequest request : map.values()) {
+            if (request.isExpired()) {
+                map.remove(request.getSender());
+                outgoingRequests.remove(request.getSender(), request);
+            } else {
+                valid.add(request);
+            }
         }
-        return request;
+        if (map.isEmpty()) incomingRequests.remove(receiver, map);
+        return valid;
+    }
+
+    /**
+     * The single pending incoming request, or null if there are none or several.
+     */
+    public DuelRequest getIncomingRequest(UUID receiver) {
+        List<DuelRequest> valid = getIncomingRequests(receiver);
+        return valid.size() == 1 ? valid.get(0) : null;
     }
 
     public DuelRequest getIncomingRequestFrom(UUID receiver, UUID sender) {
-        DuelRequest request = incomingRequests.get(receiver);
-        if (request != null && request.getSender().equals(sender) && !request.isExpired()) {
-            return request;
+        Map<UUID, DuelRequest> map = incomingRequests.get(receiver);
+        if (map == null) return null;
+        DuelRequest request = map.get(sender);
+        if (request != null && request.isExpired()) {
+            removeIncoming(receiver, sender);
+            outgoingRequests.remove(sender, request);
+            return null;
         }
-        return null;
+        return request;
     }
 
     public DuelRequest getOutgoingRequest(UUID sender) {
         DuelRequest request = outgoingRequests.get(sender);
         if (request != null && request.isExpired()) {
             outgoingRequests.remove(sender);
-            incomingRequests.remove(request.getReceiver());
+            removeIncoming(request.getReceiver(), sender);
             return null;
         }
         return request;
@@ -102,25 +133,53 @@ public class DuelManager {
     public void cancelRequest(UUID sender) {
         DuelRequest request = outgoingRequests.remove(sender);
         if (request != null) {
-            incomingRequests.remove(request.getReceiver());
+            removeIncoming(request.getReceiver(), sender);
         }
     }
 
-    public void denyRequest(UUID receiver) {
-        DuelRequest request = incomingRequests.remove(receiver);
+    public void denyRequest(UUID receiver, UUID sender) {
+        Map<UUID, DuelRequest> map = incomingRequests.get(receiver);
+        if (map == null) return;
+        DuelRequest request = map.remove(sender);
+        if (map.isEmpty()) incomingRequests.remove(receiver, map);
         if (request != null) {
-            outgoingRequests.remove(request.getSender());
+            outgoingRequests.remove(sender, request);
         }
     }
 
-    public void acceptRequest(UUID receiver) {
-        DuelRequest request = incomingRequests.remove(receiver);
+    /**
+     * Drop every pending incoming request for a player (quit, duel start, ...).
+     */
+    public void denyAllIncoming(UUID receiver) {
+        Map<UUID, DuelRequest> map = incomingRequests.remove(receiver);
+        if (map == null) return;
+        for (DuelRequest request : map.values()) {
+            outgoingRequests.remove(request.getSender(), request);
+        }
+    }
+
+    private void removeIncoming(UUID receiver, UUID sender) {
+        Map<UUID, DuelRequest> map = incomingRequests.get(receiver);
+        if (map != null) {
+            map.remove(sender);
+            if (map.isEmpty()) incomingRequests.remove(receiver, map);
+        }
+    }
+
+    public void acceptRequest(UUID receiver, UUID senderId) {
+        DuelRequest request = getIncomingRequestFrom(receiver, senderId);
         if (request == null) return;
-        outgoingRequests.remove(request.getSender());
+        denyRequest(receiver, senderId); // consume the request
 
         Player player1 = Bukkit.getPlayer(request.getSender());
         Player player2 = Bukkit.getPlayer(receiver);
         if (player1 == null || player2 == null) return;
+
+        if (isBusy(player1.getUniqueId()) || isBusy(player2.getUniqueId())) {
+            player1.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            player2.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            return;
+        }
 
         Arena arena = plugin.getArenaManager().getArena(request.getArenaName());
         Kit kit = plugin.getKitManager().getKit(request.getKitName());
@@ -161,6 +220,18 @@ public class DuelManager {
     }
 
     private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit) {
+        // Guard: never start a duel for someone who is already fighting.
+        // Tournament membership is intentionally NOT checked here — tournament
+        // matches are themselves started through this method.
+        boolean inTeamDuel = plugin.getTeamDuelManager() != null
+                && (plugin.getTeamDuelManager().isInTeamDuel(player1.getUniqueId())
+                    || plugin.getTeamDuelManager().isInTeamDuel(player2.getUniqueId()));
+        if (isInDuel(player1.getUniqueId()) || isInDuel(player2.getUniqueId()) || inTeamDuel) {
+            player1.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            player2.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            return null;
+        }
+
         DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName());
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
@@ -172,8 +243,8 @@ public class DuelManager {
         // Safety: cancel any outgoing/incoming duel requests for both players
         cancelRequest(player1.getUniqueId());
         cancelRequest(player2.getUniqueId());
-        denyRequest(player1.getUniqueId());
-        denyRequest(player2.getUniqueId());
+        denyAllIncoming(player1.getUniqueId());
+        denyAllIncoming(player2.getUniqueId());
 
         player1.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
         player2.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
@@ -390,6 +461,22 @@ public class DuelManager {
         DuelInstance duel = activeDuels.get(playerId);
         if (duel == null || !duel.isActive()) return;
 
+        UUID opponent = duel.getOpponent(playerId);
+        endDuel(duel, opponent, playerId);
+    }
+
+    /**
+     * Called when a duel participant leaves the arena world (e.g. teleported
+     * away by another plugin). Counts as a forfeit — the opponent wins.
+     */
+    public void handleForfeit(UUID playerId) {
+        DuelInstance duel = activeDuels.get(playerId);
+        if (duel == null || !duel.isActive()) return;
+
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null) {
+            player.sendMessage(Component.text("You left the arena — duel forfeited.", NamedTextColor.RED));
+        }
         UUID opponent = duel.getOpponent(playerId);
         endDuel(duel, opponent, playerId);
     }

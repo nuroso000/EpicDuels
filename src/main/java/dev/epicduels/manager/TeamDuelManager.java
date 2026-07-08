@@ -46,7 +46,7 @@ public class TeamDuelManager {
             // Safety: drop from queue/requests
             plugin.getQueueManager().removePlayer(id);
             plugin.getDuelManager().cancelRequest(id);
-            plugin.getDuelManager().denyRequest(id);
+            plugin.getDuelManager().denyAllIncoming(id);
         }
         activeById.put(instance.getId(), instance);
 
@@ -304,6 +304,25 @@ public class TeamDuelManager {
                 }, 20L);
             }
         }.runTaskLater(plugin, 60L);
+    }
+
+    /**
+     * A living participant left the arena world (teleported away) — counts as
+     * a death for their team.
+     */
+    public void handleForfeit(Player player) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
+        if (instance == null || !instance.isActive()) return;
+        if (!instance.isAlive(player.getUniqueId())) return;
+
+        instance.markDead(player.getUniqueId());
+        frozen.remove(player.getUniqueId());
+        player.sendMessage(Component.text("You left the arena — you are out of the team duel.", NamedTextColor.RED));
+
+        TeamDuelInstance.Team winner = instance.getWinningTeam();
+        if (winner != null) {
+            endTeamDuel(instance, winner);
+        }
     }
 
     public void handleDisconnect(UUID playerId) {

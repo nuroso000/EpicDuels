@@ -44,7 +44,7 @@ public class TournamentManager {
             // Safety: clear other states
             plugin.getQueueManager().removePlayer(id);
             plugin.getDuelManager().cancelRequest(id);
-            plugin.getDuelManager().denyRequest(id);
+            plugin.getDuelManager().denyAllIncoming(id);
         }
 
         party.messageAll(Component.text("=== TOURNAMENT STARTED ===", NamedTextColor.GOLD, TextDecoration.BOLD));

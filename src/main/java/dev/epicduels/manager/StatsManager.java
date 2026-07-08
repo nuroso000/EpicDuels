@@ -122,11 +122,14 @@ public class StatsManager {
         local = new PlayerStats(0, 0);
         stats.put(uuid, local);
 
-        // If remote provider is configured, try to pull data
+        // If remote provider is configured, try to pull data. The HTTP callback
+        // runs on the HttpClient's thread pool — hop back onto the main thread
+        // before touching the stats map or saving, since neither is thread-safe.
         if (remoteProvider != null) {
             final PlayerStats placeholder = local;
             remoteProvider.fetch(uuid).thenAccept(remote -> {
-                if (remote != null) {
+                if (remote == null || !plugin.isEnabled()) return;
+                org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
                     // Merge: take the higher value for each field so no data is lost
                     int mergedWins = Math.max(placeholder.getWins(), remote.getWins());
                     int mergedLosses = Math.max(placeholder.getLosses(), remote.getLosses());
@@ -135,7 +138,7 @@ public class StatsManager {
                     // Persist merged data locally
                     saveStats();
                     plugin.getLogger().info("Synced stats for " + uuid + " from remote (" + mergedWins + "W/" + mergedLosses + "L).");
-                }
+                });
             });
         }
 

@@ -397,8 +397,8 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a match!", NamedTextColor.RED));
             return;
         }
 
@@ -418,8 +418,8 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        if (plugin.getDuelManager().isInDuel(target.getUniqueId())) {
-            player.sendMessage(Component.text("That player is already in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(target.getUniqueId())) {
+            player.sendMessage(Component.text("That player is already in a match!", NamedTextColor.RED));
             return;
         }
 
@@ -441,25 +441,33 @@ public class DuelCommand implements CommandExecutor {
                 return;
             }
             request = plugin.getDuelManager().getIncomingRequestFrom(player.getUniqueId(), sender.getUniqueId());
+            if (request == null) {
+                player.sendMessage(Component.text("You have no pending duel request from that player.", NamedTextColor.RED));
+                return;
+            }
         } else {
-            request = plugin.getDuelManager().getIncomingRequest(player.getUniqueId());
-        }
-
-        if (request == null) {
-            player.sendMessage(Component.text("You have no pending duel requests.", NamedTextColor.RED));
-            return;
+            var requests = plugin.getDuelManager().getIncomingRequests(player.getUniqueId());
+            if (requests.isEmpty()) {
+                player.sendMessage(Component.text("You have no pending duel requests.", NamedTextColor.RED));
+                return;
+            }
+            if (requests.size() > 1) {
+                player.sendMessage(Component.text("You have multiple duel requests. Use /duel accept <player>.", NamedTextColor.YELLOW));
+                return;
+            }
+            request = requests.get(0);
         }
 
         Player sender = Bukkit.getPlayer(request.getSender());
         if (sender == null) {
             player.sendMessage(Component.text("The challenger is no longer online.", NamedTextColor.RED));
-            plugin.getDuelManager().denyRequest(player.getUniqueId());
+            plugin.getDuelManager().denyRequest(player.getUniqueId(), request.getSender());
             return;
         }
 
         player.sendMessage(Component.text("Duel accepted!", NamedTextColor.GREEN));
         sender.sendMessage(Component.text(player.getName() + " accepted your duel!", NamedTextColor.GREEN));
-        plugin.getDuelManager().acceptRequest(player.getUniqueId());
+        plugin.getDuelManager().acceptRequest(player.getUniqueId(), request.getSender());
     }
 
     private void handleDeny(Player player, String[] args) {
@@ -471,17 +479,25 @@ public class DuelCommand implements CommandExecutor {
                 return;
             }
             request = plugin.getDuelManager().getIncomingRequestFrom(player.getUniqueId(), sender.getUniqueId());
+            if (request == null) {
+                player.sendMessage(Component.text("You have no pending duel request from that player.", NamedTextColor.RED));
+                return;
+            }
         } else {
-            request = plugin.getDuelManager().getIncomingRequest(player.getUniqueId());
-        }
-
-        if (request == null) {
-            player.sendMessage(Component.text("You have no pending duel requests.", NamedTextColor.RED));
-            return;
+            var requests = plugin.getDuelManager().getIncomingRequests(player.getUniqueId());
+            if (requests.isEmpty()) {
+                player.sendMessage(Component.text("You have no pending duel requests.", NamedTextColor.RED));
+                return;
+            }
+            if (requests.size() > 1) {
+                player.sendMessage(Component.text("You have multiple duel requests. Use /duel deny <player>.", NamedTextColor.YELLOW));
+                return;
+            }
+            request = requests.get(0);
         }
 
         Player sender = Bukkit.getPlayer(request.getSender());
-        plugin.getDuelManager().denyRequest(player.getUniqueId());
+        plugin.getDuelManager().denyRequest(player.getUniqueId(), request.getSender());
         player.sendMessage(Component.text("Duel request denied.", NamedTextColor.YELLOW));
         if (sender != null) {
             sender.sendMessage(Component.text(player.getName() + " denied your duel request.", NamedTextColor.RED));
@@ -536,8 +552,8 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(Component.text("You are already in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
+            player.sendMessage(Component.text("You are already in a match!", NamedTextColor.RED));
             return;
         }
 
@@ -550,8 +566,8 @@ public class DuelCommand implements CommandExecutor {
     }
 
     private void handleSpectate(Player player, String[] args) {
-        if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(Component.text("You can't spectate while in a duel!", NamedTextColor.RED));
+        if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
+            player.sendMessage(Component.text("You can't spectate while in a match!", NamedTextColor.RED));
             return;
         }
 

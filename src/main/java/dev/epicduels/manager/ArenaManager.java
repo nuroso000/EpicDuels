@@ -215,6 +215,13 @@ public class ArenaManager {
     }
 
     public CompletableFuture<World> createInstanceWorld(Arena arena, String instanceWorldName) {
+        // Flush pending chunk changes to disk so the copy contains the latest
+        // template edits. Called from the main thread before the async copy.
+        World templateWorld = Bukkit.getWorld(arena.getWorldName());
+        if (templateWorld != null) {
+            templateWorld.save();
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             String templateWorldName = arena.getWorldName();
             String instanceName = instanceWorldName;

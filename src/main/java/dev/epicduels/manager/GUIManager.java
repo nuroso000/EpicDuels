@@ -111,7 +111,7 @@ public class GUIManager {
     public void openDuelsMenu(Player player, int page) {
         List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
         online.remove(player);
-        online.removeIf(p -> plugin.getDuelManager().isInDuel(p.getUniqueId()));
+        online.removeIf(p -> plugin.getDuelManager().isBusy(p.getUniqueId()));
 
         int totalPages = Math.max(1, (int) Math.ceil((double) online.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
