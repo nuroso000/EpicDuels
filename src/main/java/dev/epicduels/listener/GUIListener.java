@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -71,6 +72,29 @@ public class GUIListener implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+
+        String title = getInventoryTitle(event.getView().title());
+        if (!isPluginGUI(title)) return;
+
+        UUID uuid = player.getUniqueId();
+
+        // The challenge flow (Player -> Kit -> Map) opens a new GUI right after closing
+        // the old one, which fires this close event for the GUI being replaced. Delay the
+        // state cleanup by one tick and only clear it if the player doesn't have one of
+        // our GUIs open anymore by then.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            String currentTitle = getInventoryTitle(player.getOpenInventory().title());
+            if (isPluginGUI(currentTitle)) return;
+
+            plugin.getGUIManager().cancelAnimation(uuid);
+            plugin.getGUIManager().clearChallengeData(uuid);
+            plugin.getGUIManager().clearPartyFlow(uuid);
+        });
     }
 
     // ========== MAIN MENU ==========
@@ -283,6 +307,11 @@ public class GUIListener implements Listener {
     private void handleKitEditClick(InventoryClickEvent event, Player player, String title) {
         int slot = event.getRawSlot();
 
+        if (slot >= 41 && slot <= 52) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (slot == 53) {
             event.setCancelled(true);
 
@@ -385,6 +414,10 @@ public class GUIListener implements Listener {
                 || title.equals(GUIManager.PARTY_KIT_TITLE)
                 || title.equals(GUIManager.PARTY_CONFIRM_TITLE)
                 || title.startsWith(GUIManager.KIT_PREVIEW_TITLE);
+    }
+
+    private boolean isPluginGUI(String title) {
+        return title != null && (title.startsWith(GUIManager.KIT_EDIT_TITLE) || isOurGUI(title));
     }
 
     // ========== PARTY FLOW HANDLERS ==========

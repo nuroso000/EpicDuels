@@ -338,10 +338,12 @@ public class GUIManager {
                         inv.setItem(animSlot, createItem(chosenArena.getDisplayIcon(),
                                 "&a&l" + chosenArena.getName(), "&aSelected!"));
                         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-                        animatingPlayers.remove(player.getUniqueId());
+                        // Keep the player marked as animating until the delayed callback runs,
+                        // so a menu close in the meantime can still cancel the finish via cancelAnimation().
 
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                            if (player.isOnline()) {
+                            boolean stillAnimating = animatingPlayers.remove(player.getUniqueId());
+                            if (stillAnimating && player.isOnline()) {
                                 player.closeInventory();
                                 finishChallengeWithArena(player, chosenArena.getName());
                             }
@@ -370,6 +372,13 @@ public class GUIManager {
             }
         }
         if (kit.getOffHand() != null) inv.setItem(40, kit.getOffHand().clone());
+
+        // Slots 41-52 are unused by the kit (only 0-40 are saved) — block them off
+        ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 41; i <= 52; i++) {
+            inv.setItem(i, pane);
+        }
+
         inv.setItem(53, createItem(Material.EMERALD, "&aSave Kit", "&7Click to save changes"));
 
         player.openInventory(inv);
@@ -638,6 +647,15 @@ public class GUIManager {
 
     public boolean isAnimating(UUID player) {
         return animatingPlayers.contains(player);
+    }
+
+    /**
+     * Cancels a running "Random Map" animation for a player, if any.
+     * The running animation task checks {@code animatingPlayers} every tick and
+     * stops itself (without finishing the challenge) once the entry is removed.
+     */
+    public void cancelAnimation(UUID player) {
+        animatingPlayers.remove(player);
     }
 
     public int getPlayerPage(UUID playerId) {

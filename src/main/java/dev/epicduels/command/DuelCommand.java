@@ -526,25 +526,23 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
-        if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
-            plugin.getQueueManager().leaveQueue(player.getUniqueId());
-            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
-            player.sendActionBar(Component.empty());
+        boolean wasInQueue = plugin.getQueueManager().isInQueue(player.getUniqueId());
+
+        // No kit argument, or explicit "leave" -> just leave the current queue.
+        if (args.length < 2 || args[1].equalsIgnoreCase("leave")) {
+            if (wasInQueue) {
+                plugin.getQueueManager().leaveQueue(player.getUniqueId());
+                player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
+                player.sendActionBar(Component.empty());
+            } else if (args.length < 2) {
+                player.sendMessage(Component.text("Usage: /duel queue <kit> or /duel queue leave", NamedTextColor.YELLOW));
+            } else {
+                player.sendMessage(Component.text("You are not in a queue.", NamedTextColor.YELLOW));
+            }
             return;
         }
 
-        if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /duel queue <kit> or /duel queue leave", NamedTextColor.YELLOW));
-            return;
-        }
-
-        if (args[1].equalsIgnoreCase("leave")) {
-            plugin.getQueueManager().leaveQueue(player.getUniqueId());
-            player.sendMessage(Component.text("You left the queue.", NamedTextColor.YELLOW));
-            player.sendActionBar(Component.empty());
-            return;
-        }
-
+        // Kit argument given -> join that queue (switching from any current queue).
         String kitName = args[1];
         Kit kit = plugin.getKitManager().getKit(kitName);
         if (kit == null) {
@@ -557,15 +555,28 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
+        if (wasInQueue) {
+            plugin.getQueueManager().leaveQueue(player.getUniqueId());
+        }
+
         boolean joined = plugin.getQueueManager().joinQueue(player.getUniqueId(), kit.getName());
         if (joined) {
-            player.sendMessage(Component.text("You joined the queue for: " + kit.getName(), NamedTextColor.GREEN));
+            if (wasInQueue) {
+                player.sendMessage(Component.text("Switched queue to: " + kit.getName(), NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("You joined the queue for: " + kit.getName(), NamedTextColor.GREEN));
+            }
         } else {
             player.sendMessage(Component.text("Could not join queue.", NamedTextColor.RED));
         }
     }
 
     private void handleSpectate(Player player, String[] args) {
+        if (!player.hasPermission("epicduels.spectate")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+
         if (plugin.getDuelManager().isBusy(player.getUniqueId())) {
             player.sendMessage(Component.text("You can't spectate while in a match!", NamedTextColor.RED));
             return;
