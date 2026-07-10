@@ -30,7 +30,7 @@ A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, *
 - **/duel toggle** — Players can turn off incoming duel requests (persistent). They disappear from the challenge menu.
 - **/duel reload** — Reload `config.yml` at runtime.
 - **`lobby.handle-join` config** — The join-time inventory wipe + lobby teleport can now be disabled for servers where EpicDuels runs alongside other gameplay.
-- **Bug fixes** — Duel-state guards, multi-request support, thread-safe remote stats, projectile-proof lobby PvP protection, arena-exit forfeits, and more. See [release notes](release/RELEASE.md).
+- **Bug fixes** — Duel-state guards, multi-request support, thread-safe remote stats, projectile-proof lobby PvP protection, arena-exit forfeits, and more. See the [changelog](CHANGELOG.md) and [release notes](release/RELEASE.md).
 
 ## Features
 
