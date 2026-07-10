@@ -54,6 +54,8 @@ public class PlayerListener implements Listener {
         plugin.getDuelManager().denyAllIncoming(player.getUniqueId());
         // Clear GUI data
         plugin.getGUIManager().clearChallengeData(player.getUniqueId());
+        // Cancel any pending rematch offer
+        if (plugin.getRematchManager() != null) plugin.getRematchManager().handleDisconnect(player.getUniqueId());
         // Party / team duel / tournament cleanup
         if (plugin.getTeamDuelManager() != null) plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
         if (plugin.getTournamentManager() != null) plugin.getTournamentManager().handleDisconnect(player.getUniqueId());

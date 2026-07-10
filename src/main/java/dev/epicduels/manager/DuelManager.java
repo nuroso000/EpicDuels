@@ -221,6 +221,14 @@ public class DuelManager {
         return duel;
     }
 
+    /**
+     * Starts a duel without a challenge request (rematch, ...). Same busy
+     * checks as any other duel start.
+     */
+    public DuelInstance startDirectDuel(Player player1, Player player2, Arena arena, Kit kit) {
+        return startDuel(player1, player2, arena, kit);
+    }
+
     private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit) {
         // Guard: never start a duel for someone who is already fighting.
         // Tournament membership is intentionally NOT checked here — tournament
@@ -488,6 +496,10 @@ public class DuelManager {
         removeSpectatorsForDuel(duel);
         endCallbacks.remove(duel.getId());
 
+        if (p1 != null && p2 != null && plugin.getRematchManager() != null) {
+            plugin.getRematchManager().offerRematch(duel);
+        }
+
         scheduleReturnToLobby(duel, p1, p2);
     }
 
@@ -546,6 +558,9 @@ public class DuelManager {
             } catch (Throwable t) {
                 plugin.getLogger().warning("Duel end callback threw: " + t.getMessage());
             }
+        } else if (winner != null && loser != null && plugin.getRematchManager() != null) {
+            // Regular duel (not a tournament match) — offer a rematch
+            plugin.getRematchManager().offerRematch(duel);
         }
 
         scheduleReturnToLobby(duel, winner, loser);

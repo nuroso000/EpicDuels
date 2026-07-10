@@ -60,6 +60,7 @@ public class DuelCommand implements CommandExecutor {
             case "queue", "q" -> handleQueue(player, args);
             case "spectate", "spec" -> handleSpectate(player, args);
             case "forfeit", "ff", "leave" -> handleForfeit(player, args);
+            case "rematch" -> handleRematch(player);
             case "duels" -> {
                 if (!player.hasPermission("epicduels.duel")) {
                     player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -656,6 +657,14 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("Click within 10 seconds to confirm.", NamedTextColor.GRAY));
     }
 
+    private void handleRematch(Player player) {
+        if (!player.hasPermission("epicduels.duel")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+        plugin.getRematchManager().accept(player);
+    }
+
     private void handleLeaderboard(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -836,6 +845,7 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel forfeit", NamedTextColor.YELLOW).append(Component.text(" - Give up your current match", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel rematch", NamedTextColor.YELLOW).append(Component.text(" - Accept a pending rematch offer", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel leaderboard <wins|score>", NamedTextColor.YELLOW).append(Component.text(" - Show the top 10", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));

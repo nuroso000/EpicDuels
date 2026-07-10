@@ -97,6 +97,7 @@ public class EpicDuels extends JavaPlugin {
     private PartyManager partyManager;
     private TeamDuelManager teamDuelManager;
     private TournamentManager tournamentManager;
+    private RematchManager rematchManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
@@ -115,6 +116,7 @@ public class EpicDuels extends JavaPlugin {
         partyManager = new PartyManager(this);
         teamDuelManager = new TeamDuelManager(this);
         tournamentManager = new TournamentManager(this);
+        rematchManager = new RematchManager(this);
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -159,6 +161,7 @@ public class EpicDuels extends JavaPlugin {
         if (duelManager != null) {
             duelManager.cleanupAll();
         }
+        if (rematchManager != null) rematchManager.cleanup();
 
         // Cleanup queue
         if (queueManager != null) {
@@ -341,5 +344,9 @@ public class EpicDuels extends JavaPlugin {
 
     public TournamentManager getTournamentManager() {
         return tournamentManager;
+    }
+
+    public RematchManager getRematchManager() {
+        return rematchManager;
     }
 }
