@@ -18,11 +18,21 @@
 
 **A full-featured Duels plugin for Paper 1.21.1+ — no external dependencies required.**
 
-Challenge players 1v1, group up with friends for team duels or tournaments, track stats across multiple servers, and keep your lobby perfectly pristine — all out of the box.
+Challenge players 1v1 (Best of 1/3/5), group up with friends for team duels or tournaments, rematch with one click, fight with kits or your own inventory, track stats across multiple servers, and keep your lobby perfectly pristine — all out of the box.
 
 ---
 
 ## Features
+
+### New in v3.0 — Gameplay Update
+
+- **Match time limit & draws** — Configurable clock with action-bar countdown (default 5 min). Time-up = draw for 1v1/team duels; tournament matches get a sudden-death extension and/or coin flip so the bracket always advances.
+- **Best of 1 / 3 / 5** — Choose a round mode when challenging. Rounds reuse the same arena (placed blocks are reset), with score titles like "Round 2 — 1:1".
+- **Rematch** — Clickable `[REMATCH]` message after every duel (30 s). Both click → same kit, arena, and round mode, new fight.
+- **Forfeit** — `/duel forfeit` gives up the current match, with a click-to-confirm prompt against fat-fingering.
+- **Own Inventory duels** — Fight with the items you carry instead of a kit. Inventories are saved to disk at duel start and restored afterwards — safe across disconnects and even server crashes.
+- **Request toggle** — `/duel toggle` blocks incoming duel requests (persistent); you disappear from the challenge menu.
+- **Admin QoL** — `/duel reload` reloads the config; new `lobby.handle-join` option disables the join-time reset for non-dedicated servers.
 
 ### Party System
 
@@ -43,7 +53,7 @@ Create a party with `/party create`, invite friends, and launch a game with `/pa
 
 ### 1v1 Duels
 
-- **Challenge anyone** — Pick a player, kit, and map through the GUI. Opponent gets a clickable Accept / Deny message with a 30-second timer.
+- **Challenge anyone** — Pick a player, kit, rounds (Bo1/Bo3/Bo5), and map through the GUI. Opponent gets a clickable Accept / Deny message with a 30-second timer.
 - **Queue / Matchmaking** — Join a kit-based queue from the menu or via `/duel queue <kit>`. Two players queuing for the same kit are instantly matched on a random arena. Live queue time on the action bar.
 - **Spectate** — `/duel spectate <player>` puts you in Spectator mode inside the duel. Auto-returned to lobby when the match ends.
 - **Isolated arenas** — Every duel runs in its own void world copy, deleted immediately after the match.
@@ -100,7 +110,7 @@ Does not work on Spigot or Vanilla.
 
 ## Installation
 
-1. Drop `EpicDuels-2.0.0.jar` into your `plugins/` folder.
+1. Drop `EpicDuels-3.0.0.jar` into your `plugins/` folder.
 2. Restart the server.
 3. Set lobby spawn: stand where you want it and run `/duel setlobby`.
 4. Create an arena: `/duel arena create myarena` → build → `/duel arena setspawn1` → `/duel arena setspawn2` → `/duel arena save`.
@@ -130,6 +140,9 @@ worlds:
 | `/duel queue <kit>` | `/d q <kit>` | Join matchmaking queue |
 | `/duel queue leave` | `/d q leave` | Leave the queue |
 | `/duel spectate <player>` | `/d spec <player>` | Spectate an active duel |
+| `/duel forfeit` | `/d ff` | Give up your match (click to confirm) |
+| `/duel rematch` | | Accept a rematch offer |
+| `/duel toggle` | | Block/allow incoming duel requests |
 | `/duel stats [player]` | | View stats in chat |
 | `/duel leaderboard wins` | `/d lb wins` | Top 10 by wins |
 | `/duel leaderboard score` | `/d lb score` | Top 10 by score |
@@ -154,6 +167,7 @@ worlds:
 | `/duel arena create/delete/rename/list/tp/save/setspawn1/setspawn2/seticon` | Arena management |
 | `/duel kit create/delete/rename/list/edit/preview/give/seticon` | Kit management |
 | `/duel setlobby` | Set lobby spawn |
+| `/duel reload` | Reload `config.yml` at runtime |
 | `/duel lobby off` | Creative + bypass all lobby protections (you only) |
 | `/duel lobby on` | Restore Adventure + re-enable protections (you only) |
 | `/duel leaderboard sethologram <wins\|score>` | Place leaderboard hologram |
@@ -211,11 +225,13 @@ worlds:
 
 | File | Contents |
 |---|---|
-| `config.yml` | Lobby spawn, protections, PvP toggle, stats backend |
+| `config.yml` | Lobby spawn, protections, PvP toggle, duel settings, stats backend |
 | `arenas.yml` | Arena definitions, spawn points, icons |
 | `kits.yml` | Kit inventories (Base64) and icons |
 | `stats.yml` | Player win/loss records (local cache) |
 | `leaderboards.yml` | Hologram positions |
+| `toggles.yml` | Players with duel requests disabled |
+| `inventories/` | Inventory backups during own-inventory duels |
 
 ---
 

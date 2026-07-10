@@ -2,33 +2,38 @@
 
 Priorisierte Liste fehlender Features. Stand: Juli 2026, Basis: Branch `bugfixes` (v2.0.0).
 
+> **Update v3.0.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
+> 3.4 (`/duel toggle`), 4.2 (`/duel reload`, nur config.yml — messages.yml
+> existiert noch nicht) und der Join-Handling-Toggle aus 4.5
+> (`lobby.handle-join`). Erledigte Punkte sind mit ✅ markiert.
+
 ---
 
 ## Priorität 1 — Gameplay-Grundlagen
 
-### 1.1 Match-Zeitlimit & Unentschieden
+### 1.1 Match-Zeitlimit & Unentschieden ✅ (v3.0.0)
 Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - Konfigurierbares Zeitlimit pro Duell (`config.yml`, z.B. `duel.time-limit-seconds: 300`, 0 = aus)
 - Bossbar oder Actionbar-Countdown während des Duells
 - Bei Ablauf: Unentschieden — kein Win/Loss für beide, Meldung + Teleport zur Lobby, Instanz-Welt aufräumen
 - Gilt auch für Team-Duelle und Turnier-Matches (Turnier: bei Draw z.B. Sudden-Death-Verlängerung oder Münzwurf, konfigurierbar)
 
-### 1.2 Forfeit-Command (`/duel forfeit` bzw. `/duel leave`)
+### 1.2 Forfeit-Command (`/duel forfeit` bzw. `/duel leave`) ✅ (v3.0.0)
 - Spieler kann laufendes Duell/Team-Duell aufgeben → zählt als Niederlage
 - Bestätigung per Klick-Nachricht (versehentliches Aufgeben vermeiden)
 - Nutzt die bestehende `handleForfeit`-Logik aus `DuelManager`/`TeamDuelManager`
 
-### 1.3 Rematch
+### 1.3 Rematch ✅ (v3.0.0)
 - Nach Duell-Ende beiden Spielern eine klickbare `[REMATCH]`-Nachricht anzeigen (30s gültig)
 - Bei beidseitigem Klick: gleiches Kit + gleiche Arena, neues Duell
 - Command-Variante: `/duel rematch`
 
-### 1.4 Best-of-N / Rundenmodus
+### 1.4 Best-of-N / Rundenmodus ✅ (v3.0.0)
 - Challenge-Flow um Rundenauswahl erweitern (Bo1/Bo3/Bo5)
 - Zwischen Runden: kurzer Reset (Teleport zu Spawns, Kit neu, Countdown), Instanz-Welt wiederverwenden; von Spielern gesetzte Blöcke zurücksetzen (die `playerPlacedBlocks`-Tracking-Struktur existiert bereits in `DuelInstance`)
 - Punktestand-Anzeige (Titel/Actionbar: "Runde 2 — 1:1")
 
-### 1.5 Duell mit eigenem Inventar (No-Kit)
+### 1.5 Duell mit eigenem Inventar (No-Kit) ✅ (v3.0.0)
 - Im Kit-Select-GUI zusätzliche Option "Eigenes Inventar"
 - Inventar wird beim Duell-Start gesichert und danach wiederhergestellt (wichtig: auch bei Disconnect/Crash — Persistenz z.B. als Datei)
 
@@ -74,8 +79,8 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - `/duel spectate` ohne Argument öffnet GUI mit allen laufenden Duellen (Spieler-Köpfe, Kit, Dauer)
 - Klick → zuschauen; Verlassen über Menü-Item in der Hotbar des Spectators
 
-### 3.4 Challenge-Komfort
-- `/duel toggle` — Duell-Anfragen an sich deaktivieren/aktivieren (persistent)
+### 3.4 Challenge-Komfort (teilweise ✅)
+- ✅ `/duel toggle` — Duell-Anfragen an sich deaktivieren/aktivieren (persistent, toggles.yml; v3.0.0)
 - Cooldown für Anfragen an denselben Spieler (Spam-Schutz, z.B. 30s nach Deny)
 
 ---
@@ -87,9 +92,9 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - Zentrale `Messages`-Klasse mit Platzhaltern (`<player>`, `<kit>`, `<arena>`, …)
 - Mitgelieferte Übersetzungen: en, de
 
-### 4.2 `/duel reload`
-- Config + messages.yml zur Laufzeit neu laden (Permission `epicduels.admin`)
-- Achtung: Stats-Backend-Wechsel zur Laufzeit sauber behandeln (Provider neu initialisieren)
+### 4.2 `/duel reload` (teilweise ✅)
+- ✅ Config zur Laufzeit neu laden (Permission `epicduels.admin`; v3.0.0)
+- Offen: messages.yml (existiert noch nicht, siehe 4.1) und Stats-Backend-Wechsel zur Laufzeit (Provider neu initialisieren — aktuell Neustart nötig)
 
 ### 4.3 PlaceholderAPI
 - Placeholders: `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%`, `%epicduels_elo%`, `%epicduels_streak%`, `%epicduels_in_duel%`
@@ -105,7 +110,7 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - Update-Checker (GitHub Releases / Modrinth API)
 - API für andere Plugins: eigene Events (`DuelStartEvent`, `DuelEndEvent`, `TournamentEndEvent`, cancellable wo sinnvoll)
 - Konfigurierbarer Countdown (Dauer, Sounds), konfigurierbare Nachricht-Broadcasts (Duell-Ergebnis global an/aus)
-- README/Config-Hinweis oder Config-Toggle: Inventar-Wipe + Lobby-Teleport beim Join (`PlayerListener.onPlayerJoin`) setzt einen dedizierten Duels-Server voraus — optional abschaltbar machen
+- ✅ Config-Toggle für Inventar-Wipe + Lobby-Teleport beim Join: `lobby.handle-join` (v3.0.0)
 
 ---
 

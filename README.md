@@ -14,18 +14,34 @@
   </a>
 </p>
 
-A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, **party-based team duels (2v2/3v3/4v4)**, **single-elimination tournaments**, leaderboards, in-world holograms, and multi-server stats via Supabase or Firebase.
+A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, **best-of-N rounds**, **party-based team duels (2v2/3v3/4v4)**, **single-elimination tournaments**, rematches, leaderboards, in-world holograms, and multi-server stats via Supabase or Firebase.
 
-> **v2.0.0 — Party Update**: Group up with friends and play team duels or run a tournament bracket through your party. See [Party System](#party-system) below.
+> **v3.0.0 — Gameplay Update**: Match time limits with draws, `/duel forfeit`, one-click rematches, Best-of-1/3/5 round mode, and no-kit duels with crash-safe inventory backups. See [What's new in v3](#whats-new-in-v3) below.
 
 ---
 
+## What's new in v3
+
+- **Match Time Limit & Draws** — Duels no longer run forever. A configurable clock (default 5 minutes) counts down on the action bar; when it runs out, 1v1 and team duels end in a draw (no win/loss). Tournament matches resolve via a sudden-death extension and/or coin flip so the bracket always advances.
+- **Best of 1 / 3 / 5** — Pick a round mode when challenging. Rounds reuse the same arena instance: player-placed blocks are cleared, kits re-applied, and a score title ("Round 2 — 1:1") keeps everyone up to date.
+- **Rematch** — After every regular duel both players get a clickable `[REMATCH]` message (30 s). If both click, a new duel with the same kit, arena, and round mode starts instantly.
+- **/duel forfeit** — Give up a running duel or team duel with a click-to-confirm prompt. Counts as a loss.
+- **Own Inventory Duels** — A new "Own Inventory" option in the kit selection lets players fight with their own items. Inventories are saved to disk at duel start and restored afterwards — even after a disconnect or server crash.
+- **/duel toggle** — Players can turn off incoming duel requests (persistent). They disappear from the challenge menu.
+- **/duel reload** — Reload `config.yml` at runtime.
+- **`lobby.handle-join` config** — The join-time inventory wipe + lobby teleport can now be disabled for servers where EpicDuels runs alongside other gameplay.
+- **Bug fixes** — Duel-state guards, multi-request support, thread-safe remote stats, projectile-proof lobby PvP protection, arena-exit forfeits, and more. See [release notes](release/RELEASE.md).
+
 ## Features
 
-- **Party System (NEW in v2.0)** — Create a party (2–8 players), invite friends, and choose between **Team Duels** (2v2 / 3v3 / 4v4 with friendly fire disabled) or a **Single-Elimination Tournament** (1v1 bracket, eliminated players auto-spectate live matches). Tournament winners are announced only inside the party, not server-wide.
+- **Party System (v2.0)** — Create a party (2–8 players), invite friends, and choose between **Team Duels** (2v2 / 3v3 / 4v4 with friendly fire disabled) or a **Single-Elimination Tournament** (1v1 bracket, eliminated players auto-spectate live matches). Tournament winners are announced only inside the party, not server-wide.
 - **Arena System** — Create void-world arenas with a simple setup wizard. Each duel runs in its own isolated world copy that gets deleted after the match.
 - **Kit System** — Save, edit, rename, and preview kits with full armor, offhand, and inventory support. Admins can copy any saved kit directly into their own inventory for testing.
-- **Duel Challenges** — Challenge players through an interactive GUI (pick player → kit → map) or via commands. Requests expire after 30 seconds with clickable Accept/Deny buttons.
+- **Duel Challenges** — Challenge players through an interactive GUI (pick player → kit → rounds → map) or via commands. Requests expire after 30 seconds with clickable Accept/Deny buttons.
+- **Best-of-N Rounds (NEW in v3.0)** — Bo1, Bo3, or Bo5 per challenge. Between rounds the arena instance is reused (player-placed blocks reset), players are healed, re-kitted, and counted down again. Score shown as titles and chat.
+- **Match Time Limit (NEW in v3.0)** — Configurable per-duel clock with action-bar countdown. Timeouts end in a draw (1v1/team) or are resolved by sudden death / coin flip (tournaments).
+- **Rematch & Forfeit (NEW in v3.0)** — Clickable `[REMATCH]` offer after each duel; `/duel forfeit` (with confirmation) to give up a match.
+- **Own Inventory Duels (NEW in v3.0)** — Fight with your own items instead of a kit. Inventories are backed up to disk and restored after the duel — crash- and disconnect-safe.
 - **Queue / Matchmaking** — Join a kit-based queue from the menu or via command. When two players queue for the same kit they are instantly matched and teleported to a random arena. Action bar shows live queue time.
 - **Leaderboards & Holograms** — `/duel leaderboard wins` and `/duel leaderboard score` show the top 10 players in chat. Admins can place persistent in-world holograms with `/duel leaderboard sethologram <wins|score>` — no external plugin required.
 - **Spectate** — Watch any active duel in Spectator mode with `/duel spectate <player>`. Automatically returned to lobby when the duel ends.
@@ -45,7 +61,7 @@ A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, *
 
 ## Installation
 
-1. Download `EpicDuels-2.0.0.jar` from the `release/` folder or build from source
+1. Download `EpicDuels-3.0.0.jar` from the `release/` folder or build from source
 2. Place it in your server's `plugins/` folder
 3. Restart the server
 4. (Optional) Add to `bukkit.yml` for true void lobby world:
@@ -78,6 +94,9 @@ A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, *
 | `/duel queue <kit>` | `/d q <kit>` | Join matchmaking queue for a kit | `epicduels.duel` |
 | `/duel queue leave` | `/d q leave` | Leave the matchmaking queue | `epicduels.duel` |
 | `/duel spectate <player>` | `/d spec <player>` | Spectate an active duel | `epicduels.duel` |
+| `/duel forfeit` | `/d ff` | Give up your current match (click to confirm) | `epicduels.duel` |
+| `/duel rematch` | | Accept a pending rematch offer | `epicduels.duel` |
+| `/duel toggle` | | Enable/disable incoming duel requests | `epicduels.duel` |
 | `/duel leaderboard wins` | `/d lb wins` | Show top 10 players by wins | `epicduels.stats` |
 | `/duel leaderboard score` | `/d lb score` | Show top 10 players by score | `epicduels.stats` |
 
@@ -116,6 +135,7 @@ A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, *
 | `/duel kit preview <name>` | Preview kit contents (read-only) | `epicduels.admin` |
 | `/duel kit seticon <name>` | Set kit icon (hold item in hand) | `epicduels.admin` |
 | `/duel setlobby` | Set lobby spawn point | `epicduels.admin` |
+| `/duel reload` | Reload `config.yml` at runtime | `epicduels.admin` |
 | `/duel leaderboard sethologram <wins\|score>` | Place a leaderboard hologram at your location | `epicduels.admin` |
 | `/duel leaderboard removehologram <wins\|score>` | Remove a leaderboard hologram | `epicduels.admin` |
 
@@ -259,6 +279,28 @@ Admins can place persistent in-world holograms without any external plugin:
 - Top 3 ranks are gold / gray / red, ranks 4–10 are white. Each line shows
   `#rank name — value`.
 
+## Duel Settings
+
+The v3 gameplay features are configured under `duel.*` in `config.yml`:
+
+```yaml
+duel:
+  # Max duel length in seconds, from the "FIGHT!" countdown. Time-up =
+  # draw (1v1/team duels). 0 disables the limit.
+  time-limit-seconds: 300
+
+  # Tournament matches always need a winner:
+  #   "sudden-death" — one extension, then coin flip if still undecided
+  #   "coin-flip"    — random winner immediately
+  tournament-draw: "sudden-death"
+  sudden-death-seconds: 60
+
+  # "Own Inventory" option in the kit selection (no-kit duels)
+  allow-own-inventory: true
+```
+
+In best-of-N matches a timeout is decided by the current round score first — only a tied score becomes a draw.
+
 ## Lobby Protections
 
 All lobby-only protections can be toggled in `config.yml` under
@@ -268,6 +310,7 @@ for every rule:
 ```yaml
 lobby:
   disable-pvp: true
+  handle-join: true            # false = no inventory wipe / lobby TP on join
   protections:
     block-break: true
     block-place: true
@@ -290,11 +333,13 @@ lobby:
 
 | File | Contents |
 |---|---|
-| `config.yml` | Lobby spawn, PvP toggle, lobby protections, remote stats backend |
+| `config.yml` | Lobby spawn, PvP toggle, lobby protections, duel settings, remote stats backend |
 | `arenas.yml` | Arena definitions, spawn points, and icons |
 | `kits.yml` | Kit inventories (Base64 encoded) and icons |
 | `stats.yml` | Player win/loss records (local cache) |
 | `leaderboards.yml` | Persistent leaderboard hologram positions |
+| `toggles.yml` | Players who disabled incoming duel requests |
+| `inventories/` | Per-player inventory backups during own-inventory duels |
 
 ## Building from Source
 
@@ -306,7 +351,7 @@ gradle clean build
 mvn clean package
 ```
 
-Output JAR: `build/libs/EpicDuels-2.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Output JAR: `build/libs/EpicDuels-3.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
 ## License & Usage
 
