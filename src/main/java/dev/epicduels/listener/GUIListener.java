@@ -223,15 +223,22 @@ public class GUIListener implements Listener {
         String itemName = getItemName(clicked);
         if (itemName == null) return;
 
-        Kit kit = plugin.getKitManager().getKit(itemName);
-        if (kit == null) {
-            player.sendMessage(Component.text("Kit not available.", NamedTextColor.RED));
+        UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+        if (targetUUID == null) {
             player.closeInventory();
             return;
         }
 
-        UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
-        if (targetUUID == null) {
+        // "Own Inventory" option — no-kit duel
+        if (clicked.getType() == Material.CHEST && itemName.equals(Kit.OWN_INVENTORY_DISPLAY)) {
+            player.closeInventory();
+            plugin.getGUIManager().openRoundsSelect(player, targetUUID, Kit.OWN_INVENTORY);
+            return;
+        }
+
+        Kit kit = plugin.getKitManager().getKit(itemName);
+        if (kit == null) {
+            player.sendMessage(Component.text("Kit not available.", NamedTextColor.RED));
             player.closeInventory();
             return;
         }

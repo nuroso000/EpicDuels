@@ -225,8 +225,19 @@ public class GUIManager {
     public void openKitSelect(Player player, UUID targetPlayer, int page) {
         challengeTarget.put(player.getUniqueId(), targetPlayer);
 
-        List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
-        int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
+        // Build combined item list: kits + the "Own Inventory" option (if enabled)
+        List<ItemStack> items = new ArrayList<>();
+        for (Kit kit : plugin.getKitManager().getAllKits()) {
+            items.add(createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
+                    "&7Click to select this kit"));
+        }
+        if (plugin.getConfig().getBoolean("duel.allow-own-inventory", true)) {
+            items.add(createItem(Material.CHEST, "&6&l" + Kit.OWN_INVENTORY_DISPLAY,
+                    "&7Fight with the items you", "&7are carrying right now!",
+                    "&7Your inventory is saved and", "&7restored after the duel."));
+        }
+
+        int totalPages = Math.max(1, (int) Math.ceil((double) items.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
         playerPage.put(player.getUniqueId(), page);
 
@@ -235,10 +246,8 @@ public class GUIManager {
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
         int start = page * ITEMS_PER_PAGE;
-        for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
-            Kit kit = kits.get(start + i);
-            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
-                    "&7Click to select this kit"));
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < items.size(); i++) {
+            inv.setItem(ITEM_SLOTS[i], items.get(start + i));
         }
 
         addNavigation(inv, page, totalPages);
@@ -500,9 +509,10 @@ public class GUIManager {
             return;
         }
 
+        String kitDisplay = Kit.displayName(kitName);
         String bestOfInfo = bestOf > 1 ? " | Best of " + bestOf : "";
         player.sendMessage(Component.text("Duel request sent to " + target.getName() + "!", NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kitName + bestOfInfo, NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kitDisplay + bestOfInfo, NamedTextColor.GRAY));
 
         target.sendMessage(Component.empty());
         target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
@@ -511,7 +521,7 @@ public class GUIManager {
         Component details = Component.text("Arena: ", NamedTextColor.GRAY)
                 .append(Component.text(arenaName, NamedTextColor.WHITE))
                 .append(Component.text(" | Kit: ", NamedTextColor.GRAY))
-                .append(Component.text(kitName, NamedTextColor.WHITE));
+                .append(Component.text(kitDisplay, NamedTextColor.WHITE));
         if (bestOf > 1) {
             details = details.append(Component.text(" | ", NamedTextColor.GRAY))
                     .append(Component.text("Best of " + bestOf, NamedTextColor.WHITE));

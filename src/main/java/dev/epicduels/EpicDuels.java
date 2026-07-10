@@ -98,6 +98,7 @@ public class EpicDuels extends JavaPlugin {
     private TeamDuelManager teamDuelManager;
     private TournamentManager tournamentManager;
     private RematchManager rematchManager;
+    private InventoryBackupManager inventoryBackupManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
@@ -108,6 +109,7 @@ public class EpicDuels extends JavaPlugin {
         // Initialize managers
         arenaManager = new ArenaManager(this);
         kitManager = new KitManager(this);
+        inventoryBackupManager = new InventoryBackupManager(this);
         statsManager = new StatsManager(this);
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
@@ -348,5 +350,9 @@ public class EpicDuels extends JavaPlugin {
 
     public RematchManager getRematchManager() {
         return rematchManager;
+    }
+
+    public InventoryBackupManager getInventoryBackupManager() {
+        return inventoryBackupManager;
     }
 }

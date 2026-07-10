@@ -183,9 +183,10 @@ public class DuelManager {
             return;
         }
 
+        boolean ownInventory = Kit.OWN_INVENTORY.equals(request.getKitName());
         Arena arena = plugin.getArenaManager().getArena(request.getArenaName());
-        Kit kit = plugin.getKitManager().getKit(request.getKitName());
-        if (arena == null || kit == null) {
+        Kit kit = ownInventory ? null : plugin.getKitManager().getKit(request.getKitName());
+        if (arena == null || (!ownInventory && kit == null)) {
             player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
             player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
             return;
@@ -223,7 +224,8 @@ public class DuelManager {
 
     /**
      * Starts a duel without a challenge request (rematch, ...). Same busy
-     * checks as any other duel start.
+     * checks as any other duel start. A null kit means an "Own Inventory"
+     * duel — players fight with what they carry.
      */
     public DuelInstance startDirectDuel(Player player1, Player player2, Arena arena, Kit kit, int bestOf) {
         return startDuel(player1, player2, arena, kit, bestOf);
@@ -234,6 +236,7 @@ public class DuelManager {
     }
 
     private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit, int bestOf) {
+        boolean ownInventory = kit == null;
         // Guard: never start a duel for someone who is already fighting.
         // Tournament membership is intentionally NOT checked here — tournament
         // matches are themselves started through this method.
@@ -246,7 +249,8 @@ public class DuelManager {
             return null;
         }
 
-        DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName(), bestOf);
+        String kitName = ownInventory ? Kit.OWN_INVENTORY : kit.getName();
+        DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kitName, bestOf);
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
 
@@ -298,17 +302,26 @@ public class DuelManager {
                 Location spawn2 = arena.getSpawn2().clone();
                 spawn2.setWorld(world);
 
+                // Own-inventory duels: save both inventories to disk first so
+                // they survive disconnects and crashes, and keep the items
+                if (ownInventory) {
+                    plugin.getInventoryBackupManager().backup(player1);
+                    plugin.getInventoryBackupManager().backup(player2);
+                }
+
                 // Clear and prepare players
-                preparePlayer(player1);
-                preparePlayer(player2);
+                preparePlayer(player1, !ownInventory);
+                preparePlayer(player2, !ownInventory);
 
                 // Teleport players
                 player1.teleport(spawn1);
                 player2.teleport(spawn2);
 
                 // Apply kit
-                applyKit(player1, kit);
-                applyKit(player2, kit);
+                if (!ownInventory) {
+                    applyKit(player1, kit);
+                    applyKit(player2, kit);
+                }
 
                 // Freeze players during countdown
                 frozenPlayers.add(player1.getUniqueId());
@@ -580,9 +593,9 @@ public class DuelManager {
             }
 
             Arena arena = plugin.getArenaManager().getArena(duel.getArenaName());
-            Kit kit = plugin.getKitManager().getKit(duel.getKitName());
+            Kit kit = duel.isOwnInventory() ? null : plugin.getKitManager().getKit(duel.getKitName());
             World world = duel.getInstanceWorld();
-            if (arena == null || kit == null || world == null
+            if (arena == null || (!duel.isOwnInventory() && kit == null) || world == null
                     || arena.getSpawn1() == null || arena.getSpawn2() == null) {
                 p1.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
                 p2.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
@@ -599,12 +612,18 @@ public class DuelManager {
             Location spawn2 = arena.getSpawn2().clone();
             spawn2.setWorld(world);
 
-            preparePlayer(p1);
-            preparePlayer(p2);
+            preparePlayer(p1, !duel.isOwnInventory());
+            preparePlayer(p2, !duel.isOwnInventory());
             p1.teleport(spawn1);
             p2.teleport(spawn2);
-            applyKit(p1, kit);
-            applyKit(p2, kit);
+            if (duel.isOwnInventory()) {
+                // Refill from the backup taken at duel start
+                plugin.getInventoryBackupManager().apply(p1);
+                plugin.getInventoryBackupManager().apply(p2);
+            } else {
+                applyKit(p1, kit);
+                applyKit(p2, kit);
+            }
 
             String newScore = duel.getWins(duel.getPlayer1()) + ":" + duel.getWins(duel.getPlayer2());
             Component roundInfo = Component.text("Round " + duel.getCurrentRound() + " — " + newScore,
@@ -708,6 +727,8 @@ public class DuelManager {
                         p.setSaturation(20f);
                         p.setGameMode(GameMode.ADVENTURE);
                         p.teleport(lobby);
+                        // Own-inventory duel: give the saved items back
+                        plugin.getInventoryBackupManager().restore(p);
                     }
                 }
 
@@ -857,6 +878,13 @@ public class DuelManager {
                 frozenPlayers.remove(duel.getPlayer2());
                 activeDuels.remove(duel.getPlayer1());
                 activeDuels.remove(duel.getPlayer2());
+                // Give own-inventory players their saved items back before shutdown
+                for (UUID pid : List.of(duel.getPlayer1(), duel.getPlayer2())) {
+                    Player p = Bukkit.getPlayer(pid);
+                    if (p != null && p.isOnline()) {
+                        plugin.getInventoryBackupManager().restore(p);
+                    }
+                }
                 if (duel.getInstanceWorld() != null) {
                     plugin.getArenaManager().deleteInstanceWorld(duel.getInstanceWorldName());
                 }
@@ -872,7 +900,13 @@ public class DuelManager {
     }
 
     private void preparePlayer(Player player) {
-        player.getInventory().clear();
+        preparePlayer(player, true);
+    }
+
+    private void preparePlayer(Player player, boolean clearInventory) {
+        if (clearInventory) {
+            player.getInventory().clear();
+        }
         player.setHealth(player.getMaxHealth());
         player.setFoodLevel(20);
         player.setSaturation(20f);

@@ -49,6 +49,14 @@ duel:
   # Length of the sudden-death extension (seconds).
   sudden-death-seconds: 60
 
+  # Adds an "Own Inventory" option to the kit selection when
+  # challenging a player: both fighters keep the items they are
+  # carrying instead of receiving a kit. Inventories are saved
+  # to plugins/EpicDuels/inventories/ when the duel starts and
+  # restored afterwards — including after a disconnect or server
+  # crash (restored on the player's next join).
+  allow-own-inventory: true
+
 # ── Stats Backend ──────────────────────────────────────────
 # Controls where player statistics are stored.
 #

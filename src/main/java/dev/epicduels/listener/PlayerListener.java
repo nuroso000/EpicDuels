@@ -38,6 +38,12 @@ public class PlayerListener implements Listener {
         player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
         player.setGameMode(org.bukkit.GameMode.ADVENTURE);
         player.teleport(plugin.getLobbyLocation());
+
+        // Restore the inventory saved for an own-inventory duel that never
+        // finished cleanly (disconnect or server crash mid-duel)
+        if (plugin.getInventoryBackupManager().restore(player)) {
+            player.sendMessage(Component.text("Your inventory from an interrupted duel has been restored.", NamedTextColor.GREEN));
+        }
     }
 
     @EventHandler

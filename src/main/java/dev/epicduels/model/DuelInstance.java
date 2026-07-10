@@ -68,6 +68,11 @@ public class DuelInstance implements BattleInstance {
         return kitName;
     }
 
+    /** True if this is a no-kit duel — players fight with their own inventory. */
+    public boolean isOwnInventory() {
+        return Kit.OWN_INVENTORY.equals(kitName);
+    }
+
     public String getInstanceWorldName() {
         return instanceWorldName;
     }

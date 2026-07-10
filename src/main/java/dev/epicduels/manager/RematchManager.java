@@ -139,9 +139,10 @@ public class RematchManager {
             return;
         }
 
+        boolean ownInventory = Kit.OWN_INVENTORY.equals(offer.kitName);
         Arena arena = plugin.getArenaManager().getArena(offer.arenaName);
-        Kit kit = plugin.getKitManager().getKit(offer.kitName);
-        if (arena == null || kit == null) {
+        Kit kit = ownInventory ? null : plugin.getKitManager().getKit(offer.kitName);
+        if (arena == null || (!ownInventory && kit == null)) {
             Component gone = Component.text("Rematch could not start: arena or kit no longer exists.", NamedTextColor.RED);
             player.sendMessage(gone);
             opponent.sendMessage(gone);
