@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`/duel toggle`** — disable/enable incoming duel requests, persisted in `toggles.yml`. Blocked players are hidden from the challenge menu.
 - **`/duel reload`** — reload `config.yml` at runtime (`epicduels.admin`).
 - **`lobby.handle-join`** — config toggle for the join-time inventory wipe + lobby teleport (disable when EpicDuels runs alongside other gameplay).
+- **Feature toggles** — new `features:` config section: every player-facing feature (challenges, matchmaking, spectating, rematch, forfeit, best-of-N, own-inventory duels, parties, team duels, tournaments, leaderboards) can be disabled individually. Disabled features vanish from the GUIs (barrier icons) and their commands answer with a clear message. Missing entries default to enabled.
+- **`duel.countdown-seconds`** — configurable pre-fight countdown length (0–60 s, 0 = instant start).
+- **`duel.broadcast-results`** — choose between server-wide duel result announcements and participants-only messages (for survival/hub servers).
 - New manager classes: `RematchManager`, `InventoryBackupManager`.
 - New data files: `toggles.yml`, `inventories/`.
 

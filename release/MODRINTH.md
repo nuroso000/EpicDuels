@@ -33,6 +33,7 @@ Challenge players 1v1 (Best of 1/3/5), group up with friends for team duels or t
 - **Own Inventory duels** — Fight with the items you carry instead of a kit. Inventories are saved to disk at duel start and restored afterwards — safe across disconnects and even server crashes.
 - **Request toggle** — `/duel toggle` blocks incoming duel requests (persistent); you disappear from the challenge menu.
 - **Admin QoL** — `/duel reload` reloads the config; new `lobby.handle-join` option disables the join-time reset for non-dedicated servers.
+- **Feature toggles** — Every feature (challenges, matchmaking, spectating, rematch, forfeit, best-of-N, own-inventory duels, parties, team duels, tournaments, leaderboards) can be disabled individually under `features.*` — tailor the plugin to a dedicated duel server, a survival server or an event setup. Plus a configurable countdown (`duel.countdown-seconds`) and participants-only result messages (`duel.broadcast-results: false`).
 
 ### Party System
 

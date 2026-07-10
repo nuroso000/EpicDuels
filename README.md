@@ -295,11 +295,40 @@ duel:
   tournament-draw: "sudden-death"
   sudden-death-seconds: 60
 
-  # "Own Inventory" option in the kit selection (no-kit duels)
-  allow-own-inventory: true
+  # Pre-fight countdown length in seconds (0-60, 0 = instant start)
+  countdown-seconds: 5
+
+  # false = duel results are shown to the two fighters only instead of
+  # being broadcast to the whole server (nice for survival/hub servers)
+  broadcast-results: true
 ```
 
 In best-of-N matches a timeout is decided by the current round score first — only a tied score becomes a draw.
+
+## Feature Toggles
+
+Every player-facing feature can be switched off individually under `features.*`,
+so EpicDuels adapts to your server concept — a dedicated duel server has no use
+for own-inventory duels (nothing to farm there), a survival server might not
+want matchmaking, an event server might disable rematch and forfeit. Disabled
+features disappear from the GUIs (barrier icons) and their commands reply
+*"This feature is disabled on this server."* Everything defaults to `true` and
+supports `/duel reload`:
+
+```yaml
+features:
+  challenges: true           # /duel challenge + Duels menu
+  matchmaking: true          # /duel queue + Matchmaking menu
+  spectating: true           # /duel spectate
+  rematch: true              # [REMATCH] offers + /duel rematch
+  forfeit: true              # /duel forfeit
+  best-of-n: true            # Bo1/Bo3/Bo5 selection step (off = always Bo1)
+  own-inventory-duels: true  # "Own Inventory" entry in the kit selection
+  parties: true              # whole party system (/party ...)
+  team-duels: true           # 2v2/3v3/4v4 in the party menu
+  tournaments: true          # tournaments in the party menu
+  leaderboards: true         # /duel leaderboard
+```
 
 ## Lobby Protections
 

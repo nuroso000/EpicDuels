@@ -225,7 +225,7 @@ public class TeamDuelManager {
 
     private void startCountdown(TeamDuelInstance instance) {
         new BukkitRunnable() {
-            int count = 5;
+            int count = Math.min(60, Math.max(0, plugin.getConfig().getInt("duel.countdown-seconds", 5)));
 
             @Override
             public void run() {

@@ -14,8 +14,11 @@
 #     1. Lobby ................ spawn location, join handling, PvP
 #     2. Lobby protections .... 15 toggleable protection rules
 #     3. Duel settings ........ time limit, draws, sudden death,
-#                               own-inventory (no-kit) duels
-#     4. Stats backend ........ local / Supabase / Firebase sync
+#                               countdown length, result broadcasts
+#     4. Feature toggles ...... switch every plugin feature on/off
+#                               individually (challenges, matchmaking,
+#                               rematch, parties, tournaments, ...)
+#     5. Stats backend ........ local / Supabase / Firebase sync
 #
 #   GENERAL NOTES
 #
@@ -79,8 +82,8 @@ lobby:
   # location when joining.
   #
   # Note: the automatic restore of inventories from interrupted
-  # own-inventory duels (see duel.allow-own-inventory) always runs on
-  # join, regardless of this setting — nobody loses items to a crash.
+  # own-inventory duels (see features.own-inventory-duels) always runs
+  # on join, regardless of this setting — nobody loses items to a crash.
   #
   handle-join: true
 
@@ -232,34 +235,130 @@ duel:
   sudden-death-seconds: 60
 
   # --------------------------------------------------------------------------
-  # Own-inventory (no-kit) duels
+  # Pre-fight countdown
   # --------------------------------------------------------------------------
-  # true  = the kit selection GUI offers an extra "Own Inventory"
-  #         entry (chest icon): both fighters keep the items they are
-  #         carrying instead of receiving a kit.
-  # false = the entry is hidden; duels always use kits.
+  # Length of the "5... 4... 3..." countdown in SECONDS before every
+  # fight (duel start, every best-of-N round, team duels). Players are
+  # frozen and invulnerable while it runs.
   #
-  # How the item safety works:
+  #   5  = classic countdown (default)
+  #   3  = snappier pace for warmup/practice servers
+  #   0  = no countdown — the fight starts instantly
   #
-  #   1. When the duel starts, both inventories (items, armor,
-  #      offhand) are written to plugins/EpicDuels/inventories/<uuid>.yml.
-  #   2. During the fight players use their real items — durability
-  #      loss, consumed potions, fired arrows all happen normally.
-  #   3. When the duel ends, the SAVED inventory is restored exactly
-  #      as it was — nothing is lost, nothing is duplicated.
-  #   4. If a player disconnects or the server crashes mid-duel, the
-  #      backup file survives and is restored automatically on their
-  #      next join ("Your inventory from an interrupted duel has been
-  #      restored.").
+  # Allowed range: 0-60.
   #
-  # In Best-of-N matches every new round refills both players from the
-  # backup, so each round starts with identical loadouts.
+  countdown-seconds: 5
+
+  # --------------------------------------------------------------------------
+  # Result broadcasts
+  # --------------------------------------------------------------------------
+  # true  = duel results ("X defeated Y!", draws) are announced in the
+  #         chat of EVERYONE on the server. Great for dedicated duel
+  #         servers — it keeps the community engaged.
+  # false = results are only shown to the two fighters. Choose this
+  #         when EpicDuels runs on a survival/hub server where global
+  #         duel spam would annoy uninvolved players.
   #
-  allow-own-inventory: true
+  # Victory/defeat titles for the fighters themselves are always shown
+  # and unaffected by this setting. Team duel and tournament summaries
+  # are participant-only by design.
+  #
+  broadcast-results: true
 
 
 # ============================================================================
-#   4. STATS BACKEND
+#   4. FEATURE TOGGLES
+# ============================================================================
+#
+# Every player-facing feature of EpicDuels can be switched off
+# individually, so the plugin adapts to YOUR server concept instead of
+# the other way around. Some examples:
+#
+#   - Dedicated duel/lobby server: players cannot farm or own items
+#     there, so "Own Inventory" duels are pointless — turn
+#     own-inventory-duels off and the option disappears.
+#   - Pure 1v1 ladder server: turn off parties, team-duels and
+#     tournaments and EpicDuels becomes a lean 1v1 plugin.
+#   - Casual survival server: keep challenges on but turn off
+#     matchmaking and leaderboards if you don't want a competitive
+#     scene.
+#   - Hardcore/tournament events: turn off rematch and forfeit so
+#     every match is played out and final.
+#
+# For every toggle:
+#
+#   true  = feature available (default)
+#   false = feature hidden AND blocked — the GUI entries disappear
+#           (or show a barrier icon), and the matching commands answer
+#           "This feature is disabled on this server."
+#
+# Missing entries count as true, so configs from older versions keep
+# every feature enabled. All toggles support /duel reload.
+#
+features:
+
+  # 1v1 challenges: /duel challenge, /duel accept, the "Duels" entry in
+  # the main menu and the player-select GUI. With this off, direct
+  # duels are impossible (matchmaking below still works if enabled).
+  challenges: true
+
+  # Kit-based matchmaking queues: /duel queue and the "Matchmaking"
+  # entry in the main menu. Turn off if duels should only happen by
+  # explicit challenge.
+  matchmaking: true
+
+  # Watching running duels: /duel spectate <player>.
+  # Does not affect the automatic spectating of eliminated tournament
+  # players or dead team-duel participants inside their own match.
+  spectating: true
+
+  # The clickable [REMATCH] offer after every regular 1v1 duel and the
+  # /duel rematch command. Turn off for event servers where each
+  # pairing should only be played once.
+  rematch: true
+
+  # Giving up with /duel forfeit (counts as a loss). Turn off if
+  # matches must always be fought to the end — players can still
+  # disconnect, which counts as a loss anyway.
+  forfeit: true
+
+  # The Bo1/Bo3/Bo5 rounds-selection step in the challenge flow.
+  # With this off the step is skipped entirely and every duel is a
+  # single round (classic pre-3.0 behavior).
+  best-of-n: true
+
+  # The "Own Inventory" (no-kit) entry in the kit selection: players
+  # fight with the items they carry; inventories are saved to
+  # plugins/EpicDuels/inventories/ at duel start and restored
+  # afterwards — crash- and disconnect-safe (leftover backups restore
+  # on the next join, so nothing is ever lost).
+  #
+  # Recommended OFF on dedicated duel/lobby servers: players own no
+  # items there, so the option only adds a useless menu entry.
+  # Recommended ON when EpicDuels runs on a survival server and
+  # players want to duel with their own gear.
+  own-inventory-duels: true
+
+  # The whole party system: /party create|invite|accept|... and the
+  # party GUIs. Turning this off also makes team duels and tournaments
+  # unreachable (both are started from a party).
+  parties: true
+
+  # Team duels (2v2/3v3/4v4) in the party mode menu.
+  team-duels: true
+
+  # Single-elimination tournaments in the party mode menu.
+  tournaments: true
+
+  # Leaderboards in chat: /duel leaderboard wins|score (including the
+  # admin hologram sub-commands). Already-placed holograms keep
+  # working — remove them with /duel leaderboard removehologram
+  # BEFORE turning this off.
+  leaderboards: true
+
+
+# ============================================================================
+#   5. STATS BACKEND
 # ============================================================================
 #
 # Controls where player statistics (wins / losses) are stored.

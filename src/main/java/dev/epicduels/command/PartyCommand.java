@@ -33,6 +33,10 @@ public class PartyCommand implements CommandExecutor {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
             return true;
         }
+        if (!plugin.isFeatureEnabled("parties")) {
+            player.sendMessage(Component.text("This feature is disabled on this server.", NamedTextColor.RED));
+            return true;
+        }
 
         if (args.length == 0) {
             sendHelp(player);

@@ -52,15 +52,27 @@ public class DuelCommand implements CommandExecutor {
             case "arena" -> handleArena(player, args);
             case "setlobby" -> handleSetLobby(player);
             case "kit" -> handleKit(player, args);
-            case "challenge", "c" -> handleChallenge(player, args);
-            case "accept" -> handleAccept(player, args);
+            case "challenge", "c" -> {
+                if (requireFeature(player, "challenges")) handleChallenge(player, args);
+            }
+            case "accept" -> {
+                if (requireFeature(player, "challenges")) handleAccept(player, args);
+            }
             case "deny" -> handleDeny(player, args);
             case "cancel" -> handleCancel(player);
             case "stats" -> handleStats(player, args);
-            case "queue", "q" -> handleQueue(player, args);
-            case "spectate", "spec" -> handleSpectate(player, args);
-            case "forfeit", "ff", "leave" -> handleForfeit(player, args);
-            case "rematch" -> handleRematch(player);
+            case "queue", "q" -> {
+                if (requireFeature(player, "matchmaking")) handleQueue(player, args);
+            }
+            case "spectate", "spec" -> {
+                if (requireFeature(player, "spectating")) handleSpectate(player, args);
+            }
+            case "forfeit", "ff", "leave" -> {
+                if (requireFeature(player, "forfeit")) handleForfeit(player, args);
+            }
+            case "rematch" -> {
+                if (requireFeature(player, "rematch")) handleRematch(player);
+            }
             case "toggle" -> handleToggle(player);
             case "reload" -> handleReload(player);
             case "duels" -> {
@@ -68,21 +80,33 @@ public class DuelCommand implements CommandExecutor {
                     player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
                     return true;
                 }
-                plugin.getGUIManager().openDuelsMenu(player, 0);
+                if (requireFeature(player, "challenges")) plugin.getGUIManager().openDuelsMenu(player, 0);
             }
             case "matchmaking", "mm" -> {
                 if (!player.hasPermission("epicduels.duel")) {
                     player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
                     return true;
                 }
-                plugin.getGUIManager().openMatchmakingMenu(player, 0);
+                if (requireFeature(player, "matchmaking")) plugin.getGUIManager().openMatchmakingMenu(player, 0);
             }
-            case "leaderboard", "lb", "top" -> handleLeaderboard(player, args);
+            case "leaderboard", "lb", "top" -> {
+                if (requireFeature(player, "leaderboards")) handleLeaderboard(player, args);
+            }
             case "lobby" -> handleLobby(player, args);
             default -> sendHelp(player);
         }
 
         return true;
+    }
+
+    /**
+     * True if the feature is enabled; otherwise tells the player it is
+     * disabled and returns false.
+     */
+    private boolean requireFeature(Player player, String feature) {
+        if (plugin.isFeatureEnabled(feature)) return true;
+        player.sendMessage(Component.text("This feature is disabled on this server.", NamedTextColor.RED));
+        return false;
     }
 
     private void handleArena(Player player, String[] args) {

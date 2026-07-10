@@ -276,6 +276,27 @@ public class EpicDuels extends JavaPlugin {
         }
     }
 
+    // --- Feature toggles ---
+
+    /**
+     * Checks a feature toggle from the config's features: section.
+     * Unknown/missing toggles default to enabled, so old configs keep
+     * every feature on.
+     */
+    public boolean isFeatureEnabled(String feature) {
+        return getConfig().getBoolean("features." + feature, true);
+    }
+
+    /**
+     * Own-inventory (no-kit) duels toggle. Reads features.own-inventory-duels
+     * and falls back to the legacy duel.allow-own-inventory key from early
+     * 3.0.0 builds.
+     */
+    public boolean isOwnInventoryDuelsEnabled() {
+        return getConfig().getBoolean("features.own-inventory-duels",
+                getConfig().getBoolean("duel.allow-own-inventory", true));
+    }
+
     // --- Location helpers ---
 
     public Location getLobbyLocation() {

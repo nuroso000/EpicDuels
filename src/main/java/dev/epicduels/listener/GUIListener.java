@@ -103,6 +103,7 @@ public class GUIListener implements Listener {
     private void handleMainMenuClick(Player player, int slot) {
         switch (slot) {
             case 10 -> { // Diamond Sword — Duels
+                if (!plugin.isFeatureEnabled("challenges")) return;
                 player.closeInventory();
                 plugin.getGUIManager().openDuelsMenu(player, 0);
             }
@@ -111,6 +112,7 @@ public class GUIListener implements Listener {
                 plugin.getGUIManager().openStatsMenu(player);
             }
             case 16 -> { // Hopper — Matchmaking
+                if (!plugin.isFeatureEnabled("matchmaking")) return;
                 player.closeInventory();
                 plugin.getGUIManager().openMatchmakingMenu(player, 0);
             }
@@ -231,8 +233,13 @@ public class GUIListener implements Listener {
 
         // "Own Inventory" option — no-kit duel
         if (clicked.getType() == Material.CHEST && itemName.equals(Kit.OWN_INVENTORY_DISPLAY)) {
+            if (!plugin.isOwnInventoryDuelsEnabled()) return;
             player.closeInventory();
-            plugin.getGUIManager().openRoundsSelect(player, targetUUID, Kit.OWN_INVENTORY);
+            if (plugin.isFeatureEnabled("best-of-n")) {
+                plugin.getGUIManager().openRoundsSelect(player, targetUUID, Kit.OWN_INVENTORY);
+            } else {
+                plugin.getGUIManager().openArenaSelect(player, targetUUID, Kit.OWN_INVENTORY);
+            }
             return;
         }
 
@@ -244,7 +251,12 @@ public class GUIListener implements Listener {
         }
 
         player.closeInventory();
-        plugin.getGUIManager().openRoundsSelect(player, targetUUID, kit.getName());
+        if (plugin.isFeatureEnabled("best-of-n")) {
+            plugin.getGUIManager().openRoundsSelect(player, targetUUID, kit.getName());
+        } else {
+            // Rounds selection disabled — every duel is a single round (Bo1)
+            plugin.getGUIManager().openArenaSelect(player, targetUUID, kit.getName());
+        }
     }
 
     // ========== ROUNDS SELECT (challenge flow) ==========
@@ -470,9 +482,11 @@ public class GUIListener implements Listener {
 
     private void handlePartyModeClick(Player player, int slot) {
         if (slot == 11) {
+            if (!plugin.isFeatureEnabled("team-duels")) return;
             player.closeInventory();
             plugin.getGUIManager().openPartyTeamSizeMenu(player);
         } else if (slot == 15) {
+            if (!plugin.isFeatureEnabled("tournaments")) return;
             player.closeInventory();
             plugin.getGUIManager().setPartyFlowMode(player.getUniqueId(),
                     dev.epicduels.model.PartyMode.TOURNAMENT);

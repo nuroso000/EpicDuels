@@ -84,8 +84,13 @@ public class GUIManager {
         }
 
         // Slot 10: Diamond Sword — Duels
-        inv.setItem(10, createItem(Material.DIAMOND_SWORD, "&a&lDuels",
-                "&7Challenge another player", "&7to a private duel!"));
+        if (plugin.isFeatureEnabled("challenges")) {
+            inv.setItem(10, createItem(Material.DIAMOND_SWORD, "&a&lDuels",
+                    "&7Challenge another player", "&7to a private duel!"));
+        } else {
+            inv.setItem(10, createItem(Material.BARRIER, "&8Duels",
+                    "&cDisabled on this server."));
+        }
 
         // Slot 13: Player Head — Stats
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
@@ -101,8 +106,13 @@ public class GUIManager {
         inv.setItem(13, head);
 
         // Slot 16: Hopper — Matchmaking
-        inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
-                "&7Join a queue to find", "&7an opponent automatically!"));
+        if (plugin.isFeatureEnabled("matchmaking")) {
+            inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
+                    "&7Join a queue to find", "&7an opponent automatically!"));
+        } else {
+            inv.setItem(16, createItem(Material.BARRIER, "&8Matchmaking",
+                    "&cDisabled on this server."));
+        }
 
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
@@ -232,7 +242,7 @@ public class GUIManager {
             items.add(createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
                     "&7Click to select this kit"));
         }
-        if (plugin.getConfig().getBoolean("duel.allow-own-inventory", true)) {
+        if (plugin.isOwnInventoryDuelsEnabled()) {
             items.add(createItem(Material.CHEST, "&6&l" + Kit.OWN_INVENTORY_DISPLAY,
                     "&7Fight with the items you", "&7are carrying right now!",
                     "&7Your inventory is saved and", "&7restored after the duel."));
@@ -576,12 +586,22 @@ public class GUIManager {
         ItemStack pane = createPane(Material.PURPLE_STAINED_GLASS_PANE);
         for (int i = 0; i < 27; i++) inv.setItem(i, pane);
 
-        inv.setItem(11, createItem(Material.DIAMOND_SWORD, "&9&lTeam Duel",
-                "&7Split your party into two teams", "&7and fight on a normal arena.",
-                "", "&eClick to choose"));
-        inv.setItem(15, createItem(Material.GOLDEN_HORSE_ARMOR, "&6&lTournament",
-                "&7Single-elimination 1v1 bracket", "&7with all party members.",
-                "", "&eClick to choose"));
+        if (plugin.isFeatureEnabled("team-duels")) {
+            inv.setItem(11, createItem(Material.DIAMOND_SWORD, "&9&lTeam Duel",
+                    "&7Split your party into two teams", "&7and fight on a normal arena.",
+                    "", "&eClick to choose"));
+        } else {
+            inv.setItem(11, createItem(Material.BARRIER, "&8Team Duel",
+                    "&cDisabled on this server."));
+        }
+        if (plugin.isFeatureEnabled("tournaments")) {
+            inv.setItem(15, createItem(Material.GOLDEN_HORSE_ARMOR, "&6&lTournament",
+                    "&7Single-elimination 1v1 bracket", "&7with all party members.",
+                    "", "&eClick to choose"));
+        } else {
+            inv.setItem(15, createItem(Material.BARRIER, "&8Tournament",
+                    "&cDisabled on this server."));
+        }
 
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);

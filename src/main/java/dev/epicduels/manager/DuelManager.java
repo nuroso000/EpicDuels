@@ -385,7 +385,7 @@ public class DuelManager {
 
     private void startCountdown(DuelInstance duel) {
         new BukkitRunnable() {
-            int count = 5;
+            int count = Math.min(60, Math.max(0, plugin.getConfig().getInt("duel.countdown-seconds", 5)));
 
             @Override
             public void run() {
@@ -566,7 +566,7 @@ public class DuelManager {
                 .append(Component.text(" vs ", NamedTextColor.GRAY))
                 .append(Component.text(name2, NamedTextColor.YELLOW))
                 .append(Component.text(" ended in a draw!", NamedTextColor.GRAY));
-        Bukkit.broadcast(announcement);
+        announceResult(announcement, p1, p2);
 
         Title drawTitle = Title.title(
                 Component.text("DRAW", NamedTextColor.YELLOW, TextDecoration.BOLD),
@@ -709,7 +709,7 @@ public class DuelManager {
         plugin.getStatsManager().addWin(winnerId);
         plugin.getStatsManager().addLoss(loserId);
 
-        // Announce
+        // Announce — server-wide or participants-only, per config
         Component announcement = Component.text("DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
                 .append(Component.text("| ", NamedTextColor.DARK_GRAY))
                 .append(Component.text(winnerName, NamedTextColor.GREEN, TextDecoration.BOLD))
@@ -717,7 +717,7 @@ public class DuelManager {
                 .append(Component.text(loserName, NamedTextColor.RED))
                 .append(Component.text("!", NamedTextColor.GRAY));
 
-        Bukkit.broadcast(announcement);
+        announceResult(announcement, winner, loser);
 
         if (winner != null) {
             Title winTitle = Title.title(
@@ -754,6 +754,19 @@ public class DuelManager {
         }
 
         scheduleReturnToLobby(duel, winner, loser);
+    }
+
+    /**
+     * Sends a duel result to the whole server, or only to the two
+     * participants when duel.broadcast-results is false.
+     */
+    private void announceResult(Component announcement, Player a, Player b) {
+        if (plugin.getConfig().getBoolean("duel.broadcast-results", true)) {
+            Bukkit.broadcast(announcement);
+            return;
+        }
+        if (a != null) a.sendMessage(announcement);
+        if (b != null) b.sendMessage(announcement);
     }
 
     /**

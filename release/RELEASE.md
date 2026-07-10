@@ -65,7 +65,8 @@ items they are carrying instead of receiving a kit.
   player's next join.
 - Best-of-N round resets refill from the backup; rematches keep the
   own-inventory mode.
-- Can be disabled with `duel.allow-own-inventory: false`.
+- Can be disabled with `features.own-inventory-duels: false` — e.g. on
+  dedicated duel servers where players own no items anyway.
 
 ### New Commands
 
@@ -83,8 +84,10 @@ items they are carrying instead of receiving a kit.
 | `duel.time-limit-seconds` | `300` | Max match length; 0 disables |
 | `duel.tournament-draw` | `sudden-death` | Tournament time-up resolution (`sudden-death` / `coin-flip`) |
 | `duel.sudden-death-seconds` | `60` | Length of the sudden-death extension |
-| `duel.allow-own-inventory` | `true` | "Own Inventory" option in kit selection |
+| `duel.countdown-seconds` | `5` | Pre-fight countdown length (0–60, 0 = instant start) |
+| `duel.broadcast-results` | `true` | `false` = duel results go to the two fighters only, not server-wide |
 | `lobby.handle-join` | `true` | Join-time inventory wipe + lobby teleport (disable when running alongside other gameplay) |
+| `features.*` | `true` | Individual on/off switch for every feature: `challenges`, `matchmaking`, `spectating`, `rematch`, `forfeit`, `best-of-n`, `own-inventory-duels`, `parties`, `team-duels`, `tournaments`, `leaderboards`. Disabled features vanish from the GUIs and their commands answer "This feature is disabled on this server." (replaces the early-3.0.0 key `duel.allow-own-inventory`, which is still honored) |
 
 ### Bug Fixes
 

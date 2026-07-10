@@ -68,6 +68,7 @@ public class RematchManager {
      * players a clickable rematch offer once they are back in the lobby.
      */
     public void offerRematch(DuelInstance duel) {
+        if (!plugin.isFeatureEnabled("rematch")) return;
         purgeExpired();
 
         Offer offer = new Offer(duel.getPlayer1(), duel.getPlayer2(), duel.getArenaName(), duel.getKitName(), duel.getBestOf());
