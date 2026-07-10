@@ -30,6 +30,25 @@ lobby:
     leaf-decay: true           # Cancel leaf decay
     inventory-movement: true   # Cancel inventory clicks/drags when no plugin GUI is open
 
+# ── Duel settings ──────────────────────────────────────────
+duel:
+  # Maximum duel length in seconds, counted from the "FIGHT!"
+  # countdown finishing. When the time runs out the duel ends
+  # in a draw (no win/loss for either player). Applies to 1v1
+  # duels, team duels and tournament matches. 0 = no limit.
+  time-limit-seconds: 300
+
+  # How tournament matches resolve a time-up (a bracket always
+  # needs a winner, so a plain draw is not possible):
+  #   "sudden-death" — the match is extended once by
+  #                    sudden-death-seconds; if still undecided
+  #                    afterwards, a coin flip picks the winner
+  #   "coin-flip"    — a coin flip picks the winner immediately
+  tournament-draw: "sudden-death"
+
+  # Length of the sudden-death extension (seconds).
+  sudden-death-seconds: 60
+
 # ── Stats Backend ──────────────────────────────────────────
 # Controls where player statistics are stored.
 #

@@ -17,6 +17,10 @@ public class DuelInstance implements BattleInstance {
     private World instanceWorld;
     private boolean active;
     private boolean countdownComplete;
+    // Time-limit deadline (epoch millis); 0 = no limit. Set when the countdown finishes.
+    private long deadlineMillis;
+    // True once the match entered its one-time sudden-death extension (tournament matches).
+    private boolean suddenDeath;
     // Tracks blocks placed by players during the duel - these may be broken freely.
     // All other blocks are original map blocks and cannot be broken.
     private final Set<Long> playerPlacedBlocks = new HashSet<>();
@@ -78,6 +82,22 @@ public class DuelInstance implements BattleInstance {
 
     public void setCountdownComplete(boolean countdownComplete) {
         this.countdownComplete = countdownComplete;
+    }
+
+    public long getDeadlineMillis() {
+        return deadlineMillis;
+    }
+
+    public void setDeadlineMillis(long deadlineMillis) {
+        this.deadlineMillis = deadlineMillis;
+    }
+
+    public boolean isSuddenDeath() {
+        return suddenDeath;
+    }
+
+    public void setSuddenDeath(boolean suddenDeath) {
+        this.suddenDeath = suddenDeath;
     }
 
     public boolean isParticipant(UUID uuid) {

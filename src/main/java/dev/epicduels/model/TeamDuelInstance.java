@@ -22,6 +22,8 @@ public class TeamDuelInstance implements BattleInstance {
     private World instanceWorld;
     private boolean active;
     private boolean countdownComplete;
+    // Time-limit deadline (epoch millis); 0 = no limit. Set when the countdown finishes.
+    private long deadlineMillis;
     private final Set<Long> playerPlacedBlocks = new HashSet<>();
 
     public TeamDuelInstance(Set<UUID> teamA, Set<UUID> teamB, String arenaName, String kitName) {
@@ -47,6 +49,8 @@ public class TeamDuelInstance implements BattleInstance {
     public void setCountdownComplete(boolean v) { this.countdownComplete = v; }
     public String getArenaName() { return arenaName; }
     public String getKitName() { return kitName; }
+    public long getDeadlineMillis() { return deadlineMillis; }
+    public void setDeadlineMillis(long deadlineMillis) { this.deadlineMillis = deadlineMillis; }
 
     public Set<UUID> getTeamA() { return teamA; }
     public Set<UUID> getTeamB() { return teamB; }

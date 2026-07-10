@@ -30,10 +30,12 @@ public class DuelManager {
     private final Map<UUID, DuelInstance> spectators = new ConcurrentHashMap<>();
     private final Map<UUID, BiConsumer<UUID, UUID>> endCallbacks = new ConcurrentHashMap<>();
     private BukkitTask expirationTask;
+    private BukkitTask timeLimitTask;
 
     public DuelManager(EpicDuels plugin) {
         this.plugin = plugin;
         startExpirationTask();
+        startTimeLimitTask();
     }
 
     private void startExpirationTask() {
@@ -358,10 +360,135 @@ public class DuelManager {
                     frozenPlayers.remove(duel.getPlayer2());
                     duel.setCountdownComplete(true);
 
+                    int timeLimit = plugin.getConfig().getInt("duel.time-limit-seconds", 300);
+                    if (timeLimit > 0) {
+                        duel.setDeadlineMillis(System.currentTimeMillis() + timeLimit * 1000L);
+                    }
+
                     cancel();
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    // ========== Time limit & draws ==========
+
+    private void startTimeLimitTask() {
+        timeLimitTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                Set<UUID> seen = new HashSet<>();
+                for (DuelInstance duel : activeDuels.values()) {
+                    if (!seen.add(duel.getId())) continue;
+                    if (!duel.isActive() || !duel.isCountdownComplete() || duel.getDeadlineMillis() <= 0) continue;
+
+                    long remaining = duel.getDeadlineMillis() - System.currentTimeMillis();
+                    if (remaining <= 0) {
+                        handleTimeUp(duel);
+                    } else {
+                        sendTimeActionBar(duel, remaining);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private void sendTimeActionBar(DuelInstance duel, long remainingMillis) {
+        long seconds = (remainingMillis + 999) / 1000;
+        NamedTextColor color = seconds <= 30 ? NamedTextColor.RED
+                : seconds <= 60 ? NamedTextColor.YELLOW
+                : NamedTextColor.GRAY;
+        String prefix = duel.isSuddenDeath() ? "Sudden Death: " : "Time left: ";
+        Component bar = Component.text(prefix + formatTime(seconds), color);
+
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+        if (p1 != null) p1.sendActionBar(bar);
+        if (p2 != null) p2.sendActionBar(bar);
+    }
+
+    private static String formatTime(long totalSeconds) {
+        return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
+    }
+
+    private void handleTimeUp(DuelInstance duel) {
+        // Tournament matches always need a winner — resolve per config
+        if (endCallbacks.containsKey(duel.getId())) {
+            String resolution = plugin.getConfig().getString("duel.tournament-draw", "sudden-death");
+            if (resolution.equalsIgnoreCase("sudden-death") && !duel.isSuddenDeath()) {
+                startSuddenDeath(duel);
+                return;
+            }
+
+            UUID winnerId = new Random().nextBoolean() ? duel.getPlayer1() : duel.getPlayer2();
+            UUID loserId = duel.getOpponent(winnerId);
+            Component msg = Component.text("Time is up — a coin flip decides the match!", NamedTextColor.YELLOW);
+            Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+            if (p1 != null) p1.sendMessage(msg);
+            if (p2 != null) p2.sendMessage(msg);
+            endDuel(duel, winnerId, loserId);
+            return;
+        }
+
+        endDuelDraw(duel);
+    }
+
+    private void startSuddenDeath(DuelInstance duel) {
+        int extension = plugin.getConfig().getInt("duel.sudden-death-seconds", 60);
+        duel.setSuddenDeath(true);
+        duel.setDeadlineMillis(System.currentTimeMillis() + extension * 1000L);
+
+        Title title = Title.title(
+                Component.text("SUDDEN DEATH", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("Next kill wins — " + formatTime(extension) + " on the clock!", NamedTextColor.YELLOW),
+                Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
+        );
+        for (UUID id : List.of(duel.getPlayer1(), duel.getPlayer2())) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null) {
+                p.showTitle(title);
+                p.playSound(p.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.6f, 1.4f);
+            }
+        }
+    }
+
+    /**
+     * Ends a duel with no winner: no stats are recorded and both players are
+     * returned to the lobby.
+     */
+    public void endDuelDraw(DuelInstance duel) {
+        if (!duel.isActive()) return;
+        duel.setActive(false);
+
+        frozenPlayers.remove(duel.getPlayer1());
+        frozenPlayers.remove(duel.getPlayer2());
+
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+        String name1 = p1 != null ? p1.getName() : "Unknown";
+        String name2 = p2 != null ? p2.getName() : "Unknown";
+
+        Component announcement = Component.text("DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text("| ", NamedTextColor.DARK_GRAY))
+                .append(Component.text(name1, NamedTextColor.YELLOW))
+                .append(Component.text(" vs ", NamedTextColor.GRAY))
+                .append(Component.text(name2, NamedTextColor.YELLOW))
+                .append(Component.text(" ended in a draw!", NamedTextColor.GRAY));
+        Bukkit.broadcast(announcement);
+
+        Title drawTitle = Title.title(
+                Component.text("DRAW", NamedTextColor.YELLOW, TextDecoration.BOLD),
+                Component.text("Time is up — nobody wins.", NamedTextColor.GRAY),
+                Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
+        );
+        if (p1 != null) p1.showTitle(drawTitle);
+        if (p2 != null) p2.showTitle(drawTitle);
+
+        removeSpectatorsForDuel(duel);
+        endCallbacks.remove(duel.getId());
+
+        scheduleReturnToLobby(duel, p1, p2);
     }
 
     public void endDuel(DuelInstance duel, UUID winnerId, UUID loserId) {
@@ -421,29 +548,30 @@ public class DuelManager {
             }
         }
 
+        scheduleReturnToLobby(duel, winner, loser);
+    }
+
+    /**
+     * Waits 3 seconds, then returns both players to the lobby and deletes the
+     * instance world.
+     */
+    private void scheduleReturnToLobby(DuelInstance duel, Player playerA, Player playerB) {
         String instanceWorldName = duel.getInstanceWorldName();
 
-        // Wait 3 seconds then teleport and clean up
         new BukkitRunnable() {
             @Override
             public void run() {
                 Location lobby = plugin.getLobbyLocation();
 
-                if (winner != null && winner.isOnline()) {
-                    winner.getInventory().clear();
-                    winner.setHealth(winner.getMaxHealth());
-                    winner.setFoodLevel(20);
-                    winner.setSaturation(20f);
-                    winner.setGameMode(GameMode.ADVENTURE);
-                    winner.teleport(lobby);
-                }
-                if (loser != null && loser.isOnline()) {
-                    loser.getInventory().clear();
-                    loser.setHealth(loser.getMaxHealth());
-                    loser.setFoodLevel(20);
-                    loser.setSaturation(20f);
-                    loser.setGameMode(GameMode.ADVENTURE);
-                    loser.teleport(lobby);
+                for (Player p : new Player[]{playerA, playerB}) {
+                    if (p != null && p.isOnline()) {
+                        p.getInventory().clear();
+                        p.setHealth(p.getMaxHealth());
+                        p.setFoodLevel(20);
+                        p.setSaturation(20f);
+                        p.setGameMode(GameMode.ADVENTURE);
+                        p.teleport(lobby);
+                    }
                 }
 
                 activeDuels.remove(duel.getPlayer1());
@@ -561,6 +689,10 @@ public class DuelManager {
         if (expirationTask != null) {
             expirationTask.cancel();
             expirationTask = null;
+        }
+        if (timeLimitTask != null) {
+            timeLimitTask.cancel();
+            timeLimitTask = null;
         }
 
         for (UUID specId : new HashSet<>(spectators.keySet())) {

@@ -11,6 +11,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.*;
@@ -24,9 +25,74 @@ public class TeamDuelManager {
     // Players who died but their team isn't wiped yet -> kept as spectators inside the arena
     private final Set<UUID> deadSpectators = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Set<UUID> frozen = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private BukkitTask timeLimitTask;
 
     public TeamDuelManager(EpicDuels plugin) {
         this.plugin = plugin;
+        startTimeLimitTask();
+    }
+
+    private void startTimeLimitTask() {
+        timeLimitTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (TeamDuelInstance instance : activeById.values()) {
+                    if (!instance.isActive() || !instance.isCountdownComplete()
+                            || instance.getDeadlineMillis() <= 0) continue;
+
+                    long remaining = instance.getDeadlineMillis() - System.currentTimeMillis();
+                    if (remaining <= 0) {
+                        endTeamDuelDraw(instance);
+                    } else {
+                        sendTimeActionBar(instance, remaining);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private void sendTimeActionBar(TeamDuelInstance instance, long remainingMillis) {
+        long seconds = (remainingMillis + 999) / 1000;
+        NamedTextColor color = seconds <= 30 ? NamedTextColor.RED
+                : seconds <= 60 ? NamedTextColor.YELLOW
+                : NamedTextColor.GRAY;
+        Component bar = Component.text("Time left: " + formatTime(seconds), color);
+        for (UUID id : instance.getAllParticipants()) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null) p.sendActionBar(bar);
+        }
+    }
+
+    private static String formatTime(long totalSeconds) {
+        return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
+    }
+
+    /**
+     * Ends a team duel with no winner: no stats are recorded and everybody is
+     * returned to the lobby.
+     */
+    private void endTeamDuelDraw(TeamDuelInstance instance) {
+        if (!instance.isActive()) return;
+        instance.setActive(false);
+
+        Title drawTitle = Title.title(
+                Component.text("DRAW", NamedTextColor.YELLOW, TextDecoration.BOLD),
+                Component.text("Time is up — nobody wins.", NamedTextColor.GRAY),
+                Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
+        );
+        Component summary = Component.text("TEAM DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text("| ", NamedTextColor.DARK_GRAY))
+                .append(Component.text("The match ended in a draw!", NamedTextColor.GRAY));
+
+        for (UUID id : instance.getAllParticipants()) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null && p.isOnline()) {
+                p.showTitle(drawTitle);
+                p.sendMessage(summary);
+            }
+        }
+
+        scheduleReturnToLobby(instance);
     }
 
     public boolean startTeamDuel(List<UUID> partyMembers, dev.epicduels.model.TeamSize size, Arena arena, Kit kit) {
@@ -201,6 +267,12 @@ public class TeamDuelManager {
                         frozen.remove(id);
                     }
                     instance.setCountdownComplete(true);
+
+                    int timeLimit = plugin.getConfig().getInt("duel.time-limit-seconds", 300);
+                    if (timeLimit > 0) {
+                        instance.setDeadlineMillis(System.currentTimeMillis() + timeLimit * 1000L);
+                    }
+
                     cancel();
                 }
             }
@@ -276,6 +348,14 @@ public class TeamDuelManager {
             }
         }
 
+        scheduleReturnToLobby(instance);
+    }
+
+    /**
+     * Waits 3 seconds, then returns all participants to the lobby and deletes
+     * the instance world.
+     */
+    private void scheduleReturnToLobby(TeamDuelInstance instance) {
         String instanceWorldName = instance.getInstanceWorldName();
         Set<UUID> all = instance.getAllParticipants();
 
@@ -370,6 +450,10 @@ public class TeamDuelManager {
     }
 
     public void cleanupAll() {
+        if (timeLimitTask != null) {
+            timeLimitTask.cancel();
+            timeLimitTask = null;
+        }
         for (TeamDuelInstance instance : new HashSet<>(activeById.values())) {
             if (instance.isActive()) {
                 instance.setActive(false);
