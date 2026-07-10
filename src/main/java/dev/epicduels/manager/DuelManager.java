@@ -609,6 +609,20 @@ public class DuelManager {
         endDuel(duel, opponent, playerId);
     }
 
+    /**
+     * Player gives up via /duel forfeit — the opponent wins.
+     */
+    public void forfeitDuel(UUID playerId) {
+        DuelInstance duel = activeDuels.get(playerId);
+        if (duel == null || !duel.isActive()) return;
+
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null) {
+            player.sendMessage(Component.text("You forfeited the duel.", NamedTextColor.RED));
+        }
+        endDuel(duel, duel.getOpponent(playerId), playerId);
+    }
+
     public boolean isInDuel(UUID playerId) {
         DuelInstance duel = activeDuels.get(playerId);
         return duel != null && duel.isActive();

@@ -284,25 +284,49 @@ public class TeamDuelManager {
      * Returns true if the death was consumed by team duel handling.
      */
     public boolean handleDeath(Player deceased) {
-        TeamDuelInstance instance = activeByPlayer.get(deceased.getUniqueId());
+        return eliminate(deceased,
+                Component.text("You died! Spectating until the match ends.", NamedTextColor.GRAY));
+    }
+
+    /**
+     * Player gives up via /duel forfeit — they are out of the team duel and
+     * spectate the rest of the match.
+     */
+    public void forfeit(Player player) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
+        if (instance == null || !instance.isActive()) return;
+        if (!instance.isAlive(player.getUniqueId())) return;
+
+        frozen.remove(player.getUniqueId());
+        eliminate(player,
+                Component.text("You forfeited! Spectating until the match ends.", NamedTextColor.GRAY));
+    }
+
+    /**
+     * Removes a participant from the fight (death or forfeit). If their team is
+     * wiped the duel ends, otherwise they spectate inside the arena.
+     * Returns true if the player was an active participant.
+     */
+    private boolean eliminate(Player player, Component spectatorMessage) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
         if (instance == null || !instance.isActive()) return false;
 
-        instance.markDead(deceased.getUniqueId());
+        instance.markDead(player.getUniqueId());
 
         TeamDuelInstance.Team winner = instance.getWinningTeam();
         if (winner != null) {
             endTeamDuel(instance, winner);
         } else {
-            // Move dead player into spectator mode within the arena
-            deadSpectators.add(deceased.getUniqueId());
+            // Move the player into spectator mode within the arena
+            deadSpectators.add(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!deceased.isOnline()) return;
-                deceased.getInventory().clear();
-                deceased.setGameMode(GameMode.SPECTATOR);
+                if (!player.isOnline()) return;
+                player.getInventory().clear();
+                player.setGameMode(GameMode.SPECTATOR);
                 if (instance.getInstanceWorld() != null) {
-                    deceased.teleport(instance.getInstanceWorld().getSpawnLocation());
+                    player.teleport(instance.getInstanceWorld().getSpawnLocation());
                 }
-                deceased.sendMessage(Component.text("You died! Spectating until the match ends.", NamedTextColor.GRAY));
+                player.sendMessage(spectatorMessage);
             });
         }
         return true;

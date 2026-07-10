@@ -12,7 +12,7 @@ generators:
 commands:
   duel:
     description: Main duel command
-    usage: /<command> [menu|duels|matchmaking|stats|challenge|accept|deny|cancel|queue|spectate|leaderboard|arena|kit|setlobby|lobby]
+    usage: /<command> [menu|duels|matchmaking|stats|challenge|accept|deny|cancel|queue|spectate|forfeit|leaderboard|arena|kit|setlobby|lobby]
     aliases: [d]
   party:
     description: Manage your party

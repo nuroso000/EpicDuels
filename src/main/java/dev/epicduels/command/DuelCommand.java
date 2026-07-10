@@ -18,11 +18,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class DuelCommand implements CommandExecutor {
 
+    private static final long FORFEIT_CONFIRM_MILLIS = 10_000;
+
     private final EpicDuels plugin;
+    // Pending /duel forfeit confirmations: player -> time the prompt was shown
+    private final Map<UUID, Long> forfeitConfirmations = new HashMap<>();
 
     public DuelCommand(EpicDuels plugin) {
         this.plugin = plugin;
@@ -53,6 +59,7 @@ public class DuelCommand implements CommandExecutor {
             case "stats" -> handleStats(player, args);
             case "queue", "q" -> handleQueue(player, args);
             case "spectate", "spec" -> handleSpectate(player, args);
+            case "forfeit", "ff", "leave" -> handleForfeit(player, args);
             case "duels" -> {
                 if (!player.hasPermission("epicduels.duel")) {
                     player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -613,6 +620,42 @@ public class DuelCommand implements CommandExecutor {
         plugin.getDuelManager().addSpectator(player, duel);
     }
 
+    private void handleForfeit(Player player, String[] args) {
+        UUID id = player.getUniqueId();
+        boolean inDuel = plugin.getDuelManager().isInDuel(id);
+        boolean inTeamDuel = !inDuel
+                && plugin.getTeamDuelManager().isInTeamDuel(id)
+                && plugin.getTeamDuelManager().getTeamDuelOf(id).isAlive(id);
+
+        if (!inDuel && !inTeamDuel) {
+            forfeitConfirmations.remove(id);
+            player.sendMessage(Component.text("You are not in a duel.", NamedTextColor.RED));
+            return;
+        }
+
+        if (args.length >= 2 && args[1].equalsIgnoreCase("confirm")) {
+            Long promptedAt = forfeitConfirmations.remove(id);
+            if (promptedAt == null || System.currentTimeMillis() - promptedAt > FORFEIT_CONFIRM_MILLIS) {
+                player.sendMessage(Component.text("Confirmation expired — use /duel forfeit again.", NamedTextColor.RED));
+                return;
+            }
+            if (inDuel) {
+                plugin.getDuelManager().forfeitDuel(id);
+            } else {
+                plugin.getTeamDuelManager().forfeit(player);
+            }
+            return;
+        }
+
+        forfeitConfirmations.put(id, System.currentTimeMillis());
+        player.sendMessage(Component.text("Forfeiting counts as a loss! ", NamedTextColor.YELLOW)
+                .append(Component.text("[CONFIRM]", NamedTextColor.RED, TextDecoration.BOLD)
+                        .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel forfeit confirm"))
+                        .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                                Component.text("Give up this match", NamedTextColor.GRAY)))));
+        player.sendMessage(Component.text("Click within 10 seconds to confirm.", NamedTextColor.GRAY));
+    }
+
     private void handleLeaderboard(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -792,6 +835,7 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel queue <kit>", NamedTextColor.YELLOW).append(Component.text(" - Join matchmaking queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel queue leave", NamedTextColor.YELLOW).append(Component.text(" - Leave the queue", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel forfeit", NamedTextColor.YELLOW).append(Component.text(" - Give up your current match", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel leaderboard <wins|score>", NamedTextColor.YELLOW).append(Component.text(" - Show the top 10", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
