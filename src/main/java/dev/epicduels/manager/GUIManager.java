@@ -27,6 +27,7 @@ public class GUIManager {
     public static final String STATS_MENU_TITLE = "Your Stats";
     public static final String MATCHMAKING_TITLE = "Matchmaking";
     public static final String KIT_SELECT_TITLE = "Select Kit";
+    public static final String ROUNDS_SELECT_TITLE = "Select Rounds";
     public static final String ARENA_SELECT_TITLE = "Select Map";
     public static final String KIT_EDIT_TITLE = "Edit Kit: ";
     public static final String KIT_PREVIEW_TITLE = "Preview Kit: ";
@@ -54,6 +55,7 @@ public class GUIManager {
     // Challenge flow state
     private final Map<UUID, UUID> challengeTarget = new HashMap<>();
     private final Map<UUID, String> challengeKit = new HashMap<>();
+    private final Map<UUID, Integer> challengeRounds = new HashMap<>();
 
     // Pagination state
     private final Map<UUID, Integer> playerPage = new HashMap<>();
@@ -246,6 +248,33 @@ public class GUIManager {
 
     public void openKitSelect(Player player, UUID targetPlayer) {
         openKitSelect(player, targetPlayer, 0);
+    }
+
+    // ========== ROUNDS SELECT — challenge flow (Bo1/Bo3/Bo5) ==========
+
+    public void openRoundsSelect(Player player, UUID targetPlayer, String kitName) {
+        challengeTarget.put(player.getUniqueId(), targetPlayer);
+        challengeKit.put(player.getUniqueId(), kitName);
+
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text(ROUNDS_SELECT_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
+        ItemStack pane = createPane(Material.YELLOW_STAINED_GLASS_PANE);
+        for (int i = 0; i < 27; i++) inv.setItem(i, pane);
+
+        inv.setItem(11, createItem(Material.PAPER, "&a&lBest of 1",
+                "&7A single round decides", "&7the duel.", "", "&eClick to select"));
+        inv.setItem(13, createItem(Material.BOOK, "&6&lBest of 3",
+                "&7First to 2 round wins", "&7takes the match.", "", "&eClick to select"));
+        inv.setItem(15, createItem(Material.ENCHANTED_BOOK, "&d&lBest of 5",
+                "&7First to 3 round wins", "&7takes the match.", "", "&eClick to select"));
+        inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to kit selection"));
+
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    public void setChallengeRounds(UUID player, int rounds) {
+        challengeRounds.put(player, rounds);
     }
 
     // ========== ARENA / MAP SELECT — challenge flow (paginated) ==========
@@ -454,6 +483,7 @@ public class GUIManager {
     public void finishChallengeWithArena(Player player, String arenaName) {
         UUID targetUUID = challengeTarget.get(player.getUniqueId());
         String kitName = challengeKit.get(player.getUniqueId());
+        int bestOf = challengeRounds.getOrDefault(player.getUniqueId(), 1);
         clearChallengeData(player.getUniqueId());
 
         if (targetUUID == null || kitName == null) return;
@@ -464,23 +494,29 @@ public class GUIManager {
             return;
         }
 
-        boolean sent = plugin.getDuelManager().sendRequest(player.getUniqueId(), targetUUID, arenaName, kitName);
+        boolean sent = plugin.getDuelManager().sendRequest(player.getUniqueId(), targetUUID, arenaName, kitName, bestOf);
         if (!sent) {
             player.sendMessage(Component.text("Could not send duel request. You may already have a pending request.", NamedTextColor.RED));
             return;
         }
 
+        String bestOfInfo = bestOf > 1 ? " | Best of " + bestOf : "";
         player.sendMessage(Component.text("Duel request sent to " + target.getName() + "!", NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kitName, NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kitName + bestOfInfo, NamedTextColor.GRAY));
 
         target.sendMessage(Component.empty());
         target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
         target.sendMessage(Component.text(player.getName(), NamedTextColor.YELLOW)
                 .append(Component.text(" challenged you to a duel!", NamedTextColor.GREEN)));
-        target.sendMessage(Component.text("Arena: ", NamedTextColor.GRAY)
+        Component details = Component.text("Arena: ", NamedTextColor.GRAY)
                 .append(Component.text(arenaName, NamedTextColor.WHITE))
                 .append(Component.text(" | Kit: ", NamedTextColor.GRAY))
-                .append(Component.text(kitName, NamedTextColor.WHITE)));
+                .append(Component.text(kitName, NamedTextColor.WHITE));
+        if (bestOf > 1) {
+            details = details.append(Component.text(" | ", NamedTextColor.GRAY))
+                    .append(Component.text("Best of " + bestOf, NamedTextColor.WHITE));
+        }
+        target.sendMessage(details);
         target.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN)
                 .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel accept " + player.getName()))
                 .append(Component.text("  "))
@@ -504,6 +540,7 @@ public class GUIManager {
     public void clearChallengeData(UUID player) {
         challengeTarget.remove(player);
         challengeKit.remove(player);
+        challengeRounds.remove(player);
         animatingPlayers.remove(player);
         playerPage.remove(player);
         partyFlowMode.remove(player);

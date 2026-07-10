@@ -34,14 +34,16 @@ public class RematchManager {
         final UUID player2;
         final String arenaName;
         final String kitName;
+        final int bestOf;
         final long createdAt = System.currentTimeMillis();
         final Set<UUID> accepted = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-        Offer(UUID player1, UUID player2, String arenaName, String kitName) {
+        Offer(UUID player1, UUID player2, String arenaName, String kitName, int bestOf) {
             this.player1 = player1;
             this.player2 = player2;
             this.arenaName = arenaName;
             this.kitName = kitName;
+            this.bestOf = bestOf;
         }
 
         boolean isExpired() {
@@ -68,7 +70,7 @@ public class RematchManager {
     public void offerRematch(DuelInstance duel) {
         purgeExpired();
 
-        Offer offer = new Offer(duel.getPlayer1(), duel.getPlayer2(), duel.getArenaName(), duel.getKitName());
+        Offer offer = new Offer(duel.getPlayer1(), duel.getPlayer2(), duel.getArenaName(), duel.getKitName(), duel.getBestOf());
         offersByPlayer.put(duel.getPlayer1(), offer);
         offersByPlayer.put(duel.getPlayer2(), offer);
 
@@ -146,7 +148,7 @@ public class RematchManager {
             return;
         }
 
-        plugin.getDuelManager().startDirectDuel(player, opponent, arena, kit);
+        plugin.getDuelManager().startDirectDuel(player, opponent, arena, kit, offer.bestOf);
     }
 
     public void handleDisconnect(UUID playerId) {

@@ -147,9 +147,10 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        // End the 1v1 duel - the opponent wins
+        // Score the 1v1 round for the opponent — DuelManager ends the match
+        // or starts the next round (best-of-N)
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());
-        plugin.getDuelManager().endDuel(duel, winnerId, deceased.getUniqueId());
+        plugin.getDuelManager().handleRoundEnd(duel, winnerId, deceased.getUniqueId());
     }
 
     @EventHandler
@@ -163,6 +164,23 @@ public class PlayerListener implements Listener {
                 ? plugin.getTeamDuelManager().getTeamDuelOf(id) : null;
         if (teamDuel != null && teamDuel.isActive() && teamDuel.getInstanceWorld() != null) {
             event.setRespawnLocation(teamDuel.getInstanceWorld().getSpawnLocation());
+            return;
+        }
+
+        // A 1v1 duel that is still active after a death means a best-of-N
+        // round loss — respawn at the player's arena spawn for the next round.
+        DuelInstance duel = plugin.getDuelManager().getDuel(id);
+        if (duel != null && duel.isActive() && duel.getInstanceWorld() != null) {
+            org.bukkit.Location respawn = duel.getInstanceWorld().getSpawnLocation();
+            dev.epicduels.model.Arena arena = plugin.getArenaManager().getArena(duel.getArenaName());
+            if (arena != null) {
+                org.bukkit.Location base = duel.getPlayer1().equals(id) ? arena.getSpawn1() : arena.getSpawn2();
+                if (base != null) {
+                    respawn = base.clone();
+                    respawn.setWorld(duel.getInstanceWorld());
+                }
+            }
+            event.setRespawnLocation(respawn);
             return;
         }
 

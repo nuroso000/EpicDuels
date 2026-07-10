@@ -8,13 +8,15 @@ public class DuelRequest {
     private final UUID receiver;
     private final String arenaName;
     private final String kitName;
+    private final int bestOf;
     private final long timestamp;
 
-    public DuelRequest(UUID sender, UUID receiver, String arenaName, String kitName) {
+    public DuelRequest(UUID sender, UUID receiver, String arenaName, String kitName, int bestOf) {
         this.sender = sender;
         this.receiver = receiver;
         this.arenaName = arenaName;
         this.kitName = kitName;
+        this.bestOf = bestOf;
         this.timestamp = System.currentTimeMillis();
     }
 
@@ -32,6 +34,10 @@ public class DuelRequest {
 
     public String getKitName() {
         return kitName;
+    }
+
+    public int getBestOf() {
+        return bestOf;
     }
 
     public long getTimestamp() {

@@ -60,6 +60,7 @@ public class GUIListener implements Listener {
             case GUIManager.STATS_MENU_TITLE -> handleStatsMenuClick(player, slot);
             case GUIManager.MATCHMAKING_TITLE -> handleMatchmakingClick(player, slot, clicked);
             case GUIManager.KIT_SELECT_TITLE -> handleKitSelectClick(player, slot, clicked);
+            case GUIManager.ROUNDS_SELECT_TITLE -> handleRoundsSelectClick(player, slot);
             case GUIManager.ARENA_SELECT_TITLE -> handleArenaSelectClick(player, slot, clicked);
             case GUIManager.KIT_LIST_TITLE -> handleKitListClick(player, slot, clicked);
             case GUIManager.PARTY_MODE_TITLE -> handlePartyModeClick(player, slot);
@@ -236,7 +237,41 @@ public class GUIListener implements Listener {
         }
 
         player.closeInventory();
-        plugin.getGUIManager().openArenaSelect(player, targetUUID, kit.getName());
+        plugin.getGUIManager().openRoundsSelect(player, targetUUID, kit.getName());
+    }
+
+    // ========== ROUNDS SELECT (challenge flow) ==========
+
+    private void handleRoundsSelectClick(Player player, int slot) {
+        UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+        String kitName = plugin.getGUIManager().getChallengeKit(player.getUniqueId());
+
+        if (slot == 22) { // Back arrow
+            player.closeInventory();
+            if (targetUUID != null) {
+                plugin.getGUIManager().openKitSelect(player, targetUUID);
+            } else {
+                plugin.getGUIManager().openDuelsMenu(player, 0);
+            }
+            return;
+        }
+
+        int bestOf = switch (slot) {
+            case 11 -> 1;
+            case 13 -> 3;
+            case 15 -> 5;
+            default -> 0;
+        };
+        if (bestOf == 0) return;
+
+        if (targetUUID == null || kitName == null) {
+            player.closeInventory();
+            return;
+        }
+
+        plugin.getGUIManager().setChallengeRounds(player.getUniqueId(), bestOf);
+        player.closeInventory();
+        plugin.getGUIManager().openArenaSelect(player, targetUUID, kitName);
     }
 
     // ========== ARENA SELECT (challenge flow) ==========
@@ -246,8 +281,11 @@ public class GUIListener implements Listener {
 
         if (slot == GUIManager.BACK_SLOT) {
             UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
+            String kitName = plugin.getGUIManager().getChallengeKit(player.getUniqueId());
             player.closeInventory();
-            if (targetUUID != null) {
+            if (targetUUID != null && kitName != null) {
+                plugin.getGUIManager().openRoundsSelect(player, targetUUID, kitName);
+            } else if (targetUUID != null) {
                 plugin.getGUIManager().openKitSelect(player, targetUUID);
             } else {
                 plugin.getGUIManager().openDuelsMenu(player, 0);
@@ -406,6 +444,7 @@ public class GUIListener implements Listener {
                 || title.equals(GUIManager.STATS_MENU_TITLE)
                 || title.equals(GUIManager.MATCHMAKING_TITLE)
                 || title.equals(GUIManager.KIT_SELECT_TITLE)
+                || title.equals(GUIManager.ROUNDS_SELECT_TITLE)
                 || title.equals(GUIManager.ARENA_SELECT_TITLE)
                 || title.equals(GUIManager.KIT_LIST_TITLE)
                 || title.equals(GUIManager.ARENA_LIST_TITLE)

@@ -73,11 +73,11 @@ public class DuelManager {
         return plugin.getTournamentManager() != null && plugin.getTournamentManager().isInTournament(playerId);
     }
 
-    public boolean sendRequest(UUID sender, UUID receiver, String arenaName, String kitName) {
+    public boolean sendRequest(UUID sender, UUID receiver, String arenaName, String kitName, int bestOf) {
         if (outgoingRequests.containsKey(sender)) return false;
         if (isBusy(sender) || isBusy(receiver)) return false;
 
-        DuelRequest request = new DuelRequest(sender, receiver, arenaName, kitName);
+        DuelRequest request = new DuelRequest(sender, receiver, arenaName, kitName, bestOf);
         outgoingRequests.put(sender, request);
         incomingRequests.computeIfAbsent(receiver, k -> new ConcurrentHashMap<>()).put(sender, request);
         return true;
@@ -191,7 +191,7 @@ public class DuelManager {
             return;
         }
 
-        startDuel(player1, player2, arena, kit);
+        startDuel(player1, player2, arena, kit, request.getBestOf());
     }
 
     public void startQueueDuel(Player player1, Player player2, String arenaName, String kitName) {
@@ -225,11 +225,15 @@ public class DuelManager {
      * Starts a duel without a challenge request (rematch, ...). Same busy
      * checks as any other duel start.
      */
-    public DuelInstance startDirectDuel(Player player1, Player player2, Arena arena, Kit kit) {
-        return startDuel(player1, player2, arena, kit);
+    public DuelInstance startDirectDuel(Player player1, Player player2, Arena arena, Kit kit, int bestOf) {
+        return startDuel(player1, player2, arena, kit, bestOf);
     }
 
     private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit) {
+        return startDuel(player1, player2, arena, kit, 1);
+    }
+
+    private DuelInstance startDuel(Player player1, Player player2, Arena arena, Kit kit, int bestOf) {
         // Guard: never start a duel for someone who is already fighting.
         // Tournament membership is intentionally NOT checked here — tournament
         // matches are themselves started through this method.
@@ -242,7 +246,7 @@ public class DuelManager {
             return null;
         }
 
-        DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName());
+        DuelInstance duel = new DuelInstance(player1.getUniqueId(), player2.getUniqueId(), arena.getName(), kit.getName(), bestOf);
         activeDuels.put(player1.getUniqueId(), duel);
         activeDuels.put(player2.getUniqueId(), duel);
 
@@ -420,6 +424,23 @@ public class DuelManager {
     }
 
     private void handleTimeUp(DuelInstance duel) {
+        // Best-of-N: whoever leads on rounds when the time runs out wins
+        int wins1 = duel.getWins(duel.getPlayer1());
+        int wins2 = duel.getWins(duel.getPlayer2());
+        if (wins1 != wins2) {
+            UUID winnerId = wins1 > wins2 ? duel.getPlayer1() : duel.getPlayer2();
+            UUID loserId = duel.getOpponent(winnerId);
+            Player w = Bukkit.getPlayer(winnerId);
+            Component msg = Component.text("Time is up — " + (w != null ? w.getName() : "the leader")
+                    + " wins on rounds!", NamedTextColor.YELLOW);
+            for (UUID id : List.of(duel.getPlayer1(), duel.getPlayer2())) {
+                Player p = Bukkit.getPlayer(id);
+                if (p != null) p.sendMessage(msg);
+            }
+            endDuel(duel, winnerId, loserId);
+            return;
+        }
+
         // Tournament matches always need a winner — resolve per config
         if (endCallbacks.containsKey(duel.getId())) {
             String resolution = plugin.getConfig().getString("duel.tournament-draw", "sudden-death");
@@ -501,6 +522,107 @@ public class DuelManager {
         }
 
         scheduleReturnToLobby(duel, p1, p2);
+    }
+
+    // ========== Best-of-N rounds ==========
+
+    /**
+     * Called when a participant dies. Scores the round; ends the match if
+     * decided, otherwise resets the arena and starts the next round in the
+     * same instance world.
+     */
+    public void handleRoundEnd(DuelInstance duel, UUID roundWinnerId, UUID roundLoserId) {
+        if (!duel.isActive()) return;
+
+        duel.addRoundWin(roundWinnerId);
+        if (duel.getWins(roundWinnerId) >= duel.getRoundsToWin()) {
+            endDuel(duel, roundWinnerId, roundLoserId);
+            return;
+        }
+
+        startNextRound(duel, roundWinnerId);
+    }
+
+    private void startNextRound(DuelInstance duel, UUID roundWinnerId) {
+        duel.setDeadlineMillis(0); // pause the clock during the break
+
+        UUID roundLoserId = duel.getOpponent(roundWinnerId);
+        Player roundWinner = Bukkit.getPlayer(roundWinnerId);
+        Player roundLoser = Bukkit.getPlayer(roundLoserId);
+        String winnerName = roundWinner != null ? roundWinner.getName() : "Unknown";
+
+        String score = duel.getWins(duel.getPlayer1()) + ":" + duel.getWins(duel.getPlayer2());
+        Title roundTitle = Title.title(
+                Component.text(score, NamedTextColor.GOLD, TextDecoration.BOLD),
+                Component.text(winnerName + " won round " + duel.getCurrentRound() + "!", NamedTextColor.YELLOW),
+                Title.Times.times(Duration.ZERO, Duration.ofSeconds(2), Duration.ofMillis(500))
+        );
+
+        // Freeze both players during the break (also blocks damage)
+        frozenPlayers.add(duel.getPlayer1());
+        frozenPlayers.add(duel.getPlayer2());
+
+        for (Player p : new Player[]{roundWinner, roundLoser}) {
+            if (p != null) {
+                p.showTitle(roundTitle);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1.2f);
+            }
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!duel.isActive()) return;
+
+            Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+            if (p1 == null || p2 == null) {
+                // Someone left during the break — the quit handler ends the duel
+                return;
+            }
+
+            Arena arena = plugin.getArenaManager().getArena(duel.getArenaName());
+            Kit kit = plugin.getKitManager().getKit(duel.getKitName());
+            World world = duel.getInstanceWorld();
+            if (arena == null || kit == null || world == null
+                    || arena.getSpawn1() == null || arena.getSpawn2() == null) {
+                p1.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
+                p2.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
+                endDuelDraw(duel);
+                return;
+            }
+
+            // Reuse the instance world: just remove the blocks players placed
+            resetPlayerPlacedBlocks(duel);
+            duel.startNextRound();
+
+            Location spawn1 = arena.getSpawn1().clone();
+            spawn1.setWorld(world);
+            Location spawn2 = arena.getSpawn2().clone();
+            spawn2.setWorld(world);
+
+            preparePlayer(p1);
+            preparePlayer(p2);
+            p1.teleport(spawn1);
+            p2.teleport(spawn2);
+            applyKit(p1, kit);
+            applyKit(p2, kit);
+
+            String newScore = duel.getWins(duel.getPlayer1()) + ":" + duel.getWins(duel.getPlayer2());
+            Component roundInfo = Component.text("Round " + duel.getCurrentRound() + " — " + newScore,
+                    NamedTextColor.AQUA, TextDecoration.BOLD);
+            p1.sendMessage(roundInfo);
+            p2.sendMessage(roundInfo);
+
+            startCountdown(duel);
+        }, 60L); // 3 seconds
+    }
+
+    private void resetPlayerPlacedBlocks(DuelInstance duel) {
+        World world = duel.getInstanceWorld();
+        if (world == null) return;
+        for (int[] pos : duel.getPlayerPlacedBlockPositions()) {
+            world.getBlockAt(pos[0], pos[1], pos[2]).setType(Material.AIR, false);
+        }
+        duel.clearPlayerPlacedBlocks();
     }
 
     public void endDuel(DuelInstance duel, UUID winnerId, UUID loserId) {
