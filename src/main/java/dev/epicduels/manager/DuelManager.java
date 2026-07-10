@@ -11,9 +11,12 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,11 +34,56 @@ public class DuelManager {
     private final Map<UUID, BiConsumer<UUID, UUID>> endCallbacks = new ConcurrentHashMap<>();
     private BukkitTask expirationTask;
     private BukkitTask timeLimitTask;
+    // Players who turned off incoming duel requests (/duel toggle), persisted to toggles.yml
+    private final Set<UUID> requestsDisabled = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final File togglesFile;
 
     public DuelManager(EpicDuels plugin) {
         this.plugin = plugin;
+        this.togglesFile = new File(plugin.getDataFolder(), "toggles.yml");
+        loadToggles();
         startExpirationTask();
         startTimeLimitTask();
+    }
+
+    private void loadToggles() {
+        if (!togglesFile.exists()) return;
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(togglesFile);
+        for (String entry : config.getStringList("requests-disabled")) {
+            try {
+                requestsDisabled.add(UUID.fromString(entry));
+            } catch (IllegalArgumentException ignored) {}
+        }
+    }
+
+    private void saveToggles() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("requests-disabled", requestsDisabled.stream().map(UUID::toString).toList());
+        try {
+            config.save(togglesFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to save toggles.yml: " + e.getMessage());
+        }
+    }
+
+    public boolean hasRequestsDisabled(UUID playerId) {
+        return requestsDisabled.contains(playerId);
+    }
+
+    /**
+     * Toggles incoming duel requests for a player. Returns the new state:
+     * true = requests are now disabled.
+     */
+    public boolean toggleRequests(UUID playerId) {
+        boolean disabled;
+        if (requestsDisabled.remove(playerId)) {
+            disabled = false;
+        } else {
+            requestsDisabled.add(playerId);
+            disabled = true;
+        }
+        saveToggles();
+        return disabled;
     }
 
     private void startExpirationTask() {
@@ -76,6 +124,7 @@ public class DuelManager {
     public boolean sendRequest(UUID sender, UUID receiver, String arenaName, String kitName, int bestOf) {
         if (outgoingRequests.containsKey(sender)) return false;
         if (isBusy(sender) || isBusy(receiver)) return false;
+        if (requestsDisabled.contains(receiver)) return false;
 
         DuelRequest request = new DuelRequest(sender, receiver, arenaName, kitName, bestOf);
         outgoingRequests.put(sender, request);

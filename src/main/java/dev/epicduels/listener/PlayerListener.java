@@ -29,15 +29,20 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-        player.setHealth(player.getMaxHealth());
-        player.setFoodLevel(20);
-        player.setSaturation(20f);
-        player.setFireTicks(0);
-        player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
-        player.setGameMode(org.bukkit.GameMode.ADVENTURE);
-        player.teleport(plugin.getLobbyLocation());
+
+        // Full reset + lobby teleport assumes a dedicated duels server —
+        // disable via lobby.handle-join when running alongside other gameplay
+        if (plugin.getConfig().getBoolean("lobby.handle-join", true)) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+            player.setHealth(player.getMaxHealth());
+            player.setFoodLevel(20);
+            player.setSaturation(20f);
+            player.setFireTicks(0);
+            player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+            player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+            player.teleport(plugin.getLobbyLocation());
+        }
 
         // Restore the inventory saved for an own-inventory duel that never
         // finished cleanly (disconnect or server crash mid-duel)

@@ -113,7 +113,8 @@ public class GUIManager {
     public void openDuelsMenu(Player player, int page) {
         List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
         online.remove(player);
-        online.removeIf(p -> plugin.getDuelManager().isBusy(p.getUniqueId()));
+        online.removeIf(p -> plugin.getDuelManager().isBusy(p.getUniqueId())
+                || plugin.getDuelManager().hasRequestsDisabled(p.getUniqueId()));
 
         int totalPages = Math.max(1, (int) Math.ceil((double) online.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
@@ -500,6 +501,11 @@ public class GUIManager {
         Player target = Bukkit.getPlayer(targetUUID);
         if (target == null || !target.isOnline()) {
             player.sendMessage(Component.text("Player is no longer online.", NamedTextColor.RED));
+            return;
+        }
+
+        if (plugin.getDuelManager().hasRequestsDisabled(targetUUID)) {
+            player.sendMessage(Component.text("That player has duel requests disabled.", NamedTextColor.RED));
             return;
         }
 

@@ -61,6 +61,8 @@ public class DuelCommand implements CommandExecutor {
             case "spectate", "spec" -> handleSpectate(player, args);
             case "forfeit", "ff", "leave" -> handleForfeit(player, args);
             case "rematch" -> handleRematch(player);
+            case "toggle" -> handleToggle(player);
+            case "reload" -> handleReload(player);
             case "duels" -> {
                 if (!player.hasPermission("epicduels.duel")) {
                     player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -431,6 +433,11 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
 
+        if (plugin.getDuelManager().hasRequestsDisabled(target.getUniqueId())) {
+            player.sendMessage(Component.text("That player has duel requests disabled.", NamedTextColor.RED));
+            return;
+        }
+
         // Open kit selection first (new flow: player -> kit -> map)
         plugin.getGUIManager().openKitSelect(player, target.getUniqueId());
     }
@@ -665,6 +672,29 @@ public class DuelCommand implements CommandExecutor {
         plugin.getRematchManager().accept(player);
     }
 
+    private void handleToggle(Player player) {
+        if (!player.hasPermission("epicduels.duel")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+        boolean disabled = plugin.getDuelManager().toggleRequests(player.getUniqueId());
+        if (disabled) {
+            player.sendMessage(Component.text("Duel requests are now disabled. Use /duel toggle to re-enable.", NamedTextColor.YELLOW));
+        } else {
+            player.sendMessage(Component.text("Duel requests are now enabled.", NamedTextColor.GREEN));
+        }
+    }
+
+    private void handleReload(Player player) {
+        if (!player.hasPermission("epicduels.admin")) {
+            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            return;
+        }
+        plugin.reloadConfig();
+        player.sendMessage(Component.text("EpicDuels config reloaded.", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Note: stats backend changes require a server restart.", NamedTextColor.GRAY));
+    }
+
     private void handleLeaderboard(Player player, String[] args) {
         if (!player.hasPermission("epicduels.stats")) {
             player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
@@ -846,12 +876,14 @@ public class DuelCommand implements CommandExecutor {
         player.sendMessage(Component.text("/duel spectate <player>", NamedTextColor.YELLOW).append(Component.text(" - Spectate a duel", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel forfeit", NamedTextColor.YELLOW).append(Component.text(" - Give up your current match", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel rematch", NamedTextColor.YELLOW).append(Component.text(" - Accept a pending rematch offer", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/duel toggle", NamedTextColor.YELLOW).append(Component.text(" - Enable/disable incoming duel requests", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/duel leaderboard <wins|score>", NamedTextColor.YELLOW).append(Component.text(" - Show the top 10", NamedTextColor.GRAY)));
         if (player.hasPermission("epicduels.admin")) {
             player.sendMessage(Component.text("/duel arena <...>", NamedTextColor.YELLOW).append(Component.text(" - Arena management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel kit <...>", NamedTextColor.YELLOW).append(Component.text(" - Kit management", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel setlobby", NamedTextColor.YELLOW).append(Component.text(" - Set lobby spawn", NamedTextColor.GRAY)));
             player.sendMessage(Component.text("/duel lobby <on|off>", NamedTextColor.YELLOW).append(Component.text(" - Toggle lobby protections", NamedTextColor.GRAY)));
+            player.sendMessage(Component.text("/duel reload", NamedTextColor.YELLOW).append(Component.text(" - Reload the config", NamedTextColor.GRAY)));
         }
         player.sendMessage(Component.empty());
     }
