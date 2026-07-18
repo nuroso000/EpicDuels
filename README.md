@@ -382,6 +382,9 @@ mvn clean package
 
 Output JAR: `build/libs/EpicDuels-3.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
 
+
+<img alt="Star the EpicDuels repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
+
 ## License & Usage
 
 This project is licensed under **CC BY-NC-SA 4.0**.
