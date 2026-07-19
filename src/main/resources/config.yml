@@ -11,6 +11,7 @@
 #
 #   CONTENTS
 #
+#     0. Language ............. message language (en/de, lang/ folder)
 #     1. Lobby ................ spawn location, join handling, PvP
 #     2. Lobby protections .... 15 toggleable protection rules
 #     3. Duel settings ........ time limit, draws, sudden death,
@@ -31,6 +32,21 @@
 #     when you run /duel setlobby — you rarely need to edit them by hand.
 #
 # ============================================================================
+
+
+# ============================================================================
+#   0. LANGUAGE
+# ============================================================================
+#
+# Language of all player-facing chat messages, action bars and titles.
+# Shipped languages: en (English), de (German/Deutsch).
+#
+# The message templates live in plugins/EpicDuels/lang/messages_<code>.yml
+# (MiniMessage format, https://docs.advntr.dev/minimessage/format.html) and
+# can be edited freely — missing keys fall back to the built-in English text.
+# Apply changes with /duel reload.
+
+language: en
 
 
 # ============================================================================
@@ -338,6 +354,15 @@ features:
   # Recommended ON when EpicDuels runs on a survival server and
   # players want to duel with their own gear.
   own-inventory-duels: true
+
+  # The Kit Editor: /duel kits and the "Kit Editor" entry in the main
+  # menu. Lets every player rearrange the items of any kit into their
+  # personally preferred slots (hotbar order, armor, offhand). Layouts
+  # are pure rearrangements — items can never be added, removed or
+  # changed — and are stored per player in playerkits.yml. If an admin
+  # later edits the kit itself, outdated personal layouts silently fall
+  # back to the kit's default arrangement.
+  kit-editor: true
 
   # The whole party system: /party create|invite|accept|... and the
   # party GUIs. Turning this off also makes team duels and tournaments

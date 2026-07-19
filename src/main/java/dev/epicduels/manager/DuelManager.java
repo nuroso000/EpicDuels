@@ -1,6 +1,7 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Arena;
 import dev.epicduels.model.DuelInstance;
 import dev.epicduels.model.DuelRequest;
@@ -101,10 +102,10 @@ public class DuelManager {
                         Player sender = Bukkit.getPlayer(request.getSender());
                         Player receiver = Bukkit.getPlayer(request.getReceiver());
                         if (sender != null) {
-                            sender.sendMessage(Component.text("Your duel request has expired.", NamedTextColor.RED));
+                            Messages.send(sender, "duel.request-expired-sender");
                         }
                         if (receiver != null) {
-                            receiver.sendMessage(Component.text("The duel request has expired.", NamedTextColor.GRAY));
+                            Messages.send(receiver, "duel.request-expired-receiver");
                         }
                     }
                 }
@@ -227,8 +228,8 @@ public class DuelManager {
         if (player1 == null || player2 == null) return;
 
         if (isBusy(player1.getUniqueId()) || isBusy(player2.getUniqueId())) {
-            player1.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
-            player2.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            Messages.send(player1, "duel.start-busy");
+            Messages.send(player2, "duel.start-busy");
             return;
         }
 
@@ -236,8 +237,8 @@ public class DuelManager {
         Arena arena = plugin.getArenaManager().getArena(request.getArenaName());
         Kit kit = ownInventory ? null : plugin.getKitManager().getKit(request.getKitName());
         if (arena == null || (!ownInventory && kit == null)) {
-            player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
-            player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            Messages.send(player1, "duel.start-gone");
+            Messages.send(player2, "duel.start-gone");
             return;
         }
 
@@ -248,8 +249,8 @@ public class DuelManager {
         Arena arena = plugin.getArenaManager().getArena(arenaName);
         Kit kit = plugin.getKitManager().getKit(kitName);
         if (arena == null || kit == null) {
-            player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
-            player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            Messages.send(player1, "duel.start-gone");
+            Messages.send(player2, "duel.start-gone");
             return;
         }
         startDuel(player1, player2, arena, kit);
@@ -260,8 +261,8 @@ public class DuelManager {
         Arena arena = plugin.getArenaManager().getArena(arenaName);
         Kit kit = plugin.getKitManager().getKit(kitName);
         if (arena == null || kit == null) {
-            player1.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
-            player2.sendMessage(Component.text("Duel could not start: arena or kit no longer exists.", NamedTextColor.RED));
+            Messages.send(player1, "duel.start-gone");
+            Messages.send(player2, "duel.start-gone");
             return null;
         }
         DuelInstance duel = startDuel(player1, player2, arena, kit);
@@ -293,8 +294,8 @@ public class DuelManager {
                 && (plugin.getTeamDuelManager().isInTeamDuel(player1.getUniqueId())
                     || plugin.getTeamDuelManager().isInTeamDuel(player2.getUniqueId()));
         if (isInDuel(player1.getUniqueId()) || isInDuel(player2.getUniqueId()) || inTeamDuel) {
-            player1.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
-            player2.sendMessage(Component.text("Duel could not start: one of you is already in a match.", NamedTextColor.RED));
+            Messages.send(player1, "duel.start-busy");
+            Messages.send(player2, "duel.start-busy");
             return null;
         }
 
@@ -313,15 +314,20 @@ public class DuelManager {
         denyAllIncoming(player1.getUniqueId());
         denyAllIncoming(player2.getUniqueId());
 
-        player1.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
-        player2.sendMessage(Component.text("Preparing duel arena...", NamedTextColor.YELLOW));
+        // Safety: drop spectator tracking — otherwise the end of the watched
+        // duel would teleport them out of their own match (counting as forfeit)
+        clearSpectatorState(player1.getUniqueId());
+        clearSpectatorState(player2.getUniqueId());
+
+        Messages.send(player1, "duel.preparing");
+        Messages.send(player2, "duel.preparing");
 
         // Copy and load the arena world, passing the duel instance to record original blocks
         plugin.getArenaManager().createInstanceWorld(arena, duel).thenAccept(world -> {
             if (world == null) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player1.sendMessage(Component.text("Failed to create duel arena!", NamedTextColor.RED));
-                    player2.sendMessage(Component.text("Failed to create duel arena!", NamedTextColor.RED));
+                    Messages.send(player1, "duel.fail-create");
+                    Messages.send(player2, "duel.fail-create");
                     activeDuels.remove(player1.getUniqueId());
                     activeDuels.remove(player2.getUniqueId());
                 });
@@ -329,6 +335,20 @@ public class DuelManager {
             }
 
             Bukkit.getScheduler().runTask(plugin, () -> {
+                // A disconnect during the async world copy is not caught by
+                // handleDisconnect (the duel is not active yet) — clean up
+                // here so nobody stays marked as busy forever.
+                if (!player1.isOnline() || !player2.isOnline()) {
+                    activeDuels.remove(player1.getUniqueId());
+                    activeDuels.remove(player2.getUniqueId());
+                    Player online = player1.isOnline() ? player1 : player2.isOnline() ? player2 : null;
+                    if (online != null) {
+                        Messages.send(online, "duel.cancelled-left");
+                    }
+                    plugin.getArenaManager().deleteInstanceWorld(duel.getInstanceWorldName());
+                    return;
+                }
+
                 duel.setInstanceWorld(world);
                 duel.setActive(true);
 
@@ -336,8 +356,8 @@ public class DuelManager {
                 if (arena.getSpawn1() == null || arena.getSpawn2() == null) {
                     plugin.getLogger().severe("Arena '" + arena.getName() + "' has null spawn points! spawn1="
                             + arena.getSpawn1() + ", spawn2=" + arena.getSpawn2());
-                    player1.sendMessage(Component.text("Arena spawn points are not configured! Please notify an admin.", NamedTextColor.RED));
-                    player2.sendMessage(Component.text("Arena spawn points are not configured! Please notify an admin.", NamedTextColor.RED));
+                    Messages.send(player1, "duel.fail-spawns");
+                    Messages.send(player2, "duel.fail-spawns");
                     duel.setActive(false);
                     activeDuels.remove(player1.getUniqueId());
                     activeDuels.remove(player2.getUniqueId());
@@ -407,7 +427,7 @@ public class DuelManager {
 
                     Title title = Title.title(
                             Component.text(String.valueOf(count), color, TextDecoration.BOLD),
-                            Component.text("Get ready!", NamedTextColor.GRAY),
+                            Messages.get("countdown.get-ready"),
                             Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ZERO)
                     );
                     p1.showTitle(title);
@@ -420,7 +440,7 @@ public class DuelManager {
                 } else {
                     // Fight!
                     Title title = Title.title(
-                            Component.text("FIGHT!", NamedTextColor.GREEN, TextDecoration.BOLD),
+                            Messages.get("countdown.fight"),
                             Component.empty(),
                             Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))
                     );
@@ -472,8 +492,8 @@ public class DuelManager {
         NamedTextColor color = seconds <= 30 ? NamedTextColor.RED
                 : seconds <= 60 ? NamedTextColor.YELLOW
                 : NamedTextColor.GRAY;
-        String prefix = duel.isSuddenDeath() ? "Sudden Death: " : "Time left: ";
-        Component bar = Component.text(prefix + formatTime(seconds), color);
+        String key = duel.isSuddenDeath() ? "duel.sudden-death-bar" : "duel.time-left";
+        Component bar = Messages.get(key, Messages.unparsed("time", formatTime(seconds))).color(color);
 
         Player p1 = Bukkit.getPlayer(duel.getPlayer1());
         Player p2 = Bukkit.getPlayer(duel.getPlayer2());
@@ -493,8 +513,9 @@ public class DuelManager {
             UUID winnerId = wins1 > wins2 ? duel.getPlayer1() : duel.getPlayer2();
             UUID loserId = duel.getOpponent(winnerId);
             Player w = Bukkit.getPlayer(winnerId);
-            Component msg = Component.text("Time is up — " + (w != null ? w.getName() : "the leader")
-                    + " wins on rounds!", NamedTextColor.YELLOW);
+            Component msg = w != null
+                    ? Messages.get("duel.timeup-rounds", Messages.unparsed("player", w.getName()))
+                    : Messages.get("duel.timeup-rounds-leader");
             for (UUID id : List.of(duel.getPlayer1(), duel.getPlayer2())) {
                 Player p = Bukkit.getPlayer(id);
                 if (p != null) p.sendMessage(msg);
@@ -513,7 +534,7 @@ public class DuelManager {
 
             UUID winnerId = new Random().nextBoolean() ? duel.getPlayer1() : duel.getPlayer2();
             UUID loserId = duel.getOpponent(winnerId);
-            Component msg = Component.text("Time is up — a coin flip decides the match!", NamedTextColor.YELLOW);
+            Component msg = Messages.get("duel.timeup-coinflip");
             Player p1 = Bukkit.getPlayer(duel.getPlayer1());
             Player p2 = Bukkit.getPlayer(duel.getPlayer2());
             if (p1 != null) p1.sendMessage(msg);
@@ -531,8 +552,8 @@ public class DuelManager {
         duel.setDeadlineMillis(System.currentTimeMillis() + extension * 1000L);
 
         Title title = Title.title(
-                Component.text("SUDDEN DEATH", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Next kill wins — " + formatTime(extension) + " on the clock!", NamedTextColor.YELLOW),
+                Messages.get("duel.sudden-death-title"),
+                Messages.get("duel.sudden-death-subtitle", Messages.unparsed("time", formatTime(extension))),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
         );
         for (UUID id : List.of(duel.getPlayer1(), duel.getPlayer2())) {
@@ -560,26 +581,34 @@ public class DuelManager {
         String name1 = p1 != null ? p1.getName() : "Unknown";
         String name2 = p2 != null ? p2.getName() : "Unknown";
 
-        Component announcement = Component.text("DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .append(Component.text("| ", NamedTextColor.DARK_GRAY))
-                .append(Component.text(name1, NamedTextColor.YELLOW))
-                .append(Component.text(" vs ", NamedTextColor.GRAY))
-                .append(Component.text(name2, NamedTextColor.YELLOW))
-                .append(Component.text(" ended in a draw!", NamedTextColor.GRAY));
+        Component announcement = Messages.get("duel.draw-announce",
+                Messages.unparsed("player1", name1), Messages.unparsed("player2", name2));
         announceResult(announcement, p1, p2);
 
         Title drawTitle = Title.title(
-                Component.text("DRAW", NamedTextColor.YELLOW, TextDecoration.BOLD),
-                Component.text("Time is up — nobody wins.", NamedTextColor.GRAY),
+                Messages.get("duel.draw-title"),
+                Messages.get("duel.draw-subtitle"),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
         );
         if (p1 != null) p1.showTitle(drawTitle);
         if (p2 != null) p2.showTitle(drawTitle);
 
         removeSpectatorsForDuel(duel);
-        endCallbacks.remove(duel.getId());
 
-        if (p1 != null && p2 != null && plugin.getRematchManager() != null) {
+        // A registered end callback (tournament match) always needs a winner —
+        // never swallow it on a draw, or the bracket would hang forever.
+        BiConsumer<UUID, UUID> cb = endCallbacks.remove(duel.getId());
+        if (cb != null) {
+            UUID winnerId = new Random().nextBoolean() ? duel.getPlayer1() : duel.getPlayer2();
+            Component coinFlip = Messages.get("duel.draw-coinflip");
+            if (p1 != null) p1.sendMessage(coinFlip);
+            if (p2 != null) p2.sendMessage(coinFlip);
+            try {
+                cb.accept(winnerId, duel.getOpponent(winnerId));
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Duel end callback threw: " + t.getMessage());
+            }
+        } else if (p1 != null && p2 != null && plugin.getRematchManager() != null) {
             plugin.getRematchManager().offerRematch(duel);
         }
 
@@ -615,8 +644,9 @@ public class DuelManager {
 
         String score = duel.getWins(duel.getPlayer1()) + ":" + duel.getWins(duel.getPlayer2());
         Title roundTitle = Title.title(
-                Component.text(score, NamedTextColor.GOLD, TextDecoration.BOLD),
-                Component.text(winnerName + " won round " + duel.getCurrentRound() + "!", NamedTextColor.YELLOW),
+                Messages.get("duel.round-title", Messages.unparsed("score", score)),
+                Messages.get("duel.round-subtitle", Messages.unparsed("player", winnerName),
+                        Messages.unparsed("round", duel.getCurrentRound())),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(2), Duration.ofMillis(500))
         );
 
@@ -646,8 +676,8 @@ public class DuelManager {
             World world = duel.getInstanceWorld();
             if (arena == null || (!duel.isOwnInventory() && kit == null) || world == null
                     || arena.getSpawn1() == null || arena.getSpawn2() == null) {
-                p1.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
-                p2.sendMessage(Component.text("Next round could not start — match ends in a draw.", NamedTextColor.RED));
+                Messages.send(p1, "duel.round-next-failed");
+                Messages.send(p2, "duel.round-next-failed");
                 endDuelDraw(duel);
                 return;
             }
@@ -675,8 +705,8 @@ public class DuelManager {
             }
 
             String newScore = duel.getWins(duel.getPlayer1()) + ":" + duel.getWins(duel.getPlayer2());
-            Component roundInfo = Component.text("Round " + duel.getCurrentRound() + " — " + newScore,
-                    NamedTextColor.AQUA, TextDecoration.BOLD);
+            Component roundInfo = Messages.get("duel.round-info",
+                    Messages.unparsed("round", duel.getCurrentRound()), Messages.unparsed("score", newScore));
             p1.sendMessage(roundInfo);
             p2.sendMessage(roundInfo);
 
@@ -688,7 +718,8 @@ public class DuelManager {
         World world = duel.getInstanceWorld();
         if (world == null) return;
         for (int[] pos : duel.getPlayerPlacedBlockPositions()) {
-            world.getBlockAt(pos[0], pos[1], pos[2]).setType(Material.AIR, false);
+            // Apply physics so flowing water/lava from removed sources drains
+            world.getBlockAt(pos[0], pos[1], pos[2]).setType(Material.AIR, true);
         }
         duel.clearPlayerPlacedBlocks();
     }
@@ -710,19 +741,15 @@ public class DuelManager {
         plugin.getStatsManager().addLoss(loserId);
 
         // Announce — server-wide or participants-only, per config
-        Component announcement = Component.text("DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .append(Component.text("| ", NamedTextColor.DARK_GRAY))
-                .append(Component.text(winnerName, NamedTextColor.GREEN, TextDecoration.BOLD))
-                .append(Component.text(" defeated ", NamedTextColor.GRAY))
-                .append(Component.text(loserName, NamedTextColor.RED))
-                .append(Component.text("!", NamedTextColor.GRAY));
+        Component announcement = Messages.get("duel.win-announce",
+                Messages.unparsed("winner", winnerName), Messages.unparsed("loser", loserName));
 
         announceResult(announcement, winner, loser);
 
         if (winner != null) {
             Title winTitle = Title.title(
-                    Component.text("VICTORY!", NamedTextColor.GOLD, TextDecoration.BOLD),
-                    Component.text("You won the duel!", NamedTextColor.GREEN),
+                    Messages.get("duel.victory-title"),
+                    Messages.get("duel.victory-subtitle"),
                     Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
             );
             winner.showTitle(winTitle);
@@ -730,8 +757,8 @@ public class DuelManager {
 
         if (loser != null) {
             Title loseTitle = Title.title(
-                    Component.text("DEFEAT", NamedTextColor.RED, TextDecoration.BOLD),
-                    Component.text("Better luck next time!", NamedTextColor.GRAY),
+                    Messages.get("duel.defeat-title"),
+                    Messages.get("duel.defeat-subtitle"),
                     Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
             );
             loser.showTitle(loseTitle);
@@ -823,7 +850,7 @@ public class DuelManager {
 
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
-            player.sendMessage(Component.text("You left the arena — duel forfeited.", NamedTextColor.RED));
+            Messages.send(player, "duel.left-arena");
         }
         UUID opponent = duel.getOpponent(playerId);
         endDuel(duel, opponent, playerId);
@@ -838,14 +865,16 @@ public class DuelManager {
 
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
-            player.sendMessage(Component.text("You forfeited the duel.", NamedTextColor.RED));
+            Messages.send(player, "duel.forfeited");
         }
         endDuel(duel, duel.getOpponent(playerId), playerId);
     }
 
     public boolean isInDuel(UUID playerId) {
-        DuelInstance duel = activeDuels.get(playerId);
-        return duel != null && duel.isActive();
+        // Map presence (not isActive) so players count as busy while the
+        // instance world is still being copied asynchronously and during the
+        // short post-match phase before they are returned to the lobby.
+        return activeDuels.containsKey(playerId);
     }
 
     public boolean isFrozen(UUID playerId) {
@@ -863,6 +892,21 @@ public class DuelManager {
             }
         }
         return null;
+    }
+
+    /**
+     * All distinct duels that are currently being fought (active with a loaded
+     * instance world). {@code activeDuels} holds one entry per participant, so
+     * the result is deduplicated by duel id.
+     */
+    public Collection<DuelInstance> getActiveDuels() {
+        Map<UUID, DuelInstance> distinct = new LinkedHashMap<>();
+        for (DuelInstance duel : activeDuels.values()) {
+            if (duel.isActive() && duel.getInstanceWorld() != null) {
+                distinct.putIfAbsent(duel.getId(), duel);
+            }
+        }
+        return distinct.values();
     }
 
     public DuelInstance getDuelById(UUID duelId) {
@@ -884,7 +928,7 @@ public class DuelManager {
         Location spawnLoc = p1 != null ? p1.getLocation() : duel.getInstanceWorld().getSpawnLocation();
         spectator.setGameMode(GameMode.SPECTATOR);
         spectator.teleport(spawnLoc);
-        spectator.sendMessage(Component.text("You are now spectating a duel!", NamedTextColor.GREEN));
+        Messages.send(spectator, "duel.spectate-start");
         return true;
     }
 
@@ -895,12 +939,28 @@ public class DuelManager {
         if (spectator != null && spectator.isOnline()) {
             spectator.setGameMode(GameMode.ADVENTURE);
             spectator.teleport(plugin.getLobbyLocation());
-            spectator.sendMessage(Component.text("You stopped spectating.", NamedTextColor.YELLOW));
+            Messages.send(spectator, "duel.spectate-stop");
         }
     }
 
     public boolean isSpectating(UUID playerId) {
         return spectators.containsKey(playerId);
+    }
+
+    /**
+     * Drops spectator tracking without teleporting — used when the player is
+     * about to enter a match themselves.
+     */
+    public void clearSpectatorState(UUID playerId) {
+        spectators.remove(playerId);
+    }
+
+    /** True if any current duel (active or starting) runs on the given arena. */
+    public boolean isArenaInUse(String arenaName) {
+        for (DuelInstance duel : activeDuels.values()) {
+            if (duel.getArenaName().equalsIgnoreCase(arenaName)) return true;
+        }
+        return false;
     }
 
     private void removeSpectatorsForDuel(DuelInstance duel) {
@@ -912,7 +972,7 @@ public class DuelManager {
                 if (spectator != null && spectator.isOnline()) {
                     spectator.setGameMode(GameMode.ADVENTURE);
                     spectator.teleport(plugin.getLobbyLocation());
-                    spectator.sendMessage(Component.text("The duel has ended.", NamedTextColor.GRAY));
+                    Messages.send(spectator, "duel.spectate-ended");
                 }
                 it.remove();
             }
@@ -978,6 +1038,8 @@ public class DuelManager {
     }
 
     private void applyKit(Player player, Kit kit) {
+        // Use the player's personalized layout (Kit Editor) if one exists
+        kit = plugin.getPlayerKitManager().getPersonalizedKit(player.getUniqueId(), kit);
         player.getInventory().setContents(kit.getContents());
         if (kit.getArmorContents() != null) {
             player.getInventory().setArmorContents(kit.getArmorContents());

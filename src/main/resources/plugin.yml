@@ -6,13 +6,14 @@ author: nuroso000
 website: https://github.com/nuroso000/EpicDuels
 api-version: '1.21'
 load: STARTUP
+softdepend: [PlaceholderAPI]
 generators:
   EpicDuels:
     dev.epicduels.world.VoidWorldGenerator
 commands:
   duel:
     description: Main duel command
-    usage: /<command> [menu|duels|matchmaking|stats|challenge|accept|deny|cancel|queue|spectate|forfeit|rematch|toggle|leaderboard|arena|kit|setlobby|lobby|reload]
+    usage: /<command> [menu|duels|matchmaking|stats|challenge|accept|deny|cancel|queue|kits|spectate|forfeit|rematch|toggle|leaderboard|arena|kit|setlobby|lobby|reload]
     aliases: [d]
   party:
     description: Manage your party

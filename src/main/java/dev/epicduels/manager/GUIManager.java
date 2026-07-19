@@ -1,6 +1,10 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
+import dev.epicduels.gui.MenuHolder;
+import dev.epicduels.gui.MenuKeys;
+import dev.epicduels.gui.MenuType;
 import dev.epicduels.model.Arena;
 import dev.epicduels.model.Kit;
 import dev.epicduels.model.PlayerStats;
@@ -32,7 +36,15 @@ public class GUIManager {
     public static final String KIT_EDIT_TITLE = "Edit Kit: ";
     public static final String KIT_PREVIEW_TITLE = "Preview Kit: ";
     public static final String KIT_LIST_TITLE = "Kits";
+    public static final String KIT_EDITOR_LIST_TITLE = "Kit Editor";
+    public static final String KIT_CUSTOMIZE_TITLE = "Customize Kit: ";
+
+    // Customize GUI control slots (bottom row, after the 41 kit slots)
+    public static final int CUSTOMIZE_INFO_SLOT = 50;
+    public static final int CUSTOMIZE_RESET_SLOT = 51;
+    public static final int CUSTOMIZE_SAVE_SLOT = 53;
     public static final String ARENA_LIST_TITLE = "Arenas";
+    public static final String SPECTATE_TITLE = "Spectate - Live Duels";
     public static final String PARTY_MODE_TITLE = "Party - Choose Mode";
     public static final String PARTY_TEAM_SIZE_TITLE = "Party - Team Size";
     public static final String PARTY_KIT_TITLE = "Party - Select Kit";
@@ -57,9 +69,6 @@ public class GUIManager {
     private final Map<UUID, String> challengeKit = new HashMap<>();
     private final Map<UUID, Integer> challengeRounds = new HashMap<>();
 
-    // Pagination state
-    private final Map<UUID, Integer> playerPage = new HashMap<>();
-
     // Random map animation state
     private final Set<UUID> animatingPlayers = new HashSet<>();
 
@@ -72,10 +81,23 @@ public class GUIManager {
         this.plugin = plugin;
     }
 
+    /** Creates a plugin menu inventory identified by a {@link MenuHolder}. */
+    private Inventory createMenu(MenuType type, int size, Component title) {
+        return createMenu(type, null, 0, size, title);
+    }
+
+    private Inventory createMenu(MenuType type, int page, int size, Component title) {
+        return createMenu(type, null, page, size, title);
+    }
+
+    private Inventory createMenu(MenuType type, String context, int page, int size, Component title) {
+        return MenuHolder.createInventory(new MenuHolder(type, context, page), size, title);
+    }
+
     // ========== MAIN MENU (27 slots, 3 rows) ==========
 
     public void openMainMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.MAIN, 27,
                 Component.text(MAIN_MENU_TITLE, NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
 
         ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
@@ -105,6 +127,24 @@ public class GUIManager {
         head.setItemMeta(headMeta);
         inv.setItem(13, head);
 
+        // Slot 4: Ender Eye — Spectate
+        if (plugin.isFeatureEnabled("spectating")) {
+            inv.setItem(4, createItem(Material.ENDER_EYE, "&3&lSpectate",
+                    "&7Watch the duels that are", "&7being fought right now!"));
+        } else {
+            inv.setItem(4, createItem(Material.BARRIER, "&8Spectate",
+                    "&cDisabled on this server."));
+        }
+
+        // Slot 22: Anvil — Kit Editor
+        if (plugin.isFeatureEnabled("kit-editor")) {
+            inv.setItem(22, createItem(Material.ANVIL, "&e&lKit Editor",
+                    "&7Personalize the item layout", "&7of any kit — just for you!"));
+        } else {
+            inv.setItem(22, createItem(Material.BARRIER, "&8Kit Editor",
+                    "&cDisabled on this server."));
+        }
+
         // Slot 16: Hopper — Matchmaking
         if (plugin.isFeatureEnabled("matchmaking")) {
             inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
@@ -128,9 +168,8 @@ public class GUIManager {
 
         int totalPages = Math.max(1, (int) Math.ceil((double) online.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.DUELS, page, 54,
                 Component.text(DUELS_MENU_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
         fillBorder(inv, Material.ORANGE_STAINED_GLASS_PANE);
 
@@ -145,6 +184,7 @@ public class GUIManager {
             meta.lore(List.of(Component.text("Click to challenge", NamedTextColor.GRAY)
                     .decoration(TextDecoration.ITALIC, false)));
             headItem.setItemMeta(meta);
+            MenuKeys.tag(headItem, MenuKeys.PLAYER, target.getUniqueId().toString());
             inv.setItem(ITEM_SLOTS[i], headItem);
         }
 
@@ -156,7 +196,7 @@ public class GUIManager {
     // ========== STATS MENU (27 slots) ==========
 
     public void openStatsMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.STATS, 27,
                 Component.text(STATS_MENU_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
 
         ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
@@ -208,9 +248,8 @@ public class GUIManager {
 
         int totalPages = Math.max(1, (int) Math.ceil((double) allKits.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.MATCHMAKING, page, 54,
                 Component.text(MATCHMAKING_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
 
@@ -223,7 +262,9 @@ public class GUIManager {
 
             String status = queued ? "&aQueued!" : "&7" + queueCount + " in queue";
             String action = queued ? "&eClick to leave queue" : "&eClick to join queue";
-            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(), status, action));
+            inv.setItem(ITEM_SLOTS[i], MenuKeys.tag(
+                    createItem(kit.getDisplayIcon(), "&b" + kit.getName(), status, action),
+                    MenuKeys.KIT, kit.getName()));
         }
 
         addNavigation(inv, page, totalPages);
@@ -239,20 +280,20 @@ public class GUIManager {
         // Build combined item list: kits + the "Own Inventory" option (if enabled)
         List<ItemStack> items = new ArrayList<>();
         for (Kit kit : plugin.getKitManager().getAllKits()) {
-            items.add(createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
-                    "&7Click to select this kit"));
+            items.add(MenuKeys.tag(createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
+                    "&7Click to select this kit"), MenuKeys.KIT, kit.getName()));
         }
         if (plugin.isOwnInventoryDuelsEnabled()) {
-            items.add(createItem(Material.CHEST, "&6&l" + Kit.OWN_INVENTORY_DISPLAY,
+            items.add(MenuKeys.tag(createItem(Material.CHEST, "&6&l" + Kit.OWN_INVENTORY_DISPLAY,
                     "&7Fight with the items you", "&7are carrying right now!",
-                    "&7Your inventory is saved and", "&7restored after the duel."));
+                    "&7Your inventory is saved and", "&7restored after the duel."),
+                    MenuKeys.ACTION, "own-inventory"));
         }
 
         int totalPages = Math.max(1, (int) Math.ceil((double) items.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.KIT_SELECT, page, 54,
                 Component.text(KIT_SELECT_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
@@ -276,7 +317,7 @@ public class GUIManager {
         challengeTarget.put(player.getUniqueId(), targetPlayer);
         challengeKit.put(player.getUniqueId(), kitName);
 
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.ROUNDS_SELECT, 27,
                 Component.text(ROUNDS_SELECT_TITLE, NamedTextColor.GOLD, TextDecoration.BOLD));
         ItemStack pane = createPane(Material.YELLOW_STAINED_GLASS_PANE);
         for (int i = 0; i < 27; i++) inv.setItem(i, pane);
@@ -308,19 +349,19 @@ public class GUIManager {
         int totalItems = readyArenas.size() + 1;
         int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.ARENA_SELECT, page, 54,
                 Component.text(ARENA_SELECT_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
         fillBorder(inv, Material.LIME_STAINED_GLASS_PANE);
 
         // Build combined item list: arenas + Random Map compass
         List<ItemStack> items = new ArrayList<>();
         for (Arena arena : readyArenas) {
-            items.add(createItem(arena.getDisplayIcon(), "&a" + arena.getName(), "&7Click to select this map"));
+            items.add(MenuKeys.tag(createItem(arena.getDisplayIcon(), "&a" + arena.getName(),
+                    "&7Click to select this map"), MenuKeys.ARENA, arena.getName()));
         }
-        items.add(createItem(Material.COMPASS, "&e&lRandom Map", "&7Randomly picks a map",
-                "&7with a fun animation!"));
+        items.add(MenuKeys.tag(createItem(Material.COMPASS, "&e&lRandom Map", "&7Randomly picks a map",
+                "&7with a fun animation!"), MenuKeys.ACTION, "random-map"));
 
         int start = page * ITEMS_PER_PAGE;
         for (int i = 0; i < ITEMS_PER_PAGE && start + i < items.size(); i++) {
@@ -341,7 +382,7 @@ public class GUIManager {
     public void startRandomMapAnimation(Player player) {
         List<Arena> readyArenas = plugin.getArenaManager().getReadyArenas();
         if (readyArenas.isEmpty()) {
-            player.sendMessage(Component.text("No arenas available!", NamedTextColor.RED));
+            Messages.send(player, "general.no-arenas");
             player.closeInventory();
             return;
         }
@@ -407,7 +448,7 @@ public class GUIManager {
     // ========== KIT EDIT / PREVIEW ==========
 
     public void openKitEdit(Player player, Kit kit) {
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.KIT_EDIT, kit.getName(), 0, 54,
                 Component.text(KIT_EDIT_TITLE + kit.getName(), NamedTextColor.GOLD, TextDecoration.BOLD));
 
         ItemStack[] contents = kit.getContents();
@@ -434,7 +475,7 @@ public class GUIManager {
     }
 
     public void openKitPreview(Player player, Kit kit) {
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.KIT_PREVIEW, kit.getName(), 0, 54,
                 Component.text(KIT_PREVIEW_TITLE + kit.getName(), NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
         fillBorder(inv, Material.GRAY_STAINED_GLASS_PANE);
 
@@ -453,22 +494,156 @@ public class GUIManager {
         player.openInventory(inv);
     }
 
+    // ========== KIT EDITOR (per-player personalization) ==========
+
+    public void openKitEditorList(Player player, int page) {
+        List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
+        int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+
+        Inventory inv = createMenu(MenuType.KIT_EDITOR_LIST, page, 54,
+                Component.text(KIT_EDITOR_LIST_TITLE, NamedTextColor.YELLOW, TextDecoration.BOLD));
+        fillBorder(inv, Material.YELLOW_STAINED_GLASS_PANE);
+
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
+            Kit kit = kits.get(start + i);
+            boolean customized = plugin.getPlayerKitManager().hasLayout(player.getUniqueId(), kit.getName());
+            String status = customized ? "&aPersonalized layout" : "&7Default layout";
+            inv.setItem(ITEM_SLOTS[i], MenuKeys.tag(createItem(kit.getDisplayIcon(), "&e" + kit.getName(),
+                    status, "", "&eClick to customize"), MenuKeys.KIT, kit.getName()));
+        }
+
+        addNavigation(inv, page, totalPages);
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    /**
+     * Opens the per-player customize GUI for a kit. Shows the player's saved
+     * layout if one exists (and still matches the kit), otherwise the default.
+     * Same slot mapping as the admin edit GUI: 0-35 inventory, 36-39 armor,
+     * 40 offhand.
+     */
+    public void openKitCustomize(Player player, Kit kit) {
+        Kit shown = plugin.getPlayerKitManager().getPersonalizedKit(player.getUniqueId(), kit);
+
+        Inventory inv = createMenu(MenuType.KIT_CUSTOMIZE, kit.getName(), 0, 54,
+                Component.text(KIT_CUSTOMIZE_TITLE + kit.getName(), NamedTextColor.YELLOW, TextDecoration.BOLD));
+
+        ItemStack[] contents = shown.getContents();
+        for (int i = 0; i < Math.min(contents.length, 36); i++) {
+            if (contents[i] != null) inv.setItem(i, contents[i].clone());
+        }
+        if (shown.getArmorContents() != null) {
+            ItemStack[] armor = shown.getArmorContents();
+            for (int i = 0; i < Math.min(armor.length, 4); i++) {
+                if (armor[i] != null) inv.setItem(36 + i, armor[i].clone());
+            }
+        }
+        if (shown.getOffHand() != null) inv.setItem(40, shown.getOffHand().clone());
+
+        ItemStack pane = createPane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 41; i <= 52; i++) {
+            inv.setItem(i, pane);
+        }
+
+        inv.setItem(CUSTOMIZE_INFO_SLOT, createItem(Material.BOOK, "&e&lHow it works",
+                "&7Rearrange the kit's items into",
+                "&7the slots YOU prefer.",
+                "&7Rows 1-4: inventory (row 1 = hotbar).",
+                "&7Bottom row: boots, leggings,",
+                "&7chestplate, helmet, offhand.",
+                "",
+                "&7You cannot add or remove items."));
+        inv.setItem(CUSTOMIZE_RESET_SLOT, createItem(Material.TNT, "&cReset to Default",
+                "&7Delete your personalized layout", "&7and restore the kit's default."));
+        inv.setItem(CUSTOMIZE_SAVE_SLOT, createItem(Material.EMERALD, "&aSave Layout",
+                "&7Save this arrangement.", "&7It is applied whenever you", "&7duel with this kit."));
+
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    // ========== SPECTATE — LIVE DUELS (paginated) ==========
+
+    public void openSpectateMenu(Player player, int page) {
+        List<dev.epicduels.model.DuelInstance> duels =
+                new ArrayList<>(plugin.getDuelManager().getActiveDuels());
+
+        int totalPages = Math.max(1, (int) Math.ceil((double) duels.size() / ITEMS_PER_PAGE));
+        page = clampPage(page, totalPages);
+
+        Inventory inv = createMenu(MenuType.SPECTATE, page, 54,
+                Component.text(SPECTATE_TITLE, NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
+        fillBorder(inv, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+
+        if (duels.isEmpty()) {
+            inv.setItem(22, createItem(Material.CLOCK, "&7No duels running",
+                    "&7Nobody is fighting right now.", "&7Check back later!"));
+        }
+
+        int start = page * ITEMS_PER_PAGE;
+        for (int i = 0; i < ITEMS_PER_PAGE && start + i < duels.size(); i++) {
+            dev.epicduels.model.DuelInstance duel = duels.get(start + i);
+            Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+            String name1 = p1 != null ? p1.getName() : "?";
+            String name2 = p2 != null ? p2.getName() : "?";
+
+            List<String> loreLines = new ArrayList<>();
+            loreLines.add("&7Kit: &f" + Kit.displayName(duel.getKitName()));
+            loreLines.add("&7Map: &f" + duel.getArenaName());
+            if (duel.getBestOf() > 1) {
+                loreLines.add("&7Round &f" + duel.getCurrentRound() + " &7of Best of " + duel.getBestOf());
+            }
+            loreLines.add("&7Duration: &f" + formatDuration(duel.getStartMillis()));
+            loreLines.add("&eClick to spectate");
+
+            ItemStack headItem = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) headItem.getItemMeta();
+            if (p1 != null) meta.setOwningPlayer(p1);
+            meta.displayName(colorize("&a" + name1 + " &7vs &a" + name2)
+                    .decoration(TextDecoration.ITALIC, false));
+            List<Component> lore = new ArrayList<>();
+            for (String line : loreLines) {
+                lore.add(colorize(line).decoration(TextDecoration.ITALIC, false));
+            }
+            meta.lore(lore);
+            headItem.setItemMeta(meta);
+            MenuKeys.tag(headItem, MenuKeys.PLAYER, duel.getPlayer1().toString());
+
+            inv.setItem(ITEM_SLOTS[i], headItem);
+        }
+
+        addNavigation(inv, page, totalPages);
+        player.openInventory(inv);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
+    }
+
+    private String formatDuration(long startMillis) {
+        if (startMillis <= 0) return "starting...";
+        long seconds = Math.max(0, (System.currentTimeMillis() - startMillis) / 1000);
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
+    }
+
     // ========== KIT LIST / ARENA LIST (paginated) ==========
 
     public void openKitList(Player player, int page) {
         List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
         int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.KIT_LIST, page, 54,
                 Component.text(KIT_LIST_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
         int start = page * ITEMS_PER_PAGE;
         for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
             Kit kit = kits.get(start + i);
-            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(), "&7Click to preview"));
+            inv.setItem(ITEM_SLOTS[i], MenuKeys.tag(
+                    createItem(kit.getDisplayIcon(), "&b" + kit.getName(), "&7Click to preview"),
+                    MenuKeys.KIT, kit.getName()));
         }
 
         addNavigation(inv, page, totalPages);
@@ -480,9 +655,8 @@ public class GUIManager {
         List<Arena> arenas = new ArrayList<>(plugin.getArenaManager().getAllArenas());
         int totalPages = Math.max(1, (int) Math.ceil((double) arenas.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.ARENA_LIST, page, 54,
                 Component.text(ARENA_LIST_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
         fillBorder(inv, Material.LIME_STAINED_GLASS_PANE);
 
@@ -510,46 +684,36 @@ public class GUIManager {
 
         Player target = Bukkit.getPlayer(targetUUID);
         if (target == null || !target.isOnline()) {
-            player.sendMessage(Component.text("Player is no longer online.", NamedTextColor.RED));
+            Messages.send(player, "general.player-offline");
             return;
         }
 
         if (plugin.getDuelManager().hasRequestsDisabled(targetUUID)) {
-            player.sendMessage(Component.text("That player has duel requests disabled.", NamedTextColor.RED));
+            Messages.send(player, "challenge.requests-disabled");
             return;
         }
 
         boolean sent = plugin.getDuelManager().sendRequest(player.getUniqueId(), targetUUID, arenaName, kitName, bestOf);
         if (!sent) {
-            player.sendMessage(Component.text("Could not send duel request. You may already have a pending request.", NamedTextColor.RED));
+            Messages.send(player, "challenge.send-failed");
             return;
         }
 
         String kitDisplay = Kit.displayName(kitName);
-        String bestOfInfo = bestOf > 1 ? " | Best of " + bestOf : "";
-        player.sendMessage(Component.text("Duel request sent to " + target.getName() + "!", NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Arena: " + arenaName + " | Kit: " + kitDisplay + bestOfInfo, NamedTextColor.GRAY));
+        Messages.send(player, "challenge.sent", Messages.unparsed("player", target.getName()));
+        Messages.send(player, bestOf > 1 ? "challenge.sent-details-bestof" : "challenge.sent-details",
+                Messages.unparsed("arena", arenaName), Messages.unparsed("kit", kitDisplay),
+                Messages.unparsed("rounds", bestOf));
 
         target.sendMessage(Component.empty());
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
-        target.sendMessage(Component.text(player.getName(), NamedTextColor.YELLOW)
-                .append(Component.text(" challenged you to a duel!", NamedTextColor.GREEN)));
-        Component details = Component.text("Arena: ", NamedTextColor.GRAY)
-                .append(Component.text(arenaName, NamedTextColor.WHITE))
-                .append(Component.text(" | Kit: ", NamedTextColor.GRAY))
-                .append(Component.text(kitDisplay, NamedTextColor.WHITE));
-        if (bestOf > 1) {
-            details = details.append(Component.text(" | ", NamedTextColor.GRAY))
-                    .append(Component.text("Best of " + bestOf, NamedTextColor.WHITE));
-        }
-        target.sendMessage(details);
-        target.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN)
-                .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel accept " + player.getName()))
-                .append(Component.text("  "))
-                .append(Component.text("[DENY]", NamedTextColor.RED)
-                        .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/duel deny " + player.getName()))));
-        target.sendMessage(Component.text("Expires in 30 seconds!", NamedTextColor.GRAY));
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
+        Messages.send(target, "general.separator");
+        Messages.send(target, "challenge.received", Messages.unparsed("player", player.getName()));
+        Messages.send(target, bestOf > 1 ? "challenge.received-details-bestof" : "challenge.received-details",
+                Messages.unparsed("arena", arenaName), Messages.unparsed("kit", kitDisplay),
+                Messages.unparsed("rounds", bestOf));
+        target.sendMessage(Messages.format("challenge.accept-deny", Map.of("player", player.getName())));
+        Messages.send(target, "challenge.expires");
+        Messages.send(target, "general.separator");
         target.sendMessage(Component.empty());
 
         target.playSound(target.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
@@ -568,7 +732,6 @@ public class GUIManager {
         challengeKit.remove(player);
         challengeRounds.remove(player);
         animatingPlayers.remove(player);
-        playerPage.remove(player);
         partyFlowMode.remove(player);
         partyFlowTeamSize.remove(player);
         partyFlowKit.remove(player);
@@ -581,7 +744,7 @@ public class GUIManager {
         partyFlowTeamSize.remove(owner.getUniqueId());
         partyFlowKit.remove(owner.getUniqueId());
 
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.PARTY_MODE, 27,
                 Component.text(PARTY_MODE_TITLE, NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
         ItemStack pane = createPane(Material.PURPLE_STAINED_GLASS_PANE);
         for (int i = 0; i < 27; i++) inv.setItem(i, pane);
@@ -610,7 +773,7 @@ public class GUIManager {
     public void openPartyTeamSizeMenu(Player owner) {
         partyFlowMode.put(owner.getUniqueId(), dev.epicduels.model.PartyMode.TEAM_DUEL);
 
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.PARTY_TEAM_SIZE, 27,
                 Component.text(PARTY_TEAM_SIZE_TITLE, NamedTextColor.BLUE, TextDecoration.BOLD));
         ItemStack pane = createPane(Material.BLUE_STAINED_GLASS_PANE);
         for (int i = 0; i < 27; i++) inv.setItem(i, pane);
@@ -643,17 +806,16 @@ public class GUIManager {
         List<Kit> kits = new ArrayList<>(plugin.getKitManager().getAllKits());
         int totalPages = Math.max(1, (int) Math.ceil((double) kits.size() / ITEMS_PER_PAGE));
         page = clampPage(page, totalPages);
-        playerPage.put(owner.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54,
+        Inventory inv = createMenu(MenuType.PARTY_KIT, page, 54,
                 Component.text(PARTY_KIT_TITLE, NamedTextColor.AQUA, TextDecoration.BOLD));
         fillBorder(inv, Material.CYAN_STAINED_GLASS_PANE);
 
         int start = page * ITEMS_PER_PAGE;
         for (int i = 0; i < ITEMS_PER_PAGE && start + i < kits.size(); i++) {
             Kit kit = kits.get(start + i);
-            inv.setItem(ITEM_SLOTS[i], createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
-                    "&7Click to select this kit"));
+            inv.setItem(ITEM_SLOTS[i], MenuKeys.tag(createItem(kit.getDisplayIcon(), "&b" + kit.getName(),
+                    "&7Click to select this kit"), MenuKeys.KIT, kit.getName()));
         }
         addNavigation(inv, page, totalPages);
         owner.openInventory(inv);
@@ -666,7 +828,7 @@ public class GUIManager {
         dev.epicduels.model.TeamSize size = partyFlowTeamSize.get(owner.getUniqueId());
         dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(owner.getUniqueId());
 
-        Inventory inv = Bukkit.createInventory(null, 27,
+        Inventory inv = createMenu(MenuType.PARTY_CONFIRM, 27,
                 Component.text(PARTY_CONFIRM_TITLE, NamedTextColor.GREEN, TextDecoration.BOLD));
         ItemStack pane = createPane(Material.LIME_STAINED_GLASS_PANE);
         for (int i = 0; i < 27; i++) inv.setItem(i, pane);
@@ -729,10 +891,6 @@ public class GUIManager {
      */
     public void cancelAnimation(UUID player) {
         animatingPlayers.remove(player);
-    }
-
-    public int getPlayerPage(UUID playerId) {
-        return playerPage.getOrDefault(playerId, 0);
     }
 
     // ========== Navigation & Utility ==========

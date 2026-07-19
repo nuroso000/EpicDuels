@@ -93,16 +93,43 @@ public class StatsManager {
     }
 
     public void saveStats() {
+        String data = serializeStats();
+        writeStatsFile(data);
+    }
+
+    /**
+     * Serializes on the main thread (the stats map is not thread-safe) and
+     * writes the file asynchronously so wins/losses don't block the tick.
+     * Falls back to a synchronous write during shutdown.
+     */
+    private void saveStatsAsync() {
+        String data = serializeStats();
+        if (plugin.isEnabled()) {
+            org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> writeStatsFile(data));
+        } else {
+            writeStatsFile(data);
+        }
+    }
+
+    private String serializeStats() {
         YamlConfiguration config = new YamlConfiguration();
         for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
             String key = entry.getKey().toString();
             config.set(key + ".wins", entry.getValue().getWins());
             config.set(key + ".losses", entry.getValue().getLosses());
         }
-        try {
-            config.save(dataFile);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to save stats.yml", e);
+        return config.saveToString();
+    }
+
+    private final Object saveLock = new Object();
+
+    private void writeStatsFile(String data) {
+        synchronized (saveLock) {
+            try {
+                java.nio.file.Files.writeString(dataFile.toPath(), data);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to save stats.yml", e);
+            }
         }
     }
 
@@ -136,7 +163,7 @@ public class StatsManager {
                     placeholder.setWins(mergedWins);
                     placeholder.setLosses(mergedLosses);
                     // Persist merged data locally
-                    saveStats();
+                    saveStatsAsync();
                     plugin.getLogger().info("Synced stats for " + uuid + " from remote (" + mergedWins + "W/" + mergedLosses + "L).");
                 });
             });
@@ -147,13 +174,13 @@ public class StatsManager {
 
     public void addWin(UUID uuid) {
         getStats(uuid).addWin();
-        saveStats();
+        saveStatsAsync();
         pushToRemote(uuid);
     }
 
     public void addLoss(UUID uuid) {
         getStats(uuid).addLoss();
-        saveStats();
+        saveStatsAsync();
         pushToRemote(uuid);
     }
 

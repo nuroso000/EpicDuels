@@ -1,10 +1,9 @@
 package dev.epicduels.command;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Party;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -26,15 +25,15 @@ public class PartyCommand implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
+            Messages.send(sender, "general.players-only");
             return true;
         }
         if (!player.hasPermission("epicduels.party")) {
-            player.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+            Messages.send(player, "general.no-permission");
             return true;
         }
         if (!plugin.isFeatureEnabled("parties")) {
-            player.sendMessage(Component.text("This feature is disabled on this server.", NamedTextColor.RED));
+            Messages.send(player, "general.feature-disabled");
             return true;
         }
 
@@ -59,12 +58,12 @@ public class PartyCommand implements CommandExecutor {
 
     private void handleInvite(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /party invite <player>", NamedTextColor.YELLOW));
+            Messages.send(player, "party.usage-invite");
             return;
         }
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            player.sendMessage(Component.text("Player not found or offline.", NamedTextColor.RED));
+            Messages.send(player, "general.player-not-found");
             return;
         }
         // Auto-create party if owner has none
@@ -79,7 +78,7 @@ public class PartyCommand implements CommandExecutor {
         if (args.length >= 2) {
             Player sender = Bukkit.getPlayer(args[1]);
             if (sender == null) {
-                player.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                Messages.send(player, "general.player-not-found-simple");
                 return;
             }
             from = sender.getUniqueId();
@@ -92,7 +91,7 @@ public class PartyCommand implements CommandExecutor {
         if (args.length >= 2) {
             Player sender = Bukkit.getPlayer(args[1]);
             if (sender == null) {
-                player.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                Messages.send(player, "general.player-not-found-simple");
                 return;
             }
             from = sender.getUniqueId();
@@ -103,19 +102,18 @@ public class PartyCommand implements CommandExecutor {
     private void handleList(Player player) {
         Party party = plugin.getPartyManager().getPartyOf(player.getUniqueId());
         if (party == null) {
-            player.sendMessage(Component.text("You are not in a party.", NamedTextColor.RED));
+            Messages.send(player, "party.not-in-party");
             return;
         }
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("=== Party (" + party.size() + "/" + Party.MAX_SIZE + ") ===",
-                NamedTextColor.GOLD, TextDecoration.BOLD));
+        Messages.send(player, "party.list-header",
+                Messages.unparsed("count", party.size()), Messages.unparsed("max", Party.MAX_SIZE));
         for (UUID id : party.getMembers()) {
             Player p = Bukkit.getPlayer(id);
             String name = p != null ? p.getName() : Bukkit.getOfflinePlayer(id).getName();
             if (name == null) name = id.toString().substring(0, 8);
-            NamedTextColor color = party.isOwner(id) ? NamedTextColor.GOLD : NamedTextColor.GRAY;
-            String tag = party.isOwner(id) ? " [Owner]" : "";
-            player.sendMessage(Component.text(" - " + name + tag, color));
+            Messages.send(player, party.isOwner(id) ? "party.list-owner" : "party.list-member",
+                    Messages.unparsed("name", name));
         }
         player.sendMessage(Component.empty());
     }
@@ -123,23 +121,22 @@ public class PartyCommand implements CommandExecutor {
     private void handleStart(Player player) {
         Party party = plugin.getPartyManager().getPartyOf(player.getUniqueId());
         if (party == null) {
-            player.sendMessage(Component.text("You are not in a party.", NamedTextColor.RED));
+            Messages.send(player, "party.not-in-party");
             return;
         }
         if (!party.isOwner(player.getUniqueId())) {
-            player.sendMessage(Component.text("Only the party owner can start.", NamedTextColor.RED));
+            Messages.send(player, "party.owner-only-start");
             return;
         }
         if (party.size() < Party.MIN_SIZE) {
-            player.sendMessage(Component.text("Need at least " + Party.MIN_SIZE + " players.", NamedTextColor.RED));
+            Messages.send(player, "party.need-min", Messages.unparsed("count", Party.MIN_SIZE));
             return;
         }
         for (UUID id : party.getMembers()) {
             if (plugin.getDuelManager().isInDuel(id)
                     || plugin.getTeamDuelManager().isInTeamDuel(id)
                     || plugin.getTournamentManager().isInTournament(id)) {
-                player.sendMessage(Component.text("A party member is already in a duel/tournament.",
-                        NamedTextColor.RED));
+                Messages.send(player, "party.member-busy");
                 return;
             }
         }
@@ -148,23 +145,15 @@ public class PartyCommand implements CommandExecutor {
 
     private void sendHelp(Player player) {
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("=== Party Help ===", NamedTextColor.GOLD, TextDecoration.BOLD));
-        player.sendMessage(Component.text("/party create", NamedTextColor.YELLOW)
-                .append(Component.text(" - Create a party", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party invite <player>", NamedTextColor.YELLOW)
-                .append(Component.text(" - Invite a player", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party accept [player]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Accept invite", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party deny [player]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Deny invite", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party leave", NamedTextColor.YELLOW)
-                .append(Component.text(" - Leave the party", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party disband", NamedTextColor.YELLOW)
-                .append(Component.text(" - Disband (owner only)", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party list", NamedTextColor.YELLOW)
-                .append(Component.text(" - Show members", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/party start", NamedTextColor.YELLOW)
-                .append(Component.text(" - Open mode select (owner)", NamedTextColor.GRAY)));
+        Messages.send(player, "party.help-header");
+        Messages.send(player, "party.help-create");
+        Messages.send(player, "party.help-invite");
+        Messages.send(player, "party.help-accept");
+        Messages.send(player, "party.help-deny");
+        Messages.send(player, "party.help-leave");
+        Messages.send(player, "party.help-disband");
+        Messages.send(player, "party.help-list");
+        Messages.send(player, "party.help-start");
         player.sendMessage(Component.empty());
     }
 }

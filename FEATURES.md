@@ -3,9 +3,13 @@
 Priorisierte Liste fehlender Features. Stand: Juli 2026, Basis: Branch `bugfixes` (v2.0.0).
 
 > **Update v3.0.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
-> 3.4 (`/duel toggle`), 4.2 (`/duel reload`, nur config.yml — messages.yml
-> existiert noch nicht) und der Join-Handling-Toggle aus 4.5
-> (`lobby.handle-join`). Erledigte Punkte sind mit ✅ markiert.
+> 3.4 (`/duel toggle`), 4.2 (`/duel reload`) und der Join-Handling-Toggle
+> aus 4.5 (`lobby.handle-join`). Erledigte Punkte sind mit ✅ markiert.
+>
+> **Update (unreleased, Juli 2026):** Dazu gekommen sind 3.3 (Spectate-GUI),
+> 3.5 (Kit-Editor pro Spieler), 4.1 (Lokalisierung en/de, `lang/`-Dateien),
+> 4.3 (PlaceholderAPI) und 4.4 (GUI-Refactoring auf InventoryHolder + PDC).
+> `/duel reload` lädt jetzt auch die Sprachdateien neu.
 
 ---
 
@@ -75,35 +79,43 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - Parallel laufende Matches auf mehrere Arenen verteilen (existiert), Zuschauer-Routing (existiert)
 - Turnier-Rewards (siehe 2.4), Bracket-Anzeige als Buch oder GUI
 
-### 3.3 Spectate-GUI
-- `/duel spectate` ohne Argument öffnet GUI mit allen laufenden Duellen (Spieler-Köpfe, Kit, Dauer)
-- Klick → zuschauen; Verlassen über Menü-Item in der Hotbar des Spectators
+### 3.3 Spectate-GUI ✅
+- ✅ `/duel spectate` ohne Argument (und neuer Hauptmenü-Eintrag) öffnet ein paginiertes GUI mit allen laufenden 1v1-Duellen: Spieler-Köpfe ("A vs B"), Kit, Map, Runde, Dauer
+- ✅ Klick → zuschauen (mit Re-Validierung, falls das Duell inzwischen endete); Verlassen wie bisher per `/duel spectate`
+- Offen: Team-Duelle erscheinen nicht in der Liste (TeamDuelManager hat keinen Außenstehenden-Spectate-Mechanismus — eigenes Folge-Feature)
 
 ### 3.4 Challenge-Komfort (teilweise ✅)
 - ✅ `/duel toggle` — Duell-Anfragen an sich deaktivieren/aktivieren (persistent, toggles.yml; v3.0.0)
 - Cooldown für Anfragen an denselben Spieler (Spam-Schutz, z.B. 30s nach Deny)
 
+### 3.5 Kit-Editor (pro Spieler) ✅
+- `/duel kits [kit]` bzw. "Kit Editor"-Eintrag im Hauptmenü — jeder Spieler ordnet die Items jedes Kits in seine bevorzugten Slots (Hotbar, Rüstung, Offhand)
+- Reines Umsortieren (nichts hinzufügen/entfernen/ändern), Speicherung pro Spieler in `playerkits.yml`, automatische Anwendung in 1v1, Matchmaking, Team-Duellen und Turnieren
+- Veraltete Layouts (Kit wurde vom Admin geändert) fallen still auf das Standard-Layout zurück; Feature-Toggle `features.kit-editor`
+
 ---
 
 ## Priorität 4 — Admin, Integration & Technik
 
-### 4.1 Konfigurierbare Nachrichten / Lokalisierung
-- Alle Spieler-Nachrichten (aktuell hartkodiert Englisch, verteilt über alle Klassen) in `messages.yml` auslagern, MiniMessage-Format
-- Zentrale `Messages`-Klasse mit Platzhaltern (`<player>`, `<kit>`, `<arena>`, …)
-- Mitgelieferte Übersetzungen: en, de
+### 4.1 Konfigurierbare Nachrichten / Lokalisierung ✅
+- ✅ Alle ~290 Spieler-Nachrichten (Chat, Actionbars, Titles, klickbare Buttons) in `lang/messages_<code>.yml` ausgelagert, MiniMessage-Format
+- ✅ Zentrale `Messages`-Klasse (`dev.epicduels.i18n`) mit Platzhaltern (`<player>`, `<kit>`, `<arena>`, …); Klick-Kommandos über `{token}`-Ersetzung mit Tag-Escaping
+- ✅ Mitgeliefert: en + de; Auswahl über Config-Key `language`, Fallback auf eingebautes Englisch, Reload via `/duel reload`
+- Offen: GUI-Item-Namen/-Lore bleiben vorerst im Code (eigener Pass); wenige Admin-Fehlertexte aus `renameArena`/`renameKit` sind noch Englisch
 
 ### 4.2 `/duel reload` (teilweise ✅)
 - ✅ Config zur Laufzeit neu laden (Permission `epicduels.admin`; v3.0.0)
 - Offen: messages.yml (existiert noch nicht, siehe 4.1) und Stats-Backend-Wechsel zur Laufzeit (Provider neu initialisieren — aktuell Neustart nötig)
 
-### 4.3 PlaceholderAPI
-- Placeholders: `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%`, `%epicduels_elo%`, `%epicduels_streak%`, `%epicduels_in_duel%`
-- softdepend PlaceholderAPI
+### 4.3 PlaceholderAPI ✅
+- ✅ Placeholders: `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%`, `%epicduels_in_duel%` (`dev.epicduels.hook.EpicDuelsExpansion`)
+- ✅ softdepend PlaceholderAPI, Registrierung nur wenn installiert
+- Offen: `%epicduels_elo%` / `%epicduels_streak%` folgen mit 2.1/2.2 (aktuell keine Daten dahinter — bewusst keine Fake-Werte)
 
-### 4.4 GUI-Refactoring: PDC statt Titel/Displayname
-- GUIs werden aktuell über den Fenstertitel erkannt und Klicks über den Item-Displaynamen aufgelöst (kollisionsanfällig, z.B. Kit namens "Random Map")
-- Umbau auf `PersistentDataContainer`-Keys an den Items (`epicduels:action`, `epicduels:kit`, `epicduels:arena`) und/oder eigene `InventoryHolder`-Implementierung pro Menü
-- Reine interne Verbesserung, kein Verhaltens-Change
+### 4.4 GUI-Refactoring: PDC statt Titel/Displayname ✅
+- ✅ Eigener `MenuHolder` (`dev.epicduels.gui`) mit `MenuType`-Enum, Kit-Kontext und Seite identifiziert jedes Menü — Titel sind nur noch Kosmetik
+- ✅ Klick-Auflösung über PDC-Keys an den Button-Items (`epicduels:action/kit/arena/player`) statt Displayname-Parsing; Kit-Items in den editierbaren GUIs bleiben bewusst ungetaggt
+- ✅ Nebeneffekte behoben: keine Titel-Kollisionen mit Fremd-Plugins mehr, Klicks ins eigene Inventar können keine Menü-Aktionen mehr auslösen, Arena-Liste hat funktionierende Pagination, Drag in die Kontrollzeile des Admin-Kit-Editors ist blockiert
 
 ### 4.5 Sonstiges
 - bStats-Metriken (Plugin-Nutzung, Anzahl Duelle)

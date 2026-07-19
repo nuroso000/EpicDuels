@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Kit Editor** — every player can personalize the item layout of any kit for themselves: `/duel kits [kit]` or the new "Kit Editor" entry in the main menu opens a customize GUI (inventory, armor and offhand slots) where the kit's items can be rearranged, saved and reset. Layouts are pure rearrangements (nothing can be added, removed or modified), are stored per player in `playerkits.yml`, and are applied automatically in 1v1 duels, matchmaking, team duels and tournaments. If an admin edits the base kit, outdated personal layouts fall back to the default. New feature toggle `features.kit-editor`; new manager class `PlayerKitManager`.
+- **Spectate GUI** — `/duel spectate` without arguments (and a new Ender-Eye entry in the main menu) opens a paginated browser of all running 1v1 duels showing both players, kit, map, round and duration. One click starts spectating; the duel is re-validated on click in case it ended while browsing. Team duels are not listed yet (no outside-spectator mechanism there).
+- **Localization** — every player-facing message (~290 keys: chat, action bars, titles, clickable buttons) now lives in `lang/messages_en.yml` / `lang/messages_de.yml` (MiniMessage format), selected via the new `language` config key and reloadable with `/duel reload`. Missing keys fall back to the built-in English texts; player names are inserted tag-escaped (no MiniMessage injection). New class `dev.epicduels.i18n.Messages`.
+- **PlaceholderAPI support** (optional softdepend) — `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%` and `%epicduels_in_duel%` via a new expansion that only registers when PlaceholderAPI is installed.
+
+### Changed
+- **GUI internals refactored** — plugin menus are now identified by a custom `InventoryHolder` (`MenuHolder` with menu type, kit context and page) and clicks are resolved through `PersistentDataContainer` keys on the button items instead of window-title and display-name parsing. Fixes potential collisions with other plugins' GUIs (or kits named like buttons), stops clicks in the player's own inventory from triggering menu actions, gives the arena list working pagination, and blocks drags onto the admin kit editor's control row.
+- `build.gradle` now mirrors the Maven build (PlaceholderAPI repo/dependency, jar version synced to the project version).
+
 ## [3.0.0] — 2026-07 · Gameplay Update
 
 ### Added

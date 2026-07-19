@@ -1,14 +1,11 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Arena;
 import dev.epicduels.model.DuelInstance;
 import dev.epicduels.model.Kit;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -88,14 +85,7 @@ public class RematchManager {
     }
 
     private void sendOfferMessage(Player player, String opponentName) {
-        Component button = Component.text("[REMATCH]", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .clickEvent(ClickEvent.runCommand("/duel rematch"))
-                .hoverEvent(HoverEvent.showText(
-                        Component.text("Same kit, same arena — new duel!", NamedTextColor.GRAY)));
-        player.sendMessage(Component.empty()
-                .append(button)
-                .append(Component.text(" Click to rematch " + opponentName + " ", NamedTextColor.YELLOW))
-                .append(Component.text("(valid for 30s)", NamedTextColor.GRAY)));
+        Messages.send(player, "rematch.offer", Messages.unparsed("player", opponentName));
     }
 
     /**
@@ -106,25 +96,25 @@ public class RematchManager {
         Offer offer = offersByPlayer.get(player.getUniqueId());
         if (offer == null || offer.isExpired()) {
             removeOffer(offer);
-            player.sendMessage(Component.text("You have no rematch offer right now.", NamedTextColor.RED));
+            Messages.send(player, "rematch.no-offer");
             return;
         }
 
         Player opponent = Bukkit.getPlayer(offer.getOpponent(player.getUniqueId()));
         if (opponent == null || !opponent.isOnline()) {
             removeOffer(offer);
-            player.sendMessage(Component.text("Your opponent is no longer online.", NamedTextColor.RED));
+            Messages.send(player, "rematch.opponent-offline");
             return;
         }
 
         if (!offer.accepted.add(player.getUniqueId())) {
-            player.sendMessage(Component.text("Already accepted — waiting for " + opponent.getName() + ".", NamedTextColor.YELLOW));
+            Messages.send(player, "rematch.already-accepted", Messages.unparsed("player", opponent.getName()));
             return;
         }
 
         if (offer.accepted.size() < 2) {
-            player.sendMessage(Component.text("Rematch accepted — waiting for " + opponent.getName() + ".", NamedTextColor.GREEN));
-            opponent.sendMessage(Component.text(player.getName() + " wants a rematch!", NamedTextColor.YELLOW));
+            Messages.send(player, "rematch.accepted-waiting", Messages.unparsed("player", opponent.getName()));
+            Messages.send(opponent, "rematch.opponent-wants", Messages.unparsed("player", player.getName()));
             opponent.playSound(opponent.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
             return;
         }
@@ -134,7 +124,7 @@ public class RematchManager {
 
         if (plugin.getDuelManager().isBusy(player.getUniqueId())
                 || plugin.getDuelManager().isBusy(opponent.getUniqueId())) {
-            Component busy = Component.text("Rematch could not start: one of you is already in a match.", NamedTextColor.RED);
+            Component busy = Messages.get("rematch.busy");
             player.sendMessage(busy);
             opponent.sendMessage(busy);
             return;
@@ -144,7 +134,7 @@ public class RematchManager {
         Arena arena = plugin.getArenaManager().getArena(offer.arenaName);
         Kit kit = ownInventory ? null : plugin.getKitManager().getKit(offer.kitName);
         if (arena == null || (!ownInventory && kit == null)) {
-            Component gone = Component.text("Rematch could not start: arena or kit no longer exists.", NamedTextColor.RED);
+            Component gone = Messages.get("rematch.gone");
             player.sendMessage(gone);
             opponent.sendMessage(gone);
             return;
@@ -160,7 +150,7 @@ public class RematchManager {
 
         Player opponent = Bukkit.getPlayer(offer.getOpponent(playerId));
         if (opponent != null && offer.accepted.contains(opponent.getUniqueId()) && !offer.isExpired()) {
-            opponent.sendMessage(Component.text("Rematch cancelled — your opponent left.", NamedTextColor.GRAY));
+            Messages.send(opponent, "rematch.cancelled-left");
         }
     }
 

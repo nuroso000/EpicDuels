@@ -1,9 +1,8 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
-import dev.epicduels.model.Arena;
+import dev.epicduels.i18n.Messages;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -99,7 +98,8 @@ public class QueueManager {
                     var kit = plugin.getKitManager().getKit(kitName);
                     String displayKit = kit != null ? kit.getName() : kitName;
 
-                    player.sendActionBar(Component.text("Queue [" + displayKit + "]: searching for opponent... (" + seconds + "s)", NamedTextColor.YELLOW));
+                    player.sendActionBar(Messages.get("queue.actionbar",
+                            Messages.unparsed("kit", displayKit), Messages.unparsed("seconds", seconds)));
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -126,14 +126,17 @@ public class QueueManager {
                     Player p1 = Bukkit.getPlayer(player1Id);
                     Player p2 = Bukkit.getPlayer(player2Id);
 
-                    if (p1 == null || !p1.isOnline() || p2 == null || !p2.isOnline()) {
-                        // Put back the online one
-                        if (p1 != null && p1.isOnline()) {
+                    boolean valid1 = p1 != null && p1.isOnline() && !plugin.getDuelManager().isBusy(player1Id);
+                    boolean valid2 = p2 != null && p2.isOnline() && !plugin.getDuelManager().isBusy(player2Id);
+                    if (!valid1 || !valid2) {
+                        // Put back whoever is still eligible instead of
+                        // silently dropping them from the queue
+                        if (valid1) {
                             queue.add(0, player1Id);
                             playerQueue.put(player1Id, kitName);
                             queueJoinTime.put(player1Id, System.currentTimeMillis());
                         }
-                        if (p2 != null && p2.isOnline()) {
+                        if (valid2) {
                             queue.add(0, player2Id);
                             playerQueue.put(player2Id, kitName);
                             queueJoinTime.put(player2Id, System.currentTimeMillis());
@@ -144,8 +147,8 @@ public class QueueManager {
                     // Pick a random ready arena
                     List<String> readyArenas = plugin.getArenaManager().getReadyArenaNames();
                     if (readyArenas.isEmpty()) {
-                        p1.sendMessage(Component.text("No arenas available! Removed from queue.", NamedTextColor.RED));
-                        p2.sendMessage(Component.text("No arenas available! Removed from queue.", NamedTextColor.RED));
+                        Messages.send(p1, "queue.no-arenas");
+                        Messages.send(p2, "queue.no-arenas");
                         p1.sendActionBar(Component.empty());
                         p2.sendActionBar(Component.empty());
                         continue;
@@ -155,8 +158,8 @@ public class QueueManager {
 
                     p1.sendActionBar(Component.empty());
                     p2.sendActionBar(Component.empty());
-                    p1.sendMessage(Component.text("Match found! Starting duel against " + p2.getName() + "...", NamedTextColor.GREEN));
-                    p2.sendMessage(Component.text("Match found! Starting duel against " + p1.getName() + "...", NamedTextColor.GREEN));
+                    Messages.send(p1, "queue.match-found", Messages.unparsed("player", p2.getName()));
+                    Messages.send(p2, "queue.match-found", Messages.unparsed("player", p1.getName()));
 
                     // Resolve kit name for display
                     var kit = plugin.getKitManager().getKit(kitName);

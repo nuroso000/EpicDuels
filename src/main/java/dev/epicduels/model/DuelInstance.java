@@ -21,6 +21,8 @@ public class DuelInstance implements BattleInstance {
     private boolean countdownComplete;
     // Time-limit deadline (epoch millis); 0 = no limit. Set when the countdown finishes.
     private long deadlineMillis;
+    // Epoch millis of the first fight start (first countdown completion); 0 until then.
+    private long startMillis;
     // True once the match entered its one-time sudden-death extension (tournament matches).
     private boolean suddenDeath;
     // Best-of-N round state: first player to bestOf/2+1 round wins takes the match.
@@ -99,6 +101,14 @@ public class DuelInstance implements BattleInstance {
 
     public void setCountdownComplete(boolean countdownComplete) {
         this.countdownComplete = countdownComplete;
+        if (countdownComplete && startMillis == 0) {
+            startMillis = System.currentTimeMillis();
+        }
+    }
+
+    /** Epoch millis when the fight first started; 0 while still counting down. */
+    public long getStartMillis() {
+        return startMillis;
     }
 
     public long getDeadlineMillis() {

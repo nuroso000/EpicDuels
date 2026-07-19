@@ -217,6 +217,8 @@ public class ArenaManager {
     public CompletableFuture<World> createInstanceWorld(Arena arena, String instanceWorldName) {
         // Flush pending chunk changes to disk so the copy contains the latest
         // template edits. Called from the main thread before the async copy.
+        // Note: the Bukkit API offers no way to force a full region-file
+        // flush, so a copy may very rarely miss the newest template edits.
         World templateWorld = Bukkit.getWorld(arena.getWorldName());
         if (templateWorld != null) {
             templateWorld.save();

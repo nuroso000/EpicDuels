@@ -1,9 +1,8 @@
 package dev.epicduels.listener;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.DuelInstance;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -47,7 +46,7 @@ public class PlayerListener implements Listener {
         // Restore the inventory saved for an own-inventory duel that never
         // finished cleanly (disconnect or server crash mid-duel)
         if (plugin.getInventoryBackupManager().restore(player)) {
-            player.sendMessage(Component.text("Your inventory from an interrupted duel has been restored.", NamedTextColor.GREEN));
+            Messages.send(player, "duel.inventory-restored");
         }
     }
 
@@ -66,11 +65,11 @@ public class PlayerListener implements Listener {
         // Clear GUI data
         plugin.getGUIManager().clearChallengeData(player.getUniqueId());
         // Cancel any pending rematch offer
-        if (plugin.getRematchManager() != null) plugin.getRematchManager().handleDisconnect(player.getUniqueId());
+        plugin.getRematchManager().handleDisconnect(player.getUniqueId());
         // Party / team duel / tournament cleanup
-        if (plugin.getTeamDuelManager() != null) plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
-        if (plugin.getTournamentManager() != null) plugin.getTournamentManager().handleDisconnect(player.getUniqueId());
-        if (plugin.getPartyManager() != null) plugin.getPartyManager().handleDisconnect(player.getUniqueId());
+        plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
+        plugin.getTournamentManager().handleDisconnect(player.getUniqueId());
+        plugin.getPartyManager().handleDisconnect(player.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -132,8 +131,7 @@ public class PlayerListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player deceased = event.getEntity();
         DuelInstance duel = plugin.getDuelManager().getDuel(deceased.getUniqueId());
-        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager() != null
-                ? plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId()) : null;
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId());
 
         if ((duel == null || !duel.isActive()) && (teamDuel == null || !teamDuel.isActive())) return;
 
@@ -171,8 +169,7 @@ public class PlayerListener implements Listener {
 
         // Dead team-duel participants spectate inside the arena until the match
         // ends — respawn them there directly instead of bouncing via the lobby.
-        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager() != null
-                ? plugin.getTeamDuelManager().getTeamDuelOf(id) : null;
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(id);
         if (teamDuel != null && teamDuel.isActive() && teamDuel.getInstanceWorld() != null) {
             event.setRespawnLocation(teamDuel.getInstanceWorld().getSpawnLocation());
             return;
@@ -219,8 +216,7 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager() != null
-                ? plugin.getTeamDuelManager().getTeamDuelOf(id) : null;
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(id);
         if (teamDuel != null && teamDuel.isActive() && teamDuel.getInstanceWorld() != null
                 && teamDuel.isAlive(id)
                 && !toWorld.equals(teamDuel.getInstanceWorldName())) {

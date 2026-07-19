@@ -16,10 +16,15 @@ repositories {
         name = 'papermc'
         url = 'https://repo.papermc.io/repository/maven-public/'
     }
+    maven {
+        name = 'placeholderapi'
+        url = 'https://repo.extendedclip.com/releases/'
+    }
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
+    compileOnly 'me.clip:placeholderapi:2.11.6'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -28,6 +33,6 @@ tasks.withType(JavaCompile).configureEach {
 
 jar {
     archiveBaseName.set('EpicDuels')
-    archiveVersion.set('2.0.0')
+    archiveVersion.set(version.toString())
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
