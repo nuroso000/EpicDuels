@@ -7,21 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [3.0.0] — 2026-07 · Gameplay Update
 
 ### Added
 - **Kit Editor** — every player can personalize the item layout of any kit for themselves: `/duel kits [kit]` or the new "Kit Editor" entry in the main menu opens a customize GUI (inventory, armor and offhand slots) where the kit's items can be rearranged, saved and reset. Layouts are pure rearrangements (nothing can be added, removed or modified), are stored per player in `playerkits.yml`, and are applied automatically in 1v1 duels, matchmaking, team duels and tournaments. If an admin edits the base kit, outdated personal layouts fall back to the default. New feature toggle `features.kit-editor`; new manager class `PlayerKitManager`.
 - **Spectate GUI** — `/duel spectate` without arguments (and a new Ender-Eye entry in the main menu) opens a paginated browser of all running 1v1 duels showing both players, kit, map, round and duration. One click starts spectating; the duel is re-validated on click in case it ended while browsing. Team duels are not listed yet (no outside-spectator mechanism there).
 - **Localization** — every player-facing message (~290 keys: chat, action bars, titles, clickable buttons) now lives in `lang/messages_en.yml` / `lang/messages_de.yml` (MiniMessage format), selected via the new `language` config key and reloadable with `/duel reload`. Missing keys fall back to the built-in English texts; player names are inserted tag-escaped (no MiniMessage injection). New class `dev.epicduels.i18n.Messages`.
 - **PlaceholderAPI support** (optional softdepend) — `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%` and `%epicduels_in_duel%` via a new expansion that only registers when PlaceholderAPI is installed.
-
-### Changed
-- **GUI internals refactored** — plugin menus are now identified by a custom `InventoryHolder` (`MenuHolder` with menu type, kit context and page) and clicks are resolved through `PersistentDataContainer` keys on the button items instead of window-title and display-name parsing. Fixes potential collisions with other plugins' GUIs (or kits named like buttons), stops clicks in the player's own inventory from triggering menu actions, gives the arena list working pagination, and blocks drags onto the admin kit editor's control row.
-- `build.gradle` now mirrors the Maven build (PlaceholderAPI repo/dependency, jar version synced to the project version).
-
-## [3.0.0] — 2026-07 · Gameplay Update
-
-### Added
 - **Match time limit & draws** — configurable clock (`duel.time-limit-seconds`, default 300 s, 0 = off) with action-bar countdown. Time-up ends 1v1 and team duels in a draw (no win/loss recorded). Tournament matches resolve via a one-time **sudden-death extension** and/or **coin flip** (`duel.tournament-draw`, `duel.sudden-death-seconds`).
 - **Best of 1 / 3 / 5** — new rounds-selection step in the challenge flow (player → kit → rounds → map). Rounds reuse the same arena instance: player-placed blocks are reset, players healed, re-kitted and counted down again. Score shown as titles and "Round N — X:Y" messages. The match clock pauses between rounds; a timeout with a round lead ends the match in the leader's favor.
 - **Rematch** — clickable `[REMATCH]` message for both players after every regular duel (30 s validity). Both accept (click or `/duel rematch`) → new duel with the same kit, arena and round mode.
@@ -33,8 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Feature toggles** — new `features:` config section: every player-facing feature (challenges, matchmaking, spectating, rematch, forfeit, best-of-N, own-inventory duels, parties, team duels, tournaments, leaderboards) can be disabled individually. Disabled features vanish from the GUIs (barrier icons) and their commands answer with a clear message. Missing entries default to enabled.
 - **`duel.countdown-seconds`** — configurable pre-fight countdown length (0–60 s, 0 = instant start).
 - **`duel.broadcast-results`** — choose between server-wide duel result announcements and participants-only messages (for survival/hub servers).
-- New manager classes: `RematchManager`, `InventoryBackupManager`.
-- New data files: `toggles.yml`, `inventories/`.
+- New manager classes: `RematchManager`, `InventoryBackupManager`, `PlayerKitManager`.
+- New data files: `toggles.yml`, `inventories/`, `playerkits.yml`, `lang/`.
+
+### Changed
+- **GUI internals refactored** — plugin menus are now identified by a custom `InventoryHolder` (`MenuHolder` with menu type, kit context and page) and clicks are resolved through `PersistentDataContainer` keys on the button items instead of window-title and display-name parsing. Fixes potential collisions with other plugins' GUIs (or kits named like buttons), stops clicks in the player's own inventory from triggering menu actions, gives the arena list working pagination, and blocks drags onto the admin kit editor's control row.
+- `build.gradle` now mirrors the Maven build (PlaceholderAPI repo/dependency, jar version synced to the project version).
 
 ### Fixed
 - **Duel-state guards** — players already in a duel, team duel or tournament can no longer be pulled into a second match via accept, queue or challenge (central `isBusy()` check).

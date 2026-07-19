@@ -5,11 +5,10 @@ Priorisierte Liste fehlender Features. Stand: Juli 2026, Basis: Branch `bugfixes
 > **Update v3.0.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
 > 3.4 (`/duel toggle`), 4.2 (`/duel reload`) und der Join-Handling-Toggle
 > aus 4.5 (`lobby.handle-join`). Erledigte Punkte sind mit ✅ markiert.
->
-> **Update (unreleased, Juli 2026):** Dazu gekommen sind 3.3 (Spectate-GUI),
-> 3.5 (Kit-Editor pro Spieler), 4.1 (Lokalisierung en/de, `lang/`-Dateien),
-> 4.3 (PlaceholderAPI) und 4.4 (GUI-Refactoring auf InventoryHolder + PDC).
-> `/duel reload` lädt jetzt auch die Sprachdateien neu.
+> Ebenfalls Teil von v3.0.0: 3.3 (Spectate-GUI), 3.5 (Kit-Editor pro
+> Spieler), 4.1 (Lokalisierung en/de, `lang/`-Dateien), 4.3 (PlaceholderAPI)
+> und 4.4 (GUI-Refactoring auf InventoryHolder + PDC). `/duel reload` lädt
+> jetzt auch die Sprachdateien neu.
 
 ---
 
