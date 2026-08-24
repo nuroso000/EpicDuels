@@ -14,6 +14,9 @@
   </a>
 </p>
 
+> [!CAUTION]
+> Not recommended on Windows — arena creation can fail due to a file lock issue. Use a Linux host for reliable operation.
+
 **The complete duels experience for Paper 1.21.1+ in a single, dependency-free jar.**
 
 1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
