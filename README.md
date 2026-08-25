@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.1+-green">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1--1.21.11-green">
   <img src="https://img.shields.io/badge/Java-21-orange">
   <a href="https://modrinth.com/plugin/epicduels">
     <img src="https://img.shields.io/badge/Modrinth-EpicDuels-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth">
@@ -14,10 +14,7 @@
   </a>
 </p>
 
-> [!CAUTION]
-> Not recommended on Windows — arena creation can fail due to a file lock issue. Use a Linux host for reliable operation.
-
-**The complete duels experience for Paper 1.21.1+ in a single, dependency-free jar.**
+**The complete duels experience for Paper 1.21.1-1.21.11 in a single, dependency-free jar.**
 
 1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
 
@@ -46,7 +43,7 @@ Why server owners pick it:
 
 ## Installation
 
-1. Drop `EpicDuels-3.x.jar` into `plugins/` (Paper 1.21.1+, Java 21) and restart.
+1. Drop `EpicDuels-3.x.jar` into `plugins/` (Paper 1.21.1-1.21.11, Java 21) and restart.
 2. `/duel setlobby` — set the lobby spawn.
 3. `/duel arena create map1` → build → `/duel arena setspawn1` / `setspawn2` → `/duel arena save`.
 4. Equip gear → `/duel kit create pvp`.
