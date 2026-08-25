@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.1+-green">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1--1.21.11-green">
   <img src="https://img.shields.io/badge/Java-21-orange">
   <a href="https://github.com/nuroso000/EpicDuels">
     <img src="https://img.shields.io/badge/GitHub-EpicDuels-181717?style=flat&logo=github&logoColor=white" alt="GitHub">
@@ -59,7 +59,7 @@ That's it — players open everything else through `/duel`.
 
 ## Requirements
 
-**Paper 1.21.1+** and **Java 21**. Does not run on Spigot or Vanilla.
+**Paper 1.21.1-1.21.11** and **Java 21**. Does not run on Spigot or Vanilla.
 
 ---
 
