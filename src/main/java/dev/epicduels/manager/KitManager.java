@@ -134,16 +134,20 @@ public class KitManager {
         saveKits();
     }
 
+    /**
+     * Serializes items using the Paper API (survives MC version upgrades, unlike Java
+     * serialization). Null slots are represented as AIR items since the Paper array
+     * (de)serialization does not accept null elements; they are converted back to null
+     * on load so slot positions are preserved.
+     */
     private String serializeItemStacks(ItemStack[] items) {
         try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
-            dataOutput.writeInt(items.length);
-            for (ItemStack item : items) {
-                dataOutput.writeObject(item);
+            ItemStack[] safeItems = new ItemStack[items.length];
+            for (int i = 0; i < items.length; i++) {
+                safeItems[i] = items[i] != null ? items[i] : new ItemStack(Material.AIR);
             }
-            dataOutput.close();
-            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+            byte[] bytes = ItemStack.serializeItemsAsBytes(safeItems);
+            return Base64.getEncoder().encodeToString(bytes);
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Failed to serialize items", e);
             return "";
@@ -152,6 +156,23 @@ public class KitManager {
 
     private ItemStack[] deserializeItemStacks(String data) {
         if (data == null || data.isEmpty()) return null;
+        try {
+            byte[] bytes = Base64.getDecoder().decode(data);
+            ItemStack[] items = ItemStack.deserializeItemsFromBytes(bytes);
+            for (int i = 0; i < items.length; i++) {
+                if (items[i] != null && items[i].getType() == Material.AIR) {
+                    items[i] = null;
+                }
+            }
+            return items;
+        } catch (Exception e) {
+            // Fall back to the legacy Java-serialization format for kits.yml files
+            // written before the switch to Paper's item (de)serialization.
+            return deserializeItemStacksLegacy(data);
+        }
+    }
+
+    private ItemStack[] deserializeItemStacksLegacy(String data) {
         try {
             ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
             BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
@@ -163,7 +184,7 @@ public class KitManager {
             dataInput.close();
             return items;
         } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "Failed to deserialize items", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to deserialize items (legacy fallback also failed)", e);
             return null;
         }
     }

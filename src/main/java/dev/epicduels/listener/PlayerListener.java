@@ -1,9 +1,8 @@
 package dev.epicduels.listener;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.DuelInstance;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,15 +28,26 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-        player.setHealth(player.getMaxHealth());
-        player.setFoodLevel(20);
-        player.setSaturation(20f);
-        player.setFireTicks(0);
-        player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
-        player.setGameMode(org.bukkit.GameMode.ADVENTURE);
-        player.teleport(plugin.getLobbyLocation());
+
+        // Full reset + lobby teleport assumes a dedicated duels server —
+        // disable via lobby.handle-join when running alongside other gameplay
+        if (plugin.getConfig().getBoolean("lobby.handle-join", true)) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+            player.setHealth(player.getMaxHealth());
+            player.setFoodLevel(20);
+            player.setSaturation(20f);
+            player.setFireTicks(0);
+            player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+            player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+            player.teleport(plugin.getLobbyLocation());
+        }
+
+        // Restore the inventory saved for an own-inventory duel that never
+        // finished cleanly (disconnect or server crash mid-duel)
+        if (plugin.getInventoryBackupManager().restore(player)) {
+            Messages.send(player, "duel.inventory-restored");
+        }
     }
 
     @EventHandler
@@ -51,13 +61,15 @@ public class PlayerListener implements Listener {
         plugin.getQueueManager().removePlayer(player.getUniqueId());
         // Cancel any pending requests
         plugin.getDuelManager().cancelRequest(player.getUniqueId());
-        plugin.getDuelManager().denyRequest(player.getUniqueId());
+        plugin.getDuelManager().denyAllIncoming(player.getUniqueId());
         // Clear GUI data
         plugin.getGUIManager().clearChallengeData(player.getUniqueId());
+        // Cancel any pending rematch offer
+        plugin.getRematchManager().handleDisconnect(player.getUniqueId());
         // Party / team duel / tournament cleanup
-        if (plugin.getTeamDuelManager() != null) plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
-        if (plugin.getTournamentManager() != null) plugin.getTournamentManager().handleDisconnect(player.getUniqueId());
-        if (plugin.getPartyManager() != null) plugin.getPartyManager().handleDisconnect(player.getUniqueId());
+        plugin.getTeamDuelManager().handleDisconnect(player.getUniqueId());
+        plugin.getTournamentManager().handleDisconnect(player.getUniqueId());
+        plugin.getPartyManager().handleDisconnect(player.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -85,7 +97,15 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player damager)) return;
+        // Resolve the attacking player — direct hit or projectile (arrow, snowball, ...)
+        Player damager = null;
+        if (event.getDamager() instanceof Player p) {
+            damager = p;
+        } else if (event.getDamager() instanceof org.bukkit.entity.Projectile proj
+                && proj.getShooter() instanceof Player shooter) {
+            damager = shooter;
+        }
+        if (damager == null) return;
 
         if (plugin.getDuelManager().isFrozen(damager.getUniqueId())
                 || plugin.getTeamDuelManager().isFrozen(damager.getUniqueId())) {
@@ -111,8 +131,7 @@ public class PlayerListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player deceased = event.getEntity();
         DuelInstance duel = plugin.getDuelManager().getDuel(deceased.getUniqueId());
-        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager() != null
-                ? plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId()) : null;
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId());
 
         if ((duel == null || !duel.isActive()) && (teamDuel == null || !teamDuel.isActive())) return;
 
@@ -137,15 +156,71 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        // End the 1v1 duel - the opponent wins
+        // Score the 1v1 round for the opponent — DuelManager ends the match
+        // or starts the next round (best-of-N)
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());
-        plugin.getDuelManager().endDuel(duel, winnerId, deceased.getUniqueId());
+        plugin.getDuelManager().handleRoundEnd(duel, winnerId, deceased.getUniqueId());
     }
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        // If player died in duel, respawn at lobby
         Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+
+        // Dead team-duel participants spectate inside the arena until the match
+        // ends — respawn them there directly instead of bouncing via the lobby.
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(id);
+        if (teamDuel != null && teamDuel.isActive() && teamDuel.getInstanceWorld() != null) {
+            event.setRespawnLocation(teamDuel.getInstanceWorld().getSpawnLocation());
+            return;
+        }
+
+        // A 1v1 duel that is still active after a death means a best-of-N
+        // round loss — respawn at the player's arena spawn for the next round.
+        DuelInstance duel = plugin.getDuelManager().getDuel(id);
+        if (duel != null && duel.isActive() && duel.getInstanceWorld() != null) {
+            org.bukkit.Location respawn = duel.getInstanceWorld().getSpawnLocation();
+            dev.epicduels.model.Arena arena = plugin.getArenaManager().getArena(duel.getArenaName());
+            if (arena != null) {
+                org.bukkit.Location base = duel.getPlayer1().equals(id) ? arena.getSpawn1() : arena.getSpawn2();
+                if (base != null) {
+                    respawn = base.clone();
+                    respawn.setWorld(duel.getInstanceWorld());
+                }
+            }
+            event.setRespawnLocation(respawn);
+            return;
+        }
+
+        // Admins building in a template world keep the default respawn
+        if (player.getWorld().getName().startsWith("arena_template_")) return;
+
         event.setRespawnLocation(plugin.getLobbyLocation());
+    }
+
+    /**
+     * A participant being teleported out of the arena world (e.g. by another
+     * plugin's /spawn) would otherwise leave the duel running forever — treat
+     * leaving the instance world as a forfeit.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerTeleport(org.bukkit.event.player.PlayerTeleportEvent event) {
+        if (event.getTo() == null || event.getTo().getWorld() == null) return;
+        UUID id = event.getPlayer().getUniqueId();
+        String toWorld = event.getTo().getWorld().getName();
+
+        DuelInstance duel = plugin.getDuelManager().getDuel(id);
+        if (duel != null && duel.isActive() && duel.getInstanceWorld() != null
+                && !toWorld.equals(duel.getInstanceWorldName())) {
+            plugin.getDuelManager().handleForfeit(id);
+            return;
+        }
+
+        dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(id);
+        if (teamDuel != null && teamDuel.isActive() && teamDuel.getInstanceWorld() != null
+                && teamDuel.isAlive(id)
+                && !toWorld.equals(teamDuel.getInstanceWorldName())) {
+            plugin.getTeamDuelManager().handleForfeit(event.getPlayer());
+        }
     }
 }

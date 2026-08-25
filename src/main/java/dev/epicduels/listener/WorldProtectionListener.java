@@ -80,6 +80,70 @@ public class WorldProtectionListener implements Listener {
         }
     }
 
+    // Liquids placed from buckets are player "blocks" too: track them so the
+    // round reset removes them, and protect original map liquids from pickup.
+    @EventHandler(priority = EventPriority.LOW)
+    public void onBucketEmpty(org.bukkit.event.player.PlayerBucketEmptyEvent event) {
+        String worldName = event.getBlock().getWorld().getName();
+        if (worldName.startsWith("arena_template_")) return;
+        if (!worldName.startsWith("arena_instance_")) return;
+
+        BattleInstance battle = lookupBattle(worldName);
+        if (battle == null || !battle.isActive()) {
+            event.setCancelled(true);
+            return;
+        }
+        Block b = event.getBlock();
+        battle.recordPlayerBlock(b.getX(), b.getY(), b.getZ());
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onBucketFill(org.bukkit.event.player.PlayerBucketFillEvent event) {
+        String worldName = event.getBlock().getWorld().getName();
+        if (worldName.startsWith("arena_template_")) return;
+        if (!worldName.startsWith("arena_instance_")) return;
+
+        BattleInstance battle = lookupBattle(worldName);
+        if (battle == null || !battle.isActive()) {
+            event.setCancelled(true);
+            return;
+        }
+        Block b = event.getBlock();
+        if (battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
+            battle.removePlayerBlock(b.getX(), b.getY(), b.getZ());
+        } else {
+            event.setCancelled(true);
+        }
+    }
+
+    // Explosions (TNT, end crystals, ...) must not destroy original map
+    // blocks — only player-placed ones may break.
+    @EventHandler
+    public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
+        filterExplodedBlocks(event.getLocation().getWorld().getName(), event.blockList());
+    }
+
+    @EventHandler
+    public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
+        filterExplodedBlocks(event.getBlock().getWorld().getName(), event.blockList());
+    }
+
+    private void filterExplodedBlocks(String worldName, java.util.List<Block> blocks) {
+        if (!worldName.startsWith("arena_instance_")) return;
+        BattleInstance battle = lookupBattle(worldName);
+        if (battle == null) {
+            blocks.clear();
+            return;
+        }
+        blocks.removeIf(b -> {
+            if (battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
+                battle.removePlayerBlock(b.getX(), b.getY(), b.getZ());
+                return false;
+            }
+            return true;
+        });
+    }
+
     private BattleInstance lookupBattle(String worldName) {
         DuelInstance d = plugin.getDuelManager().getDuelByWorld(worldName);
         if (d != null) return d;

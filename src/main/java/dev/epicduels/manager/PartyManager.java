@@ -1,6 +1,7 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Party;
 import dev.epicduels.model.PartyInvite;
 import net.kyori.adventure.text.Component;
@@ -43,10 +44,10 @@ public class PartyManager {
                             Player receiver = Bukkit.getPlayer(inv.getReceiver());
                             Player sender = Bukkit.getPlayer(inv.getSender());
                             if (receiver != null) {
-                                receiver.sendMessage(Component.text("A party invite expired.", NamedTextColor.GRAY));
+                                Messages.send(receiver, "party.invite-expired-receiver");
                             }
                             if (sender != null) {
-                                sender.sendMessage(Component.text("Your party invite expired.", NamedTextColor.GRAY));
+                                Messages.send(sender, "party.invite-expired-sender");
                             }
                         }
                     }
@@ -57,13 +58,13 @@ public class PartyManager {
 
     public Party createParty(Player owner) {
         if (playerToParty.containsKey(owner.getUniqueId())) {
-            owner.sendMessage(Component.text("You are already in a party!", NamedTextColor.RED));
+            Messages.send(owner, "party.already-in-party-create");
             return null;
         }
         Party party = new Party(owner.getUniqueId());
         parties.put(party.getId(), party);
         playerToParty.put(owner.getUniqueId(), party.getId());
-        owner.sendMessage(Component.text("Party created! Invite players with /party invite <player>.", NamedTextColor.GREEN));
+        Messages.send(owner, "party.created");
         owner.playSound(owner.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.6f, 1.4f);
         return party;
     }
@@ -84,27 +85,27 @@ public class PartyManager {
     public boolean invitePlayer(Player owner, Player target) {
         Party party = getPartyOf(owner.getUniqueId());
         if (party == null) {
-            owner.sendMessage(Component.text("You are not in a party. Use /party create first.", NamedTextColor.RED));
+            Messages.send(owner, "party.not-in-party-create-first");
             return false;
         }
         if (!party.isOwner(owner.getUniqueId())) {
-            owner.sendMessage(Component.text("Only the party owner can invite players.", NamedTextColor.RED));
+            Messages.send(owner, "party.owner-only-invite");
             return false;
         }
         if (target.equals(owner)) {
-            owner.sendMessage(Component.text("You cannot invite yourself.", NamedTextColor.RED));
+            Messages.send(owner, "party.invite-self");
             return false;
         }
         if (party.contains(target.getUniqueId())) {
-            owner.sendMessage(Component.text(target.getName() + " is already in your party.", NamedTextColor.RED));
+            Messages.send(owner, "party.already-in-your-party", Messages.unparsed("player", target.getName()));
             return false;
         }
         if (party.isFull()) {
-            owner.sendMessage(Component.text("Your party is full (max " + Party.MAX_SIZE + ").", NamedTextColor.RED));
+            Messages.send(owner, "party.party-full-own", Messages.unparsed("max", Party.MAX_SIZE));
             return false;
         }
         if (isInParty(target.getUniqueId())) {
-            owner.sendMessage(Component.text(target.getName() + " is already in another party.", NamedTextColor.RED));
+            Messages.send(owner, "party.target-in-other-party", Messages.unparsed("player", target.getName()));
             return false;
         }
 
@@ -112,19 +113,14 @@ public class PartyManager {
         incomingInvites.computeIfAbsent(target.getUniqueId(), k -> new ConcurrentHashMap<>())
                 .put(owner.getUniqueId(), invite);
 
-        owner.sendMessage(Component.text("Invited " + target.getName() + " to your party.", NamedTextColor.GREEN));
+        Messages.send(owner, "party.invited", Messages.unparsed("player", target.getName()));
 
         target.sendMessage(Component.empty());
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
-        target.sendMessage(Component.text(owner.getName(), NamedTextColor.YELLOW)
-                .append(Component.text(" invited you to their party!", NamedTextColor.GREEN)));
-        target.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN)
-                .clickEvent(ClickEvent.runCommand("/party accept " + owner.getName()))
-                .append(Component.text("  "))
-                .append(Component.text("[DENY]", NamedTextColor.RED)
-                        .clickEvent(ClickEvent.runCommand("/party deny " + owner.getName()))));
-        target.sendMessage(Component.text("Expires in 30 seconds.", NamedTextColor.GRAY));
-        target.sendMessage(Component.text("=========================", NamedTextColor.GOLD));
+        Messages.send(target, "general.separator");
+        Messages.send(target, "party.invite-received", Messages.unparsed("player", owner.getName()));
+        target.sendMessage(Messages.format("party.invite-accept-deny", Map.of("player", owner.getName())));
+        Messages.send(target, "party.invite-expires");
+        Messages.send(target, "general.separator");
         target.sendMessage(Component.empty());
         target.playSound(target.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
         return true;
@@ -133,7 +129,7 @@ public class PartyManager {
     public boolean acceptInvite(Player player, UUID fromSenderOrNull) {
         Map<UUID, PartyInvite> map = incomingInvites.get(player.getUniqueId());
         if (map == null || map.isEmpty()) {
-            player.sendMessage(Component.text("You have no pending party invites.", NamedTextColor.RED));
+            Messages.send(player, "party.no-invites");
             return false;
         }
         PartyInvite invite;
@@ -143,24 +139,24 @@ public class PartyManager {
             invite = map.values().iterator().next();
             map.remove(invite.getSender());
         } else {
-            player.sendMessage(Component.text("You have multiple invites. Use /party accept <player>.", NamedTextColor.YELLOW));
+            Messages.send(player, "party.multiple-invites-accept");
             return false;
         }
         if (invite == null || invite.isExpired()) {
-            player.sendMessage(Component.text("That invite has expired or does not exist.", NamedTextColor.RED));
+            Messages.send(player, "party.invite-gone");
             return false;
         }
         if (isInParty(player.getUniqueId())) {
-            player.sendMessage(Component.text("You are already in a party.", NamedTextColor.RED));
+            Messages.send(player, "party.already-in-party");
             return false;
         }
         Party party = parties.get(invite.getPartyId());
         if (party == null) {
-            player.sendMessage(Component.text("That party no longer exists.", NamedTextColor.RED));
+            Messages.send(player, "party.party-gone");
             return false;
         }
         if (party.isFull()) {
-            player.sendMessage(Component.text("That party is full.", NamedTextColor.RED));
+            Messages.send(player, "party.party-full");
             return false;
         }
         party.addMember(player.getUniqueId());
@@ -168,14 +164,14 @@ public class PartyManager {
         // Drop other pending invites for this player (joined a party)
         map.clear();
 
-        party.messageAll(Component.text(player.getName() + " joined the party!", NamedTextColor.GREEN));
+        party.messageAll(Messages.get("party.joined", Messages.unparsed("player", player.getName())));
         return true;
     }
 
     public boolean denyInvite(Player player, UUID fromSenderOrNull) {
         Map<UUID, PartyInvite> map = incomingInvites.get(player.getUniqueId());
         if (map == null || map.isEmpty()) {
-            player.sendMessage(Component.text("You have no pending party invites.", NamedTextColor.RED));
+            Messages.send(player, "party.no-invites");
             return false;
         }
         PartyInvite invite;
@@ -185,25 +181,29 @@ public class PartyManager {
             invite = map.values().iterator().next();
             map.remove(invite.getSender());
         } else {
-            player.sendMessage(Component.text("You have multiple invites. Use /party deny <player>.", NamedTextColor.YELLOW));
+            Messages.send(player, "party.multiple-invites-deny");
             return false;
         }
         if (invite == null) {
-            player.sendMessage(Component.text("That invite does not exist.", NamedTextColor.RED));
+            Messages.send(player, "party.invite-not-exist");
+            return false;
+        }
+        if (invite.isExpired()) {
+            Messages.send(player, "party.invite-already-expired");
             return false;
         }
         Player sender = Bukkit.getPlayer(invite.getSender());
         if (sender != null) {
-            sender.sendMessage(Component.text(player.getName() + " denied your party invite.", NamedTextColor.RED));
+            Messages.send(sender, "party.invite-denied-sender", Messages.unparsed("player", player.getName()));
         }
-        player.sendMessage(Component.text("Invite denied.", NamedTextColor.YELLOW));
+        Messages.send(player, "party.invite-denied");
         return true;
     }
 
     public boolean leaveParty(Player player) {
         Party party = getPartyOf(player.getUniqueId());
         if (party == null) {
-            player.sendMessage(Component.text("You are not in a party.", NamedTextColor.RED));
+            Messages.send(player, "party.not-in-party");
             return false;
         }
         return removeFromParty(party, player.getUniqueId(), false);
@@ -212,14 +212,14 @@ public class PartyManager {
     public boolean disbandParty(Player owner) {
         Party party = getPartyOf(owner.getUniqueId());
         if (party == null) {
-            owner.sendMessage(Component.text("You are not in a party.", NamedTextColor.RED));
+            Messages.send(owner, "party.not-in-party");
             return false;
         }
         if (!party.isOwner(owner.getUniqueId())) {
-            owner.sendMessage(Component.text("Only the party owner can disband.", NamedTextColor.RED));
+            Messages.send(owner, "party.owner-only-disband");
             return false;
         }
-        disband(party, "Party disbanded by owner.");
+        disband(party, "party.disbanded-owner");
         return true;
     }
 
@@ -236,7 +236,7 @@ public class PartyManager {
 
         if (party.size() < Party.MIN_SIZE && party.size() > 0) {
             // Only one (or zero) member left -> disband
-            disband(party, "Party disbanded (not enough members).");
+            disband(party, "party.disbanded-members");
             return true;
         }
         if (party.size() == 0) {
@@ -250,20 +250,20 @@ public class PartyManager {
             party.setOwner(newOwner);
             Player p = Bukkit.getPlayer(newOwner);
             if (p != null) {
-                p.sendMessage(Component.text("You are now the party owner.", NamedTextColor.GOLD));
+                Messages.send(p, "party.new-owner");
             }
         }
 
         if (!silent) {
             Player leaver = Bukkit.getPlayer(playerId);
             String name = leaver != null ? leaver.getName() : playerId.toString().substring(0, 8);
-            party.messageAll(Component.text(name + " left the party.", NamedTextColor.YELLOW));
+            party.messageAll(Messages.get("party.left", Messages.unparsed("player", name)));
         }
         return true;
     }
 
-    private void disband(Party party, String reason) {
-        party.messageAll(Component.text(reason, NamedTextColor.GRAY));
+    private void disband(Party party, String reasonKey) {
+        party.messageAll(Messages.get(reasonKey));
         for (UUID member : party.getMembers()) {
             playerToParty.remove(member);
         }

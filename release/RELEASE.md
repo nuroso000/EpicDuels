@@ -2,6 +2,251 @@
 
 ---
 
+## v3.0.0 — Gameplay Update: Rounds, Rematch, Kit Editor, Spectating, Localization & More
+
+**Date:** July 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+The biggest EpicDuels release so far: match clocks with draws, Best-of-N
+rounds, rematches, no-kit duels, a per-player Kit Editor, a live spectate
+browser, full localization (English/German), PlaceholderAPI support, per-
+feature config toggles and a rewrite of the GUI internals.
+
+### Major Feature — Match Time Limit & Draws
+
+Duels can no longer run forever. A configurable clock starts when the
+"FIGHT!" countdown ends and is shown as an action-bar countdown (gray →
+yellow → red for the last 60/30 seconds).
+
+- **1v1 & team duels:** on time-up the match ends in a **draw** — no win or
+  loss is recorded, everyone is returned to the lobby.
+- **Tournament matches:** a bracket always needs a winner. Configurable
+  resolution: one **sudden-death extension** (default 60 s) and, if still
+  undecided, a **coin flip** — or a coin flip immediately.
+- **Best-of-N matches:** the current round score decides first; only a tied
+  score becomes a draw.
+
+```yaml
+duel:
+  time-limit-seconds: 300      # 0 = no limit
+  tournament-draw: "sudden-death"   # or "coin-flip"
+  sudden-death-seconds: 60
+```
+
+### Major Feature — Best of 1 / 3 / 5
+
+The challenge flow gains a **rounds selection** step (player → kit → rounds
+→ map). In Bo3/Bo5 matches:
+
+- Rounds **reuse the same arena instance** — no expensive world re-copy.
+  Blocks placed by players are removed between rounds (original map blocks
+  are untouched).
+- Between rounds: 3-second break with score title, full heal, kit re-apply,
+  teleport back to spawns, and a fresh countdown.
+- Score is shown as titles ("2:1 — X won round 3!") and chat
+  ("Round 4 — 2:1"); the match clock pauses during breaks and restarts per
+  round.
+- Deaths mid-match respawn players at their arena spawn instead of the
+  lobby.
+
+### Major Feature — Rematch
+
+After every regular duel (win **or** draw — tournament matches excluded)
+both players receive a clickable **`[REMATCH]`** message, valid for 30
+seconds. Both click (or run `/duel rematch`) → a new duel with the same
+kit, arena, and best-of mode starts. Offers are cancelled when a player
+disconnects.
+
+### Major Feature — Own Inventory (No-Kit) Duels
+
+The kit selection now offers **"Own Inventory"**: both fighters keep the
+items they are carrying instead of receiving a kit.
+
+- Inventories are saved to `plugins/EpicDuels/inventories/<uuid>.yml` when
+  the duel starts and **restored afterwards** — durability, consumed
+  potions, and used items all come back.
+- **Crash- and disconnect-safe:** leftover backups are restored on the
+  player's next join.
+- Best-of-N round resets refill from the backup; rematches keep the
+  own-inventory mode.
+- Can be disabled with `features.own-inventory-duels: false` — e.g. on
+  dedicated duel servers where players own no items anyway.
+
+### Major Feature — Kit Editor (per-player kit layouts)
+
+Every player can personalize the item layout of **any kit** — hotbar order,
+inventory slots, armor and offhand — just for themselves:
+
+- **`/duel kits [kit]`** or the new **Kit Editor** entry (anvil) in the main
+  menu opens a paginated kit list; each kit shows whether a personal layout
+  exists.
+- The customize GUI mirrors the admin kit editor (slots 0–35 inventory with
+  row 1 = hotbar, 36–39 armor, 40 offhand) with info / **Reset to Default** /
+  **Save Layout** buttons.
+- **Rearrange-only, cheat-proof:** saving validates that the layout contains
+  *exactly* the base kit's items (type, meta and amounts as a multiset) and
+  that armor slots only hold matching pieces — nothing can be added, removed
+  or modified. The GUI itself blocks every dupe vector (shift-clicks, hotbar
+  swaps, collect-to-cursor, drags into the player inventory, leftover cursor
+  items on close).
+- Layouts are stored per player in `playerkits.yml` and applied automatically
+  in 1v1 challenges, matchmaking, best-of-N round resets, team duels and
+  tournaments. If an admin edits the base kit, stale layouts silently fall
+  back to the default.
+- Toggle: `features.kit-editor`.
+
+### Major Feature — Spectate GUI
+
+`/duel spectate` without arguments (and a new Ender-Eye entry in the main
+menu) opens a **live browser of all running 1v1 duels**: one player head per
+duel ("A vs B") with kit, map, current round and live match duration in the
+lore. One click starts spectating — the duel is re-validated at click time in
+case it ended while browsing. `/duel spectate <player>` still works as
+before, and running the command while spectating exits as usual.
+
+### Major Feature — Localization (English & German)
+
+Every player-facing message — chat, action bars, titles and the clickable
+`[ACCEPT]`/`[REMATCH]`/`[CONFIRM]` buttons, ~290 keys in total — now lives in
+editable **MiniMessage** language files:
+
+```yaml
+language: en   # en | de
+```
+
+- Shipped files: `plugins/EpicDuels/lang/messages_en.yml` and
+  `messages_de.yml` — edit any wording or copy one to create a new language.
+- Missing keys fall back to the built-in English defaults, so partially
+  translated files never break.
+- Player names are inserted tag-escaped — chat formatting cannot be injected
+  through names.
+- `/duel reload` reloads the language files too.
+
+### Major Feature — PlaceholderAPI Support
+
+With PlaceholderAPI installed (optional `softdepend` — the plugin still has
+zero required dependencies), EpicDuels registers:
+
+| Placeholder | Value |
+|---|---|
+| `%epicduels_wins%` / `%epicduels_losses%` | Total wins / losses |
+| `%epicduels_winrate%` | Win rate percentage (e.g. `62.5`) |
+| `%epicduels_score%` | Leaderboard score (`wins² / (wins + losses)`) |
+| `%epicduels_in_duel%` | `true` while in a duel, team duel or tournament |
+
+### Technical — GUI Internals Rewritten (InventoryHolder + PDC)
+
+Plugin menus used to be recognized by their window title, and clicks were
+resolved by parsing item display names — fragile and collision-prone. Now:
+
+- Every menu carries a custom `InventoryHolder` (`MenuHolder` with menu type,
+  kit context and page); titles are purely cosmetic.
+- Buttons carry `PersistentDataContainer` keys (`epicduels:kit/arena/player/
+  action`) that click handlers read directly. Kit items inside the two
+  editable GUIs stay untagged so nothing leaks into saved kits.
+- Fixes along the way: no more title collisions with other plugins' GUIs (or
+  kits named like buttons), clicks in the player's own inventory can no
+  longer trigger menu actions, the arena list's pagination works, and drags
+  onto the admin kit editor's control row are blocked.
+
+### New Commands
+
+| Command | Alias | Description | Permission |
+|---|---|---|---|
+| `/duel forfeit` | `/d ff`, `/d leave` | Give up the current match (clickable 10 s confirmation; counts as a loss) | `epicduels.duel` |
+| `/duel rematch` | | Accept a pending rematch offer | `epicduels.duel` |
+| `/duel kits [kit]` | `/d editkit` | Personalize kit layouts (Kit Editor) | `epicduels.duel` |
+| `/duel spectate` | `/d spec` | Without a player: open the live-duels spectate browser | `epicduels.spectate` |
+| `/duel toggle` | | Enable/disable incoming duel requests (persistent; hidden from the challenge menu while disabled) | `epicduels.duel` |
+| `/duel reload` | | Reload `config.yml` and the language files at runtime | `epicduels.admin` |
+
+### New Config Options
+
+| Option | Default | Description |
+|---|---|---|
+| `language` | `en` | Message language (`en` / `de`), files in `lang/` (MiniMessage, freely editable) |
+| `duel.time-limit-seconds` | `300` | Max match length; 0 disables |
+| `duel.tournament-draw` | `sudden-death` | Tournament time-up resolution (`sudden-death` / `coin-flip`) |
+| `duel.sudden-death-seconds` | `60` | Length of the sudden-death extension |
+| `duel.countdown-seconds` | `5` | Pre-fight countdown length (0–60, 0 = instant start) |
+| `duel.broadcast-results` | `true` | `false` = duel results go to the two fighters only, not server-wide |
+| `lobby.handle-join` | `true` | Join-time inventory wipe + lobby teleport (disable when running alongside other gameplay) |
+| `features.*` | `true` | Individual on/off switch for every feature: `challenges`, `matchmaking`, `spectating`, `rematch`, `forfeit`, `best-of-n`, `own-inventory-duels`, `kit-editor`, `parties`, `team-duels`, `tournaments`, `leaderboards`. Disabled features vanish from the GUIs and their commands answer "This feature is disabled on this server." (replaces the early-3.0.0 key `duel.allow-own-inventory`, which is still honored) |
+
+### Bug Fixes
+
+**Critical**
+
+- **Duel-state guards** — Players already in a duel, team duel, or
+  tournament could be pulled into a second match (via accept, queue, or
+  challenge), corrupting both matches. Duel start, queue join, and
+  challenge flows now all check a central `isBusy()` state.
+- **Concurrent duel requests** — A second incoming challenge silently
+  overwrote the first. Requests are now tracked per sender, `/duel accept
+  <player>` / `/duel deny <player>` disambiguate, and the GUI lists all
+  pending requests.
+- **Stats thread safety** — The remote stats fetch callback (Supabase /
+  Firebase) mutated the stats map from an async thread, racing the main
+  thread. It now hops back to the main thread first.
+
+**Medium**
+
+- **Projectile PvP bypass** — Lobby PvP protection now also blocks arrows,
+  snowballs, and other projectiles (previously only melee was cancelled).
+- **Arena-exit exploit** — Teleporting out of the arena world (e.g. via
+  another plugin's `/spawn`) left the duel running forever. Leaving the
+  instance world now counts as a forfeit.
+- **Stale template copies** — The template world is saved before being
+  copied, so recent arena edits are always included in new duels.
+- **Respawn flow** — Dead team-duel players respawn inside the arena as
+  spectators instead of flickering through the lobby; admins in template
+  worlds keep their default respawn.
+
+**Minor**
+
+- GUI state (challenge/party flow, random-map animation) is cleaned up
+  when a plugin menu is closed — no more stuck animations or stale flows.
+- Kit edit GUI: unused slots 41–52 are blocked so items placed there are
+  no longer silently lost on save.
+- `/duel queue <kit>` now switches queues instead of only leaving.
+- Kit serialization switched to Paper's version-upgrade-safe
+  `ItemStack.serializeItemsAsBytes` (legacy kits.yml still loads).
+- `plugin.yml`: proper description/usage metadata and a new
+  `epicduels.spectate` permission.
+
+### New Files
+
+| File | Purpose |
+|---|---|
+| `RematchManager.java` | Rematch offers, acceptance, and duel restart |
+| `InventoryBackupManager.java` | Disk-backed inventory save/restore for no-kit duels |
+| `PlayerKitManager.java` / `KitLayout.java` | Per-player kit layouts (Kit Editor) incl. validation |
+| `i18n/Messages.java` | Central MiniMessage-based message access with fallback chain |
+| `gui/MenuHolder.java` / `MenuType.java` / `MenuKeys.java` | Holder/PDC-based GUI identification |
+| `hook/EpicDuelsExpansion.java` | PlaceholderAPI expansion (registered only when PAPI is present) |
+| `toggles.yml` | Players with duel requests disabled |
+| `playerkits.yml` | Personal kit layouts per player |
+| `lang/messages_en.yml` / `lang/messages_de.yml` | Editable message files (extracted on first start) |
+| `inventories/` | Per-player inventory backups (deleted after restore) |
+
+### Upgrade Notes
+
+- Replace `EpicDuels-2.0.0.jar` with `EpicDuels-3.0.0.jar`. All existing
+  `.yml` files remain fully compatible.
+- New config options are optional — defaults apply if missing. Add the
+  `duel:` section to customize time limits, `language: de` for German
+  messages, or `features.*` to disable individual features.
+- On first start the plugin extracts `lang/messages_en.yml` and
+  `lang/messages_de.yml` into its data folder — edit them freely, missing
+  keys fall back to the built-in English texts.
+- PlaceholderAPI is **optional**: without it nothing changes; with it the
+  `%epicduels_*%` placeholders register automatically.
+- Servers running EpicDuels **alongside other gameplay** should set
+  `lobby.handle-join: false` to stop the join-time inventory wipe.
+
+---
+
 ## v2.0.0 — Party System, Lobby Hardening & Stability
 
 **Date:** May 2026
@@ -498,7 +743,7 @@ No external libraries required — uses Java 21's built-in `HttpClient`.
 
 ---
 
-## v1.0.0 — Initial Release
+## Initial Release (pre-0.2.0)
 
 **Date:** early 2026
 

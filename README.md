@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.1+-green">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1--1.21.11-green">
   <img src="https://img.shields.io/badge/Java-21-orange">
   <a href="https://modrinth.com/plugin/epicduels">
     <img src="https://img.shields.io/badge/Modrinth-EpicDuels-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth">
@@ -14,306 +14,123 @@
   </a>
 </p>
 
-A full-featured Duels plugin for Paper 1.21.1 servers — with 1v1 challenges, **party-based team duels (2v2/3v3/4v4)**, **single-elimination tournaments**, leaderboards, in-world holograms, and multi-server stats via Supabase or Firebase.
+**The complete duels experience for Paper 1.21.1-1.21.11 in a single, dependency-free jar.**
 
-> **v2.0.0 — Party Update**: Group up with friends and play team duels or run a tournament bracket through your party. See [Party System](#party-system) below.
+1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
+
+Why server owners pick it:
+
+- **Five-minute setup, GUI-first UX.** One lobby point, one arena, one kit — after that players do everything through `/duel`. No player ever needs a command list.
+- **Adapts to your server concept.** Every feature has a `features.*` toggle, duel results can be broadcast or kept private, and even the join-time lobby handling can be turned off — so EpicDuels works as a dedicated duels server *or* as one mode among many.
+- **Engineered against exploits.** Isolated per-duel world copies, block tracking with per-round resets, rearrange-only kit personalization, crash-safe inventory backups for no-kit duels, and GUI identification via `InventoryHolder`/PDC instead of fragile title matching.
+- **Localized.** All ~290 player-facing messages live in MiniMessage language files (English and German included, `language:` config key) — edit any wording or add your own language, reloadable at runtime.
+- **Integrates, but never requires.** PlaceholderAPI placeholders, Supabase/Firebase stats sync, built-in holograms — all optional, none needed.
 
 ---
 
-## Features
+## Feature overview
 
-- **Party System (NEW in v2.0)** — Create a party (2–8 players), invite friends, and choose between **Team Duels** (2v2 / 3v3 / 4v4 with friendly fire disabled) or a **Single-Elimination Tournament** (1v1 bracket, eliminated players auto-spectate live matches). Tournament winners are announced only inside the party, not server-wide.
-- **Arena System** — Create void-world arenas with a simple setup wizard. Each duel runs in its own isolated world copy that gets deleted after the match.
-- **Kit System** — Save, edit, rename, and preview kits with full armor, offhand, and inventory support. Admins can copy any saved kit directly into their own inventory for testing.
-- **Duel Challenges** — Challenge players through an interactive GUI (pick player → kit → map) or via commands. Requests expire after 30 seconds with clickable Accept/Deny buttons.
-- **Queue / Matchmaking** — Join a kit-based queue from the menu or via command. When two players queue for the same kit they are instantly matched and teleported to a random arena. Action bar shows live queue time.
-- **Leaderboards & Holograms** — `/duel leaderboard wins` and `/duel leaderboard score` show the top 10 players in chat. Admins can place persistent in-world holograms with `/duel leaderboard sethologram <wins|score>` — no external plugin required.
-- **Spectate** — Watch any active duel in Spectator mode with `/duel spectate <player>`. Automatically returned to lobby when the duel ends.
-- **Multi-Server Stats** — Sync win/loss stats across multiple servers using **Supabase** (PostgreSQL) or **Firebase** Realtime Database. Local `stats.yml` always acts as a fallback cache.
-- **Lobby-Only Protections** — 15 toggleable rules (block break/place/interact, fall/void damage, weather, item pickup/drop, hunger, mob spawning, fire spread, block burning, death messages, leaf decay, inventory movement) keep the lobby pristine while arenas stay fully playable.
-- **GUI Menus** — Clean 3-icon main menu (Duels / Stats / Matchmaking) with separate sub-menus. All lists support pagination (28 items per page) for many kits and arenas.
-- **Random Map Animation** — Selecting "Random Map" triggers a slot-machine-style animation cycling through arena icons before landing on the chosen map.
-- **Duel Lifecycle** — Async world copy, 5-second countdown with Title API, freeze during countdown, automatic winner detection on death or disconnect, instant respawn on loss, 3-second victory screen, full cleanup.
-- **Block Protection** — Lobby locked for non-admins. Template worlds open for admins. Instance worlds allow player-placed blocks to be broken but protect original map blocks.
-- **Custom Icons** — Set display icons for arenas and kits using items held in hand.
-- **Void World Generator** — Custom `ChunkGenerator` for empty worlds with plains biome.
-
-## Requirements
-
-- Paper 1.21.1+
-- Java 21
+| Area | What you get |
+|---|---|
+| **1v1 duels** | GUI challenge flow (player → kit → rounds → map), clickable accept/deny, match clock with draws, sudden death for tournament matches, forfeit with confirmation, rematch offers |
+| **Matchmaking** | Per-kit queues, instant pairing, random arena, live queue time on the action bar |
+| **Kit Editor** | Every player rearranges any kit's hotbar/armor/offhand for themselves (`/duel kits`) — validated as a pure reorder, applied in all modes |
+| **Parties** | 2–8 players, invites, team duels (2v2/3v3/4v4, shuffled teams, no friendly fire) and single-elimination tournaments with auto-spectating eliminated players |
+| **Spectating** | `/duel spectate` opens a browser of all live duels (players, kit, map, duration); one click to watch, automatic return to lobby |
+| **Stats** | Wins/losses/win rate + score (`wins² / (wins+losses)`), chat top-10, in-world ArmorStand holograms, optional Supabase/Firebase sync |
+| **Arenas** | Void-world builder with creative mode, template + per-duel instance copies, original-block protection, custom icons |
+| **Lobby** | Adventure mode, 15 toggleable protection rules, per-admin bypass, optional PvP block (projectile-proof) |
 
 ## Installation
 
-1. Download `EpicDuels-2.0.0.jar` from the `release/` folder or build from source
-2. Place it in your server's `plugins/` folder
-3. Restart the server
-4. (Optional) Add to `bukkit.yml` for true void lobby world:
-   ```yaml
-   worlds:
-     world:
-       generator: EpicDuels
-   ```
+1. Drop `EpicDuels-3.x.jar` into `plugins/` (Paper 1.21.1-1.21.11, Java 21) and restart.
+2. `/duel setlobby` — set the lobby spawn.
+3. `/duel arena create map1` → build → `/duel arena setspawn1` / `setspawn2` → `/duel arena save`.
+4. Equip gear → `/duel kit create pvp`.
+5. Players take it from here with `/duel`.
 
-## Commands
-
-### Menu Navigation
-
-| Command | Alias | Description | Permission |
-|---|---|---|---|
-| `/duel` | `/d` | Open main menu (Duels / Stats / Matchmaking) | — |
-| `/duel duels` | `/d duels` | Open Duels sub-menu (player selection) | `epicduels.duel` |
-| `/duel stats` | `/d stats` | Open Stats sub-menu (your profile) | `epicduels.stats` |
-| `/duel matchmaking` | `/d mm` | Open Matchmaking sub-menu (queue) | `epicduels.duel` |
-
-### Player Commands
-
-| Command | Alias | Description | Permission |
-|---|---|---|---|
-| `/duel challenge <player>` | `/d c <player>` | Challenge a player (opens GUI flow) | `epicduels.duel` |
-| `/duel accept [player]` | | Accept a duel request | `epicduels.duel` |
-| `/duel deny [player]` | | Deny a duel request | `epicduels.duel` |
-| `/duel cancel` | | Cancel your outgoing request | `epicduels.duel` |
-| `/duel stats <player>` | | View another player's stats in chat | `epicduels.stats` |
-| `/duel queue <kit>` | `/d q <kit>` | Join matchmaking queue for a kit | `epicduels.duel` |
-| `/duel queue leave` | `/d q leave` | Leave the matchmaking queue | `epicduels.duel` |
-| `/duel spectate <player>` | `/d spec <player>` | Spectate an active duel | `epicduels.duel` |
-| `/duel leaderboard wins` | `/d lb wins` | Show top 10 players by wins | `epicduels.stats` |
-| `/duel leaderboard score` | `/d lb score` | Show top 10 players by score | `epicduels.stats` |
-
-### Party Commands
-
-| Command | Alias | Description | Permission |
-|---|---|---|---|
-| `/party create` | `/p create` | Create a new party (you become owner) | `epicduels.party` |
-| `/party invite <player>` | `/p invite <player>` | Invite a player (auto-creates party if needed) | `epicduels.party` |
-| `/party accept [player]` | `/p accept [player]` | Accept a pending invite | `epicduels.party` |
-| `/party deny [player]` | `/p deny [player]` | Deny a pending invite | `epicduels.party` |
-| `/party leave` | `/p leave` | Leave your party (owner role transfers) | `epicduels.party` |
-| `/party disband` | `/p disband` | Disband your party (owner only) | `epicduels.party` |
-| `/party list` | `/p list` | Show party members | `epicduels.party` |
-| `/party start` | `/p start` | Open the mode-select GUI (owner only) | `epicduels.party` |
-
-### Admin Commands
-
-| Command | Description | Permission |
-|---|---|---|
-| `/duel arena create <name>` | Create a new arena (void world) | `epicduels.admin` |
-| `/duel arena setspawn1` | Set spawn point 1 (stand in arena world) | `epicduels.admin` |
-| `/duel arena setspawn2` | Set spawn point 2 (stand in arena world) | `epicduels.admin` |
-| `/duel arena save` | Save arena and mark as ready | `epicduels.admin` |
-| `/duel arena delete <name>` | Delete an arena | `epicduels.admin` |
-| `/duel arena rename <old> <new>` | Rename an arena (also renames its template world) | `epicduels.admin` |
-| `/duel arena list` | List all arenas with status | `epicduels.admin` |
-| `/duel arena tp <name>` | Teleport to arena template world | `epicduels.admin` |
-| `/duel arena seticon <name>` | Set arena icon (hold item in hand) | `epicduels.admin` |
-| `/duel kit create <name>` | Save current inventory as a kit | `epicduels.admin` |
-| `/duel kit delete <name>` | Delete a kit | `epicduels.admin` |
-| `/duel kit rename <old> <new>` | Rename a kit | `epicduels.admin` |
-| `/duel kit give <name>` | Copy a kit into your own inventory | `epicduels.admin` |
-| `/duel kit list` | List all kits | `epicduels.admin` |
-| `/duel kit edit <name>` | Edit kit in chest GUI | `epicduels.admin` |
-| `/duel kit preview <name>` | Preview kit contents (read-only) | `epicduels.admin` |
-| `/duel kit seticon <name>` | Set kit icon (hold item in hand) | `epicduels.admin` |
-| `/duel setlobby` | Set lobby spawn point | `epicduels.admin` |
-| `/duel leaderboard sethologram <wins\|score>` | Place a leaderboard hologram at your location | `epicduels.admin` |
-| `/duel leaderboard removehologram <wins\|score>` | Remove a leaderboard hologram | `epicduels.admin` |
-
->[!TIP]
->`/d` works as shorthand for `/duel`
-
-## Permissions
-
-| Permission | Description | Default |
-|---|---|---|
-| `epicduels.admin` | All admin commands (arena, kit, setlobby, seticon) | OP |
-| `epicduels.duel` | Challenge players, accept/deny duels, join queue | Everyone |
-| `epicduels.stats` | View stats | Everyone |
-| `epicduels.party` | Use party commands (create, invite, start, etc.) | Everyone |
-
-## Quick Start Guide
-
-1. **Set up lobby:** Stand where you want the lobby spawn and run `/duel setlobby`
-2. **Create an arena:** `/duel arena create myarena` — you'll be teleported into a void world in creative mode
-3. **Build your arena** and set spawn points: `/duel arena setspawn1` and `/duel arena setspawn2`
-4. **Save the arena:** `/duel arena save` — teleports you back to lobby
-5. **Create a kit:** Equip the gear you want, then `/duel kit create pvp`
-6. **Set icons (optional):** Hold an item and run `/duel arena seticon myarena` or `/duel kit seticon pvp`
-7. **Duel!** Open the menu with `/duel` — challenge a player, check your stats, or join the matchmaking queue
-
-## Party System
-
-Parties let 2–8 players group up to play together. The party owner picks the mode and configures it through GUI menus.
-
-### Creating & Inviting
-
-```text
-/party create                  # become party owner
-/party invite <player>         # send a 30-second invite (auto-creates a party if you don't have one yet)
-/party accept <player>         # accept an invite (player optional if only one)
-/party deny <player>           # deny an invite
-/party list                    # see members + owner
-/party leave                   # leave (owner role transfers to next member)
-/party disband                 # owner-only: dissolve the party
-```
-
-If the owner leaves, ownership transfers to the next member. Below 2 members the party auto-disbands.
-
-### Starting a Game
-
-When the owner runs `/party start`, a GUI opens with two modes:
-
-#### Team Duel (2v2 / 3v3 / 4v4)
-
-- The owner picks a team size (only options that fit the current party size are enabled).
-- Members are **shuffled** and split into two equal teams (Team A on `spawn1`, Team B on `spawn2`).
-- Per-player **spawn offsets** distribute teammates in a small circle around each spawn so they don't collide.
-- The owner then picks a **kit** that is applied to all players.
-- **Friendly fire is disabled** — you cannot damage your own teammates (also covers projectiles).
-- When a player dies, they auto-spectate the rest of the match. The last team standing wins.
-- Winners gain `+1 win`, losers `+1 loss` (per player) in the normal stats system.
-
-#### Tournament
-
-- Single-elimination 1v1 bracket built from all party members.
-- Odd player counts get **byes** in the first round (the bye player advances automatically).
-- Each match is a normal 1v1 duel using the existing `DuelManager` — same arena copy, countdown, and cleanup.
-- **Eliminated players are automatically teleported as spectators into another live tournament match**, switching to the next live match when their current one ends. They go to the lobby only when no live match remains.
-- The tournament winner is announced **only to party members** via chat + a victory title (no global broadcast).
-
-### Limits
-
-- Party size: **2 (min)** to **8 (max)** players.
-- Invites expire after 30 seconds.
-- Members in an active duel/tournament cannot start a new party game.
-
-## Multi-Server Stats
-
-Configure a remote stats backend in `config.yml`:
+Optional void lobby world (in `bukkit.yml`):
 
 ```yaml
-stats:
-  backend: "local"   # local | supabase | firebase
+worlds:
+  world:
+    generator: EpicDuels
 ```
 
-### Supabase
-1. Run in SQL editor:
-   ```sql
-   CREATE TABLE IF NOT EXISTS player_stats (
-     uuid   TEXT PRIMARY KEY,
-     wins   INTEGER NOT NULL DEFAULT 0,
-     losses INTEGER NOT NULL DEFAULT 0
-   );
-   ```
-2. Set `backend: "supabase"` and fill in `url` + `api-key` (from Settings → API).
+## Commands at a glance
 
-### Firebase
-1. Enable Realtime Database in your Firebase project.
-2. Set `backend: "firebase"` and fill in `database-url`. Optionally set `auth-token` (database secret) for authenticated writes.
-
-Stats are pushed async on every win/loss and at shutdown. `stats.yml` stays as a local fallback cache.
-
-## Leaderboards
-
-EpicDuels ships with a built-in leaderboard system — both in-chat commands and
-in-world holograms — that read directly from the same `StatsManager` used by
-the Stats GUI. Local and Supabase/Firebase-synced data are both supported.
-
-### Commands
-
-```text
-/duel leaderboard wins     # top 10 players by total wins
-/duel leaderboard score    # top 10 players by score
-```
-
-Aliases: `/duel lb`, `/duel top`.
-
-### Score Formula
-
-The score rewards both activity *and* consistency:
-
-```
-score = wins × winrate = wins² / (wins + losses)
-```
-
-Example: a player with **21 wins / 9 losses** (winrate 70%) has a score of
-`21² / 30 ≈ 14.7 ≈ 15`. Pure grinders with a low winrate score lower than
-players with fewer but more decisive wins.
-
-### Holograms
-
-Admins can place persistent in-world holograms without any external plugin:
-
-```text
-/duel leaderboard sethologram wins      # places at your head location
-/duel leaderboard sethologram score
-/duel leaderboard removehologram wins
-/duel leaderboard removehologram score
-```
-
-- Each hologram is a stack of invisible, marker, small ArmorStands tagged via
-  the PersistentDataContainer so the plugin cleans them up safely even after a
-  crash or reload.
-- Positions are stored in `leaderboards.yml`.
-- Holograms refresh every **10 seconds**, so data always stays fresh.
-- Top 3 ranks are gold / gray / red, ranks 4–10 are white. Each line shows
-  `#rank name — value`.
-
-## Lobby Protections
-
-All lobby-only protections can be toggled in `config.yml` under
-`lobby.protections.*`. Arena worlds are never affected. Defaults to `true`
-for every rule:
-
-```yaml
-lobby:
-  disable-pvp: true
-  protections:
-    block-break: true
-    block-place: true
-    block-interact: true
-    fall-damage: true
-    void-death: true
-    weather: true
-    item-pickup: true
-    item-drop: true
-    hunger: true
-    mob-spawning: true
-    fire-spread: true
-    block-burning: true
-    death-messages: true
-    leaf-decay: true
-    inventory-movement: true   # blocks moving items in your own inventory
-```
-
-## Data Files
-
-| File | Contents |
+| Command | Purpose |
 |---|---|
-| `config.yml` | Lobby spawn, PvP toggle, lobby protections, remote stats backend |
-| `arenas.yml` | Arena definitions, spawn points, and icons |
-| `kits.yml` | Kit inventories (Base64 encoded) and icons |
-| `stats.yml` | Player win/loss records (local cache) |
-| `leaderboards.yml` | Persistent leaderboard hologram positions |
+| `/duel` (`/d`) | Main menu — duels, spectate, stats, kit editor, matchmaking |
+| `/duel challenge <player>` | Challenge someone (GUI flow) |
+| `/duel queue <kit>` | Join/switch matchmaking queue (`leave` to exit) |
+| `/duel kits [kit]` | Personalize kit layouts (Kit Editor) |
+| `/duel spectate [player]` | Browse live duels or watch a specific player |
+| `/duel forfeit` · `/duel rematch` · `/duel toggle` | Give up, rematch, block requests |
+| `/duel stats [player]` · `/duel leaderboard <wins\|score>` | Stats and top-10 |
+| `/party create/invite/start …` | Party system (team duels & tournaments) |
+| `/duel arena …` · `/duel kit …` · `/duel setlobby` · `/duel reload` | Admin setup |
 
-## Building from Source
+Permissions: `epicduels.duel`, `epicduels.stats`, `epicduels.party`, `epicduels.spectate` (all default true) and `epicduels.admin` (OP). The full command/permission reference lives in [release/RELEASE.md](release/RELEASE.md).
+
+## Configuration highlights
+
+Everything lives in a fully documented `config.yml`, reloadable via `/duel reload`:
+
+```yaml
+language: en          # en | de — all messages in lang/messages_<code>.yml (MiniMessage)
+
+duel:
+  time-limit-seconds: 300      # match clock, 0 = off
+  tournament-draw: sudden-death
+  countdown-seconds: 5
+  broadcast-results: true      # false = results only to the fighters
+
+features:             # switch any feature off individually
+  challenges: true
+  matchmaking: true
+  spectating: true
+  rematch: true
+  kit-editor: true
+  parties: true
+  tournaments: true
+  # ... and more
+
+stats:
+  backend: local      # local | supabase | firebase (cross-server sync)
+```
+
+## PlaceholderAPI
+
+With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
+
+| Placeholder | Value |
+|---|---|
+| `%epicduels_wins%` / `%epicduels_losses%` | Total wins / losses |
+| `%epicduels_winrate%` | Win rate percentage (e.g. `62.5`) |
+| `%epicduels_score%` | Leaderboard score (`wins² / (wins+losses)`) |
+| `%epicduels_in_duel%` | `true` while in a duel, team duel or tournament |
+
+## Data files
+
+`config.yml`, `arenas.yml`, `kits.yml`, `playerkits.yml` (personal layouts), `stats.yml`, `leaderboards.yml`, `toggles.yml`, `lang/` (messages) and `inventories/` (own-inventory duel backups) — all created and managed automatically.
+
+## Building from source
 
 ```bash
-# Gradle (recommended)
-gradle clean build
-
-# Maven
-mvn clean package
+mvn clean package     # → target/EpicDuels.jar
+# or
+gradle clean build    # → build/libs/EpicDuels-3.0.0.jar
 ```
 
-Output JAR: `build/libs/EpicDuels-2.0.0.jar` (Gradle) or `target/EpicDuels.jar` (Maven)
+Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history and [release/RELEASE.md](release/RELEASE.md) for detailed release notes.
 
-## License & Usage
+<img alt="Star the EpicDuels repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
 
-This project is licensed under **CC BY-NC-SA 4.0**.
+## License & usage
 
-### Commercial Use Clarification
-To avoid confusion within the Minecraft community:
-* **Allowed:** You are permitted to use this plugin on any Minecraft server, including those that generate revenue (e.g., through ranks, donations, or webstores).
-* **Prohibited:** You are NOT allowed to sell the plugin itself, sell modified versions of the plugin, or include it in paid software bundles/modpacks without explicit permission.
-* **Open Source:** If you modify the code and redistribute it, you must keep the source code open and use this same license.
+Licensed under **CC BY-NC-SA 4.0**:
+
+- **Allowed:** Use on any server, including revenue-generating ones (ranks, donations, webstores).
+- **Prohibited:** Selling the plugin or modified versions, or bundling it in paid packs without permission.
+- **Share-alike:** Modified redistributions must stay open source under this license.

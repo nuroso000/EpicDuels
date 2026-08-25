@@ -215,6 +215,15 @@ public class ArenaManager {
     }
 
     public CompletableFuture<World> createInstanceWorld(Arena arena, String instanceWorldName) {
+        // Flush pending chunk changes to disk so the copy contains the latest
+        // template edits. Called from the main thread before the async copy.
+        // Note: the Bukkit API offers no way to force a full region-file
+        // flush, so a copy may very rarely miss the newest template edits.
+        World templateWorld = Bukkit.getWorld(arena.getWorldName());
+        if (templateWorld != null) {
+            templateWorld.save();
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             String templateWorldName = arena.getWorldName();
             String instanceName = instanceWorldName;
@@ -311,6 +320,15 @@ public class ArenaManager {
 
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                // Skip session.lock: while the template world is loaded, the
+                // server holds an exclusive OS-level lock on this file. On
+                // Windows, Files.copy() on a locked file throws a
+                // FileSystemException, aborting the whole copy. We delete any
+                // copied session.lock in the instance afterwards anyway, so
+                // it's simplest to just never copy it in the first place.
+                if (file.getFileName().toString().equals("session.lock")) {
+                    return FileVisitResult.CONTINUE;
+                }
                 Files.copy(file, target.resolve(source.relativize(file)), StandardCopyOption.REPLACE_EXISTING);
                 return FileVisitResult.CONTINUE;
             }

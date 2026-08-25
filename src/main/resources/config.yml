@@ -1,70 +1,494 @@
-# EpicDuels Configuration
+# ============================================================================
+#
+#   EpicDuels — Configuration
+#   Version 3.0.0  ·  Paper 1.21.1+  ·  Java 21
+#
+#   Documentation ... https://github.com/nuroso000/EpicDuels
+#   Release notes ... release/RELEASE.md
+#   Changelog ....... CHANGELOG.md
+#
+# ----------------------------------------------------------------------------
+#
+#   CONTENTS
+#
+#     0. Language ............. message language (en/de, lang/ folder)
+#     1. Lobby ................ spawn location, join handling, PvP
+#     2. Lobby protections .... 15 toggleable protection rules
+#     3. Duel settings ........ time limit, draws, sudden death,
+#                               countdown length, result broadcasts
+#     4. Feature toggles ...... switch every plugin feature on/off
+#                               individually (challenges, matchmaking,
+#                               rematch, parties, tournaments, ...)
+#     5. Stats backend ........ local / Supabase / Firebase sync
+#
+#   GENERAL NOTES
+#
+#   - Every option in this file has a safe default. If you delete an
+#     option (or run an old config), the built-in default applies.
+#   - Reload changes at runtime with /duel reload (epicduels.admin).
+#     Exception: switching the stats backend requires a full restart.
+#   - YAML is indentation-sensitive: use spaces, never tabs.
+#   - Some values (lobby coordinates) are written by the plugin itself
+#     when you run /duel setlobby — you rarely need to edit them by hand.
+#
+# ============================================================================
 
+
+# ============================================================================
+#   0. LANGUAGE
+# ============================================================================
+#
+# Language of all player-facing chat messages, action bars and titles.
+# Shipped languages: en (English), de (German/Deutsch).
+#
+# The message templates live in plugins/EpicDuels/lang/messages_<code>.yml
+# (MiniMessage format, https://docs.advntr.dev/minimessage/format.html) and
+# can be edited freely — missing keys fall back to the built-in English text.
+# Apply changes with /duel reload.
+
+language: en
+
+
+# ============================================================================
+#   1. LOBBY
+# ============================================================================
+#
+# The lobby is where players wait between duels. Every world that is NOT
+# an arena template ("arena_template_*") or an arena instance
+# ("arena_instance_*") counts as the lobby.
+#
 lobby:
+
+  # --------------------------------------------------------------------------
+  # Lobby spawn point
+  # --------------------------------------------------------------------------
+  # Where players are teleported: on join (if handle-join is true), after
+  # every duel, after spectating, and when escaping the void.
+  #
+  # Recommended: stand at the desired spot and run /duel setlobby —
+  # the plugin writes these values for you (including view direction).
+  #
+  # world ..... name of the lobby world folder (default world is "world")
+  # x/y/z ..... exact spawn coordinates (decimals allowed, e.g. 0.5)
+  # yaw ....... horizontal view angle: 0 = south, 90 = west,
+  #             180 = north, -90/270 = east
+  # pitch ..... vertical view angle: -90 = straight up, 0 = ahead,
+  #             90 = straight down
+  #
   world: "world"
   x: 0.0
   y: 100.0
   z: 0.0
   yaw: 0.0
   pitch: 0.0
+
+  # --------------------------------------------------------------------------
+  # Join handling
+  # --------------------------------------------------------------------------
+  # EpicDuels assumes a DEDICATED duels server by default. With
+  # handle-join: true, every player who joins the server is:
+  #
+  #   - stripped of their inventory and armor
+  #   - fully healed and fed
+  #   - put into Adventure mode
+  #   - teleported to the lobby spawn above
+  #
+  # Set this to FALSE if EpicDuels runs alongside other gameplay
+  # (survival, minigames, ...) and players must keep their items and
+  # location when joining.
+  #
+  # Note: the automatic restore of inventories from interrupted
+  # own-inventory duels (see features.own-inventory-duels) always runs
+  # on join, regardless of this setting — nobody loses items to a crash.
+  #
+  handle-join: true
+
+  # --------------------------------------------------------------------------
+  # Lobby PvP
+  # --------------------------------------------------------------------------
+  # true  = players can NOT hurt each other outside of duels
+  #         (melee AND projectiles like arrows or snowballs)
+  # false = free-for-all PvP in the lobby
+  #
+  # Players who are both inside the same active duel are never affected.
+  #
   disable-pvp: true
 
-  # ── Lobby protections ──────────────────────────────────
-  # These toggles apply only inside the lobby world (i.e.
-  # any world that is not an arena template or instance).
-  # Set to false to allow the behavior in the lobby.
+  # ==========================================================================
+  #   2. LOBBY PROTECTIONS
+  # ==========================================================================
+  #
+  # Fifteen independent protection rules. Each rule applies ONLY inside
+  # the lobby — arena templates and running duels are never affected.
+  #
+  #   true  = protection ACTIVE (the action is blocked/cancelled)
+  #   false = protection off   (vanilla behavior)
+  #
+  # Admin bypass: players with epicduels.admin can toggle ALL of these
+  # off for themselves only with /duel lobby off (and back on with
+  # /duel lobby on) — e.g. for building in the lobby. Other players
+  # keep full protection meanwhile.
+  #
   protections:
-    block-break: true          # Cancel block breaking (admins bypass)
-    block-place: true          # Cancel block placing (admins bypass)
-    block-interact: true       # Cancel right/left click on blocks (admins bypass)
-    fall-damage: true          # Cancel fall damage
-    void-death: true           # Cancel void damage and teleport to lobby spawn
-    weather: true              # Cancel weather changes (keep it sunny)
-    item-pickup: true          # Cancel item pickups
-    item-drop: true            # Cancel item drops
-    hunger: true               # Cancel food level decrease
-    mob-spawning: true         # Cancel natural mob spawns
-    fire-spread: true          # Cancel fire spread / ignite from spread/lava
-    block-burning: true        # Cancel block burning
-    death-messages: true       # Suppress death messages for lobby deaths
-    leaf-decay: true           # Cancel leaf decay
-    inventory-movement: true   # Cancel inventory clicks/drags when no plugin GUI is open
 
-# ── Stats Backend ──────────────────────────────────────────
-# Controls where player statistics are stored.
+    # --- Building -----------------------------------------------------------
+
+    # Cancel breaking blocks (players with epicduels.admin bypass).
+    block-break: true
+
+    # Cancel placing blocks (players with epicduels.admin bypass).
+    block-place: true
+
+    # Cancel left/right-clicking blocks — doors, buttons, chests,
+    # levers, pressure plates etc. (admins bypass).
+    block-interact: true
+
+    # --- Player safety ------------------------------------------------------
+
+    # Cancel fall damage. Useful for elytra courses, jump pads or
+    # simply forgiving parkour fails in the lobby.
+    fall-damage: true
+
+    # Cancel void damage AND teleport the player back to the lobby
+    # spawn instead of letting them die. Essential for void lobbies.
+    void-death: true
+
+    # Cancel hunger loss — players stay at full food bar.
+    hunger: true
+
+    # --- Items --------------------------------------------------------------
+
+    # Cancel picking up items from the ground.
+    item-pickup: true
+
+    # Cancel dropping items (Q key / drag out of inventory).
+    item-drop: true
+
+    # Cancel moving items inside the player's own inventory while no
+    # EpicDuels menu is open. Prevents hiding/stashing lobby items.
+    inventory-movement: true
+
+    # --- World ambience -----------------------------------------------------
+
+    # Cancel weather changes — the lobby stays sunny forever.
+    weather: true
+
+    # Cancel natural mob spawning (spawn eggs and commands still work).
+    mob-spawning: true
+
+    # Cancel fire spreading and blocks catching fire from lava/fire.
+    fire-spread: true
+
+    # Cancel blocks burning away once they are on fire.
+    block-burning: true
+
+    # Cancel leaf decay — decorative trees keep their leaves without
+    # needing log blocks nearby.
+    leaf-decay: true
+
+    # Suppress death messages for deaths that happen in the lobby.
+    # Duel deaths already have their own announcement.
+    death-messages: true
+
+
+# ============================================================================
+#   3. DUEL SETTINGS
+# ============================================================================
 #
-#   "local"     — stats.yml only (default, single-server)
-#   "supabase"  — syncs with a Supabase (PostgreSQL) project
-#   "firebase"  — syncs with Firebase Realtime Database
+# Gameplay rules for 1v1 duels, team duels and tournament matches.
+# All values here can be changed at runtime with /duel reload.
 #
-# When a remote backend is active, stats.yml still acts as a
-# local cache so the plugin works even if the remote is down.
-# On every win/loss the data is pushed to the remote async.
+duel:
+
+  # --------------------------------------------------------------------------
+  # Match time limit
+  # --------------------------------------------------------------------------
+  # Maximum length of a fight in SECONDS, counted from the moment the
+  # "FIGHT!" countdown finishes (the 5-second pre-fight countdown does
+  # not eat into the limit).
+  #
+  # While a duel runs, all participants see a live countdown on their
+  # action bar. It turns yellow at 60 seconds and red at 30 seconds.
+  #
+  # When the time runs out:
+  #
+  #   - 1v1 duels ......... DRAW — no win/loss recorded for either
+  #                         player, both return to the lobby.
+  #   - Team duels ........ DRAW — same, for all participants.
+  #   - Best-of-N duels ... the player LEADING on round wins takes the
+  #                         match; only a tied score becomes a draw.
+  #   - Tournament ........ never a plain draw — see tournament-draw.
+  #
+  # In Best-of-N matches the clock applies PER ROUND and pauses during
+  # the short break between rounds.
+  #
+  #   300 = 5 minutes (default)
+  #   600 = 10 minutes
+  #   0   = no time limit (duels can run forever — not recommended,
+  #         players can stall by hiding)
+  #
+  time-limit-seconds: 300
+
+  # --------------------------------------------------------------------------
+  # Tournament draw resolution
+  # --------------------------------------------------------------------------
+  # A tournament bracket ALWAYS needs a winner, so tournament matches
+  # cannot simply end in a draw. When a tournament match hits the time
+  # limit, this setting decides what happens:
+  #
+  #   "sudden-death" ... the match is extended ONCE by
+  #                      sudden-death-seconds (big "SUDDEN DEATH" title,
+  #                      next kill wins). If the extension also runs
+  #                      out, a coin flip picks the winner.
+  #
+  #   "coin-flip" ...... skip the extension — a 50/50 coin flip picks
+  #                      the winner immediately when time runs out.
+  #
+  tournament-draw: "sudden-death"
+
+  # Length of the sudden-death extension in seconds.
+  # Only used when tournament-draw is "sudden-death".
+  sudden-death-seconds: 60
+
+  # --------------------------------------------------------------------------
+  # Pre-fight countdown
+  # --------------------------------------------------------------------------
+  # Length of the "5... 4... 3..." countdown in SECONDS before every
+  # fight (duel start, every best-of-N round, team duels). Players are
+  # frozen and invulnerable while it runs.
+  #
+  #   5  = classic countdown (default)
+  #   3  = snappier pace for warmup/practice servers
+  #   0  = no countdown — the fight starts instantly
+  #
+  # Allowed range: 0-60.
+  #
+  countdown-seconds: 5
+
+  # --------------------------------------------------------------------------
+  # Result broadcasts
+  # --------------------------------------------------------------------------
+  # true  = duel results ("X defeated Y!", draws) are announced in the
+  #         chat of EVERYONE on the server. Great for dedicated duel
+  #         servers — it keeps the community engaged.
+  # false = results are only shown to the two fighters. Choose this
+  #         when EpicDuels runs on a survival/hub server where global
+  #         duel spam would annoy uninvolved players.
+  #
+  # Victory/defeat titles for the fighters themselves are always shown
+  # and unaffected by this setting. Team duel and tournament summaries
+  # are participant-only by design.
+  #
+  broadcast-results: true
+
+
+# ============================================================================
+#   4. FEATURE TOGGLES
+# ============================================================================
+#
+# Every player-facing feature of EpicDuels can be switched off
+# individually, so the plugin adapts to YOUR server concept instead of
+# the other way around. Some examples:
+#
+#   - Dedicated duel/lobby server: players cannot farm or own items
+#     there, so "Own Inventory" duels are pointless — turn
+#     own-inventory-duels off and the option disappears.
+#   - Pure 1v1 ladder server: turn off parties, team-duels and
+#     tournaments and EpicDuels becomes a lean 1v1 plugin.
+#   - Casual survival server: keep challenges on but turn off
+#     matchmaking and leaderboards if you don't want a competitive
+#     scene.
+#   - Hardcore/tournament events: turn off rematch and forfeit so
+#     every match is played out and final.
+#
+# For every toggle:
+#
+#   true  = feature available (default)
+#   false = feature hidden AND blocked — the GUI entries disappear
+#           (or show a barrier icon), and the matching commands answer
+#           "This feature is disabled on this server."
+#
+# Missing entries count as true, so configs from older versions keep
+# every feature enabled. All toggles support /duel reload.
+#
+features:
+
+  # 1v1 challenges: /duel challenge, /duel accept, the "Duels" entry in
+  # the main menu and the player-select GUI. With this off, direct
+  # duels are impossible (matchmaking below still works if enabled).
+  challenges: true
+
+  # Kit-based matchmaking queues: /duel queue and the "Matchmaking"
+  # entry in the main menu. Turn off if duels should only happen by
+  # explicit challenge.
+  matchmaking: true
+
+  # Watching running duels: /duel spectate <player>.
+  # Does not affect the automatic spectating of eliminated tournament
+  # players or dead team-duel participants inside their own match.
+  spectating: true
+
+  # The clickable [REMATCH] offer after every regular 1v1 duel and the
+  # /duel rematch command. Turn off for event servers where each
+  # pairing should only be played once.
+  rematch: true
+
+  # Giving up with /duel forfeit (counts as a loss). Turn off if
+  # matches must always be fought to the end — players can still
+  # disconnect, which counts as a loss anyway.
+  forfeit: true
+
+  # The Bo1/Bo3/Bo5 rounds-selection step in the challenge flow.
+  # With this off the step is skipped entirely and every duel is a
+  # single round (classic pre-3.0 behavior).
+  best-of-n: true
+
+  # The "Own Inventory" (no-kit) entry in the kit selection: players
+  # fight with the items they carry; inventories are saved to
+  # plugins/EpicDuels/inventories/ at duel start and restored
+  # afterwards — crash- and disconnect-safe (leftover backups restore
+  # on the next join, so nothing is ever lost).
+  #
+  # Recommended OFF on dedicated duel/lobby servers: players own no
+  # items there, so the option only adds a useless menu entry.
+  # Recommended ON when EpicDuels runs on a survival server and
+  # players want to duel with their own gear.
+  own-inventory-duels: true
+
+  # The Kit Editor: /duel kits and the "Kit Editor" entry in the main
+  # menu. Lets every player rearrange the items of any kit into their
+  # personally preferred slots (hotbar order, armor, offhand). Layouts
+  # are pure rearrangements — items can never be added, removed or
+  # changed — and are stored per player in playerkits.yml. If an admin
+  # later edits the kit itself, outdated personal layouts silently fall
+  # back to the kit's default arrangement.
+  kit-editor: true
+
+  # The whole party system: /party create|invite|accept|... and the
+  # party GUIs. Turning this off also makes team duels and tournaments
+  # unreachable (both are started from a party).
+  parties: true
+
+  # Team duels (2v2/3v3/4v4) in the party mode menu.
+  team-duels: true
+
+  # Single-elimination tournaments in the party mode menu.
+  tournaments: true
+
+  # Leaderboards in chat: /duel leaderboard wins|score (including the
+  # admin hologram sub-commands). Already-placed holograms keep
+  # working — remove them with /duel leaderboard removehologram
+  # BEFORE turning this off.
+  leaderboards: true
+
+
+# ============================================================================
+#   5. STATS BACKEND
+# ============================================================================
+#
+# Controls where player statistics (wins / losses) are stored.
+#
+#   "local" ...... stats.yml only. Zero setup, perfect for a single
+#                  server. (default)
+#
+#   "supabase" ... additionally syncs with a Supabase (PostgreSQL)
+#                  project via its REST API. Use this to share stats,
+#                  leaderboards and holograms across MULTIPLE servers,
+#                  or to display them on a website.
+#
+#   "firebase" ... additionally syncs with a Firebase Realtime
+#                  Database. Same use case as Supabase, different
+#                  provider.
+#
+# How syncing works (supabase/firebase):
+#
+#   - stats.yml always stays active as a local cache — the plugin
+#     keeps working even when the remote is unreachable.
+#   - Every win/loss is pushed to the remote asynchronously; the main
+#     server thread is never blocked.
+#   - When a player's stats are fetched, the HIGHER value of local vs.
+#     remote wins/losses is kept, so no progress is lost when two
+#     servers wrote different values.
+#   - On shutdown all cached stats are pushed one final time.
+#
+# IMPORTANT: changing the backend requires a full server RESTART —
+# /duel reload does NOT re-initialize the connection.
+#
 stats:
   backend: "local"
 
-  # ── Supabase ───────────────────────────────────────────
-  # 1. Go to your Supabase project → SQL Editor and run:
+  # --------------------------------------------------------------------------
+  # Supabase (only used when backend: "supabase")
+  # --------------------------------------------------------------------------
+  # Setup:
   #
-  #    CREATE TABLE IF NOT EXISTS player_stats (
-  #      uuid   TEXT PRIMARY KEY,
-  #      wins   INTEGER NOT NULL DEFAULT 0,
-  #      losses INTEGER NOT NULL DEFAULT 0
-  #    );
+  #   1. Create a project at https://supabase.com (free tier is fine).
   #
-  # 2. Copy your project URL and anon key from
-  #    Settings → API.
+  #   2. Open SQL Editor and create the stats table:
+  #
+  #        CREATE TABLE IF NOT EXISTS player_stats (
+  #          uuid   TEXT PRIMARY KEY,
+  #          wins   INTEGER NOT NULL DEFAULT 0,
+  #          losses INTEGER NOT NULL DEFAULT 0
+  #        );
+  #
+  #   3. Copy your project URL and "anon" API key from
+  #      Project Settings -> API into the fields below.
+  #
+  #   4. Set backend: "supabase" above and RESTART the server.
+  #
+  # The plugin tests the connection on startup and logs a clear error
+  # if the URL or key is wrong. If pushes fail with HTTP 401/403,
+  # check the Row-Level Security policy of the table in the Supabase
+  # dashboard (the anon role needs SELECT + INSERT/UPDATE).
+  #
+  # url ....... your project URL, e.g. "https://abcdefgh.supabase.co"
+  # api-key ... the "anon" (public) API key — NOT the service_role key
+  # table ..... table name; keep "player_stats" unless you renamed it
+  #
   supabase:
     url: ""
     api-key: ""
     table: "player_stats"
 
-  # ── Firebase ───────────────────────────────────────────
-  # 1. Create a Firebase project and enable Realtime Database.
-  # 2. Copy the database URL (e.g. https://my-project-default-rtdb.firebaseio.com).
-  # 3. (Optional) Set auth-token to your database secret for
-  #    authenticated writes, or leave empty if rules allow
-  #    public read/write.
+  # --------------------------------------------------------------------------
+  # Firebase (only used when backend: "firebase")
+  # --------------------------------------------------------------------------
+  # Setup:
+  #
+  #   1. Create a project at https://console.firebase.google.com
+  #      and enable a Realtime Database.
+  #
+  #   2. Copy the database URL into database-url below, e.g.
+  #      "https://my-project-default-rtdb.firebaseio.com"
+  #      (region-specific URLs like ...europe-west1.firebasedatabase.app
+  #      work too).
+  #
+  #   3. Either set database rules to allow public read/write on the
+  #      stats path, OR paste your database secret into auth-token for
+  #      authenticated access.
+  #
+  #   4. Set backend: "firebase" above and RESTART the server.
+  #
+  # database-url ... full URL of the Realtime Database
+  # auth-token ..... optional database secret; leave empty when your
+  #                  rules allow unauthenticated read/write
+  #
   firebase:
     database-url: ""
     auth-token: ""
+
+
+# ============================================================================
+#   FILES WRITTEN BY THE PLUGIN (do not edit while the server runs)
+# ============================================================================
+#
+#   arenas.yml ........ arena definitions, spawn points, ready state, icons
+#   kits.yml .......... kit inventories (Base64) and icons
+#   stats.yml ......... local win/loss cache
+#   leaderboards.yml .. hologram positions
+#   toggles.yml ....... players who disabled duel requests (/duel toggle)
+#   inventories/ ...... temporary inventory backups during own-inventory
+#                       duels (one file per player, deleted after restore)
+#
+# ============================================================================

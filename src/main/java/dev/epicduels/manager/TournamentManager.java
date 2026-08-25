@@ -1,6 +1,7 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Arena;
 import dev.epicduels.model.DuelInstance;
 import dev.epicduels.model.Kit;
@@ -44,17 +45,19 @@ public class TournamentManager {
             // Safety: clear other states
             plugin.getQueueManager().removePlayer(id);
             plugin.getDuelManager().cancelRequest(id);
-            plugin.getDuelManager().denyRequest(id);
+            plugin.getDuelManager().denyAllIncoming(id);
         }
 
-        party.messageAll(Component.text("=== TOURNAMENT STARTED ===", NamedTextColor.GOLD, TextDecoration.BOLD));
-        party.messageAll(Component.text(participants.size() + " players, kit: " + kit.getName(), NamedTextColor.GRAY));
+        party.messageAll(Messages.get("tournament.started-header"));
+        party.messageAll(Messages.get("tournament.started-info",
+                Messages.unparsed("count", participants.size()), Messages.unparsed("kit", kit.getName())));
 
         buildAndStartRound(t, new ArrayList<>(participants));
         return true;
     }
 
     private void buildAndStartRound(Tournament t, List<UUID> players) {
+        t.setAdvancing(false);
         t.incrementRound();
         Collections.shuffle(players);
 
@@ -75,12 +78,14 @@ public class TournamentManager {
             nextRoundWinners.add(byePlayer);
             Player p = Bukkit.getPlayer(byePlayer);
             if (p != null) {
-                p.sendMessage(Component.text("You got a bye for round " + t.getRoundNumber() + ".", NamedTextColor.YELLOW));
+                Messages.send(p, "tournament.bye", Messages.unparsed("round", t.getRoundNumber()));
             }
         }
 
         if (party != null) {
-            party.messageAll(Component.text("Round " + t.getRoundNumber() + " — " + t.getPendingMatches().size() + " match(es)", NamedTextColor.AQUA));
+            party.messageAll(Messages.get("tournament.round-info",
+                    Messages.unparsed("round", t.getRoundNumber()),
+                    Messages.unparsed("count", t.getPendingMatches().size())));
         }
 
         launchPendingMatches(t);
@@ -89,12 +94,12 @@ public class TournamentManager {
     private void launchPendingMatches(Tournament t) {
         Kit kit = plugin.getKitManager().getKit(t.getKitName());
         if (kit == null) {
-            failTournament(t, "Kit no longer exists.");
+            failTournament(t, "tournament.reason-kit-gone");
             return;
         }
         List<Arena> readyArenas = new ArrayList<>(plugin.getArenaManager().getReadyArenas());
         if (readyArenas.isEmpty()) {
-            failTournament(t, "No ready arenas available!");
+            failTournament(t, "tournament.reason-no-arenas");
             return;
         }
         Collections.shuffle(readyArenas);
@@ -110,10 +115,10 @@ public class TournamentManager {
                 it.remove();
                 if (p1 != null && p2 == null) {
                     t.getCurrentRoundWinners().add(match.p1);
-                    p1.sendMessage(Component.text("Opponent offline — auto-advance.", NamedTextColor.YELLOW));
+                    Messages.send(p1, "tournament.opponent-offline");
                 } else if (p2 != null && p1 == null) {
                     t.getCurrentRoundWinners().add(match.p2);
-                    p2.sendMessage(Component.text("Opponent offline — auto-advance.", NamedTextColor.YELLOW));
+                    Messages.send(p2, "tournament.opponent-offline");
                 }
                 continue;
             }
@@ -123,7 +128,12 @@ public class TournamentManager {
             DuelInstance duel = plugin.getDuelManager().startQueueDuelWithCallback(p1, p2, arena.getName(), kit.getName(),
                     (winner, loser) -> onMatchEnd(t, match, winner, loser));
             if (duel == null) {
+                // Match could not start (e.g. a player is stuck in another
+                // match) — don't drop both silently, tell them what happened.
                 it.remove();
+                Component dropped = Messages.get("tournament.match-dropped");
+                p1.sendMessage(dropped);
+                p2.sendMessage(dropped);
                 continue;
             }
             match.started = true;
@@ -131,8 +141,10 @@ public class TournamentManager {
             t.getActiveMatches().add(match);
             it.remove();
 
-            p1.sendMessage(Component.text("Round " + t.getRoundNumber() + ": you vs " + p2.getName(), NamedTextColor.AQUA));
-            p2.sendMessage(Component.text("Round " + t.getRoundNumber() + ": you vs " + p1.getName(), NamedTextColor.AQUA));
+            Messages.send(p1, "tournament.match-start",
+                    Messages.unparsed("round", t.getRoundNumber()), Messages.unparsed("player", p2.getName()));
+            Messages.send(p2, "tournament.match-start",
+                    Messages.unparsed("round", t.getRoundNumber()), Messages.unparsed("player", p1.getName()));
         }
 
         // Re-route eliminated spectators to new active matches
@@ -167,13 +179,14 @@ public class TournamentManager {
 
         Player wp = Bukkit.getPlayer(winnerId);
         if (wp != null) {
-            wp.sendMessage(Component.text("You advanced to the next round!", NamedTextColor.GREEN));
+            Messages.send(wp, "tournament.advanced");
         }
 
         checkRoundCompletion(t);
     }
 
     private void checkRoundCompletion(Tournament t) {
+        if (t.isFinished() || t.isAdvancing()) return;
         if (!t.getActiveMatches().isEmpty()) return;
         if (!t.getPendingMatches().isEmpty()) return;
 
@@ -185,9 +198,11 @@ public class TournamentManager {
             return;
         }
         // Next round
+        t.setAdvancing(true);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (t.isFinished()) return;
-            buildAndStartRound(t, winners);
+            // Re-read the winners — someone may have disconnected during the pause
+            buildAndStartRound(t, new ArrayList<>(t.getCurrentRoundWinners()));
         }, 100L); // 5s pause between rounds
     }
 
@@ -236,11 +251,11 @@ public class TournamentManager {
             if (championName == null) championName = championId.toString().substring(0, 8);
         }
 
-        Component announce1 = Component.text("=== TOURNAMENT WINNER ===", NamedTextColor.GOLD, TextDecoration.BOLD);
-        Component announce2 = Component.text(championName + " wins the tournament!", NamedTextColor.YELLOW, TextDecoration.BOLD);
+        Component announce1 = Messages.get("tournament.winner-header");
+        Component announce2 = Messages.get("tournament.winner-announce", Messages.unparsed("player", championName));
         Title title = Title.title(
-                Component.text(championName, NamedTextColor.GOLD, TextDecoration.BOLD),
-                Component.text("Tournament Champion!", NamedTextColor.YELLOW),
+                Messages.get("tournament.winner-title", Messages.unparsed("player", championName)),
+                Messages.get("tournament.winner-subtitle"),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(4), Duration.ofSeconds(1))
         );
 
@@ -261,11 +276,12 @@ public class TournamentManager {
         cleanupTournamentState(t);
     }
 
-    private void failTournament(Tournament t, String reason) {
+    private void failTournament(Tournament t, String reasonKey) {
         t.setFinished(true);
         Party party = plugin.getPartyManager().getParty(t.getPartyId());
         if (party != null) {
-            party.messageAll(Component.text("Tournament cancelled: " + reason, NamedTextColor.RED));
+            party.messageAll(Messages.get("tournament.cancelled",
+                    Messages.component("reason", Messages.get(reasonKey))));
         }
         cleanupTournamentState(t);
     }
@@ -300,6 +316,8 @@ public class TournamentManager {
         // in any match, drop them from currentRoundWinners.
         t.getCurrentRoundWinners().remove(playerId);
         playerToTournament.remove(playerId);
+        // The disconnect may have been the last thing the round was waiting for
+        checkRoundCompletion(t);
     }
 
     public boolean isInTournament(UUID playerId) {

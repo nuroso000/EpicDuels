@@ -47,6 +47,12 @@ import java.io.File;
  *   per-kit display icons. Provides lookup and listing methods
  *   used by both commands and GUIs.
  *
+ * PlayerKitManager
+ *   Per-player kit personalization (the Kit Editor): stores each
+ *   player's preferred item arrangement per kit in playerkits.yml
+ *   and resolves the layout to apply when a duel starts. Layouts
+ *   are validated as pure rearrangements of the base kit.
+ *
  * DuelManager
  *   Owns the full duel lifecycle: sending / accepting / denying
  *   challenge requests, starting duels (teleport, kit apply,
@@ -89,6 +95,7 @@ public class EpicDuels extends JavaPlugin {
 
     private ArenaManager arenaManager;
     private KitManager kitManager;
+    private PlayerKitManager playerKitManager;
     private DuelManager duelManager;
     private QueueManager queueManager;
     private StatsManager statsManager;
@@ -97,6 +104,8 @@ public class EpicDuels extends JavaPlugin {
     private PartyManager partyManager;
     private TeamDuelManager teamDuelManager;
     private TournamentManager tournamentManager;
+    private RematchManager rematchManager;
+    private InventoryBackupManager inventoryBackupManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
     @Override
@@ -104,9 +113,17 @@ public class EpicDuels extends JavaPlugin {
         // Save default config
         saveDefaultConfig();
 
+        // PDC keys for GUI button items (must exist before any menu is built)
+        dev.epicduels.gui.MenuKeys.init(this);
+
+        // Localized messages (lang/messages_<code>.yml, selected via "language")
+        dev.epicduels.i18n.Messages.init(this);
+
         // Initialize managers
         arenaManager = new ArenaManager(this);
         kitManager = new KitManager(this);
+        playerKitManager = new PlayerKitManager(this);
+        inventoryBackupManager = new InventoryBackupManager(this);
         statsManager = new StatsManager(this);
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
@@ -115,6 +132,14 @@ public class EpicDuels extends JavaPlugin {
         partyManager = new PartyManager(this);
         teamDuelManager = new TeamDuelManager(this);
         tournamentManager = new TournamentManager(this);
+        rematchManager = new RematchManager(this);
+
+        // Optional PlaceholderAPI hook (softdepend) — the expansion class is
+        // only classloaded inside this guard
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new dev.epicduels.hook.EpicDuelsExpansion(this).register();
+            getLogger().info("PlaceholderAPI detected — %epicduels_*% placeholders registered.");
+        }
 
         // Register commands
         PluginCommand duelCmd = getCommand("duel");
@@ -159,6 +184,7 @@ public class EpicDuels extends JavaPlugin {
         if (duelManager != null) {
             duelManager.cleanupAll();
         }
+        if (rematchManager != null) rematchManager.cleanup();
 
         // Cleanup queue
         if (queueManager != null) {
@@ -271,6 +297,27 @@ public class EpicDuels extends JavaPlugin {
         }
     }
 
+    // --- Feature toggles ---
+
+    /**
+     * Checks a feature toggle from the config's features: section.
+     * Unknown/missing toggles default to enabled, so old configs keep
+     * every feature on.
+     */
+    public boolean isFeatureEnabled(String feature) {
+        return getConfig().getBoolean("features." + feature, true);
+    }
+
+    /**
+     * Own-inventory (no-kit) duels toggle. Reads features.own-inventory-duels
+     * and falls back to the legacy duel.allow-own-inventory key from early
+     * 3.0.0 builds.
+     */
+    public boolean isOwnInventoryDuelsEnabled() {
+        return getConfig().getBoolean("features.own-inventory-duels",
+                getConfig().getBoolean("duel.allow-own-inventory", true));
+    }
+
     // --- Location helpers ---
 
     public Location getLobbyLocation() {
@@ -307,6 +354,10 @@ public class EpicDuels extends JavaPlugin {
         return kitManager;
     }
 
+    public PlayerKitManager getPlayerKitManager() {
+        return playerKitManager;
+    }
+
     public DuelManager getDuelManager() {
         return duelManager;
     }
@@ -341,5 +392,13 @@ public class EpicDuels extends JavaPlugin {
 
     public TournamentManager getTournamentManager() {
         return tournamentManager;
+    }
+
+    public RematchManager getRematchManager() {
+        return rematchManager;
+    }
+
+    public InventoryBackupManager getInventoryBackupManager() {
+        return inventoryBackupManager;
     }
 }

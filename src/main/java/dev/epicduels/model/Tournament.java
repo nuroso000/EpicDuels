@@ -37,6 +37,9 @@ public class Tournament {
     private final List<Match> pendingMatches = new ArrayList<>();
     private int roundNumber;
     private boolean finished;
+    // True while the next round is scheduled but not yet built — prevents
+    // checkRoundCompletion() from scheduling the same round twice.
+    private boolean advancing;
     private UUID champion;
 
     public Tournament(UUID partyId, List<UUID> participants, String kitName) {
@@ -60,6 +63,8 @@ public class Tournament {
     public void incrementRound() { roundNumber++; }
     public boolean isFinished() { return finished; }
     public void setFinished(boolean f) { this.finished = f; }
+    public boolean isAdvancing() { return advancing; }
+    public void setAdvancing(boolean a) { this.advancing = a; }
     public UUID getChampion() { return champion; }
     public void setChampion(UUID c) { this.champion = c; }
 }

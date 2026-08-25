@@ -1,6 +1,7 @@
 package dev.epicduels.manager;
 
 import dev.epicduels.EpicDuels;
+import dev.epicduels.i18n.Messages;
 import dev.epicduels.model.Arena;
 import dev.epicduels.model.Kit;
 import dev.epicduels.model.TeamDuelInstance;
@@ -11,6 +12,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.*;
@@ -24,9 +26,73 @@ public class TeamDuelManager {
     // Players who died but their team isn't wiped yet -> kept as spectators inside the arena
     private final Set<UUID> deadSpectators = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Set<UUID> frozen = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private BukkitTask timeLimitTask;
 
     public TeamDuelManager(EpicDuels plugin) {
         this.plugin = plugin;
+        startTimeLimitTask();
+    }
+
+    private void startTimeLimitTask() {
+        timeLimitTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (TeamDuelInstance instance : activeById.values()) {
+                    if (!instance.isActive() || !instance.isCountdownComplete()
+                            || instance.getDeadlineMillis() <= 0) continue;
+
+                    long remaining = instance.getDeadlineMillis() - System.currentTimeMillis();
+                    if (remaining <= 0) {
+                        endTeamDuelDraw(instance);
+                    } else {
+                        sendTimeActionBar(instance, remaining);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private void sendTimeActionBar(TeamDuelInstance instance, long remainingMillis) {
+        long seconds = (remainingMillis + 999) / 1000;
+        NamedTextColor color = seconds <= 30 ? NamedTextColor.RED
+                : seconds <= 60 ? NamedTextColor.YELLOW
+                : NamedTextColor.GRAY;
+        Component bar = Messages.get("duel.time-left",
+                Messages.unparsed("time", formatTime(seconds))).color(color);
+        for (UUID id : instance.getAllParticipants()) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null) p.sendActionBar(bar);
+        }
+    }
+
+    private static String formatTime(long totalSeconds) {
+        return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
+    }
+
+    /**
+     * Ends a team duel with no winner: no stats are recorded and everybody is
+     * returned to the lobby.
+     */
+    private void endTeamDuelDraw(TeamDuelInstance instance) {
+        if (!instance.isActive()) return;
+        instance.setActive(false);
+
+        Title drawTitle = Title.title(
+                Messages.get("duel.draw-title"),
+                Messages.get("duel.draw-subtitle"),
+                Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
+        );
+        Component summary = Messages.get("teamduel.summary-draw");
+
+        for (UUID id : instance.getAllParticipants()) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null && p.isOnline()) {
+                p.showTitle(drawTitle);
+                p.sendMessage(summary);
+            }
+        }
+
+        scheduleReturnToLobby(instance);
     }
 
     public boolean startTeamDuel(List<UUID> partyMembers, dev.epicduels.model.TeamSize size, Arena arena, Kit kit) {
@@ -43,22 +109,23 @@ public class TeamDuelManager {
 
         for (UUID id : instance.getAllParticipants()) {
             activeByPlayer.put(id, instance);
-            // Safety: drop from queue/requests
+            // Safety: drop from queue/requests/spectating
             plugin.getQueueManager().removePlayer(id);
             plugin.getDuelManager().cancelRequest(id);
-            plugin.getDuelManager().denyRequest(id);
+            plugin.getDuelManager().denyAllIncoming(id);
+            plugin.getDuelManager().clearSpectatorState(id);
         }
         activeById.put(instance.getId(), instance);
 
         for (UUID id : instance.getAllParticipants()) {
             Player p = Bukkit.getPlayer(id);
-            if (p != null) p.sendMessage(Component.text("Preparing team duel arena...", NamedTextColor.YELLOW));
+            if (p != null) Messages.send(p, "teamduel.preparing");
         }
 
         plugin.getArenaManager().createInstanceWorld(arena, instance.getInstanceWorldName()).thenAccept(world -> {
             if (world == null) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    failStart(instance, "Failed to create team duel arena!");
+                    failStart(instance, "teamduel.fail-create");
                 });
                 return;
             }
@@ -67,7 +134,7 @@ public class TeamDuelManager {
                 instance.setActive(true);
 
                 if (arena.getSpawn1() == null || arena.getSpawn2() == null) {
-                    failStart(instance, "Arena spawn points are not configured!");
+                    failStart(instance, "teamduel.fail-spawns");
                     return;
                 }
 
@@ -107,9 +174,9 @@ public class TeamDuelManager {
     private void announceTeams(TeamDuelInstance instance) {
         Component teamA = namesOf(instance.getTeamA(), NamedTextColor.AQUA);
         Component teamB = namesOf(instance.getTeamB(), NamedTextColor.RED);
-        Component header = Component.text("=== TEAM DUEL ===", NamedTextColor.GOLD, TextDecoration.BOLD);
-        Component teamALine = Component.text("Team A: ", NamedTextColor.AQUA, TextDecoration.BOLD).append(teamA);
-        Component teamBLine = Component.text("Team B: ", NamedTextColor.RED, TextDecoration.BOLD).append(teamB);
+        Component header = Messages.get("teamduel.header");
+        Component teamALine = Messages.get("teamduel.team-a", Messages.component("names", teamA));
+        Component teamBLine = Messages.get("teamduel.team-b", Messages.component("names", teamB));
         for (UUID id : instance.getAllParticipants()) {
             Player p = Bukkit.getPlayer(id);
             if (p == null) continue;
@@ -143,10 +210,10 @@ public class TeamDuelManager {
         return loc;
     }
 
-    private void failStart(TeamDuelInstance instance, String reason) {
+    private void failStart(TeamDuelInstance instance, String reasonKey) {
         for (UUID id : instance.getAllParticipants()) {
             Player p = Bukkit.getPlayer(id);
-            if (p != null) p.sendMessage(Component.text(reason, NamedTextColor.RED));
+            if (p != null) Messages.send(p, reasonKey);
             activeByPlayer.remove(id);
             frozen.remove(id);
         }
@@ -159,7 +226,7 @@ public class TeamDuelManager {
 
     private void startCountdown(TeamDuelInstance instance) {
         new BukkitRunnable() {
-            int count = 5;
+            int count = Math.min(60, Math.max(0, plugin.getConfig().getInt("duel.countdown-seconds", 5)));
 
             @Override
             public void run() {
@@ -177,7 +244,7 @@ public class TeamDuelManager {
                     };
                     Title title = Title.title(
                             Component.text(String.valueOf(count), color, TextDecoration.BOLD),
-                            Component.text("Get ready!", NamedTextColor.GRAY),
+                            Messages.get("countdown.get-ready"),
                             Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ZERO)
                     );
                     for (UUID id : instance.getAllParticipants()) {
@@ -189,7 +256,7 @@ public class TeamDuelManager {
                     count--;
                 } else {
                     Title title = Title.title(
-                            Component.text("FIGHT!", NamedTextColor.GREEN, TextDecoration.BOLD),
+                            Messages.get("countdown.fight"),
                             Component.empty(),
                             Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))
                     );
@@ -201,6 +268,12 @@ public class TeamDuelManager {
                         frozen.remove(id);
                     }
                     instance.setCountdownComplete(true);
+
+                    int timeLimit = plugin.getConfig().getInt("duel.time-limit-seconds", 300);
+                    if (timeLimit > 0) {
+                        instance.setDeadlineMillis(System.currentTimeMillis() + timeLimit * 1000L);
+                    }
+
                     cancel();
                 }
             }
@@ -212,25 +285,47 @@ public class TeamDuelManager {
      * Returns true if the death was consumed by team duel handling.
      */
     public boolean handleDeath(Player deceased) {
-        TeamDuelInstance instance = activeByPlayer.get(deceased.getUniqueId());
+        return eliminate(deceased, Messages.get("teamduel.died"));
+    }
+
+    /**
+     * Player gives up via /duel forfeit — they are out of the team duel and
+     * spectate the rest of the match.
+     */
+    public void forfeit(Player player) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
+        if (instance == null || !instance.isActive()) return;
+        if (!instance.isAlive(player.getUniqueId())) return;
+
+        frozen.remove(player.getUniqueId());
+        eliminate(player, Messages.get("teamduel.forfeited"));
+    }
+
+    /**
+     * Removes a participant from the fight (death or forfeit). If their team is
+     * wiped the duel ends, otherwise they spectate inside the arena.
+     * Returns true if the player was an active participant.
+     */
+    private boolean eliminate(Player player, Component spectatorMessage) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
         if (instance == null || !instance.isActive()) return false;
 
-        instance.markDead(deceased.getUniqueId());
+        instance.markDead(player.getUniqueId());
 
         TeamDuelInstance.Team winner = instance.getWinningTeam();
         if (winner != null) {
             endTeamDuel(instance, winner);
         } else {
-            // Move dead player into spectator mode within the arena
-            deadSpectators.add(deceased.getUniqueId());
+            // Move the player into spectator mode within the arena
+            deadSpectators.add(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!deceased.isOnline()) return;
-                deceased.getInventory().clear();
-                deceased.setGameMode(GameMode.SPECTATOR);
+                if (!player.isOnline()) return;
+                player.getInventory().clear();
+                player.setGameMode(GameMode.SPECTATOR);
                 if (instance.getInstanceWorld() != null) {
-                    deceased.teleport(instance.getInstanceWorld().getSpawnLocation());
+                    player.teleport(instance.getInstanceWorld().getSpawnLocation());
                 }
-                deceased.sendMessage(Component.text("You died! Spectating until the match ends.", NamedTextColor.GRAY));
+                player.sendMessage(spectatorMessage);
             });
         }
         return true;
@@ -247,19 +342,17 @@ public class TeamDuelManager {
         for (UUID id : losers) plugin.getStatsManager().addLoss(id);
 
         Title winTitle = Title.title(
-                Component.text("VICTORY!", NamedTextColor.GOLD, TextDecoration.BOLD),
-                Component.text("Your team won!", NamedTextColor.GREEN),
+                Messages.get("teamduel.victory-title"),
+                Messages.get("teamduel.victory-subtitle"),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
         );
         Title loseTitle = Title.title(
-                Component.text("DEFEAT", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Your team lost.", NamedTextColor.GRAY),
+                Messages.get("teamduel.defeat-title"),
+                Messages.get("teamduel.defeat-subtitle"),
                 Title.Times.times(Duration.ZERO, Duration.ofSeconds(3), Duration.ofSeconds(1))
         );
-        Component summary = Component.text("TEAM DUEL ", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .append(Component.text("| ", NamedTextColor.DARK_GRAY))
-                .append(Component.text("Team " + winningTeam.name(), NamedTextColor.GREEN, TextDecoration.BOLD))
-                .append(Component.text(" wins!", NamedTextColor.GRAY));
+        Component summary = Messages.get("teamduel.summary-win",
+                Messages.unparsed("team", winningTeam.name()));
 
         for (UUID id : winners) {
             Player p = Bukkit.getPlayer(id);
@@ -276,6 +369,14 @@ public class TeamDuelManager {
             }
         }
 
+        scheduleReturnToLobby(instance);
+    }
+
+    /**
+     * Waits 3 seconds, then returns all participants to the lobby and deletes
+     * the instance world.
+     */
+    private void scheduleReturnToLobby(TeamDuelInstance instance) {
         String instanceWorldName = instance.getInstanceWorldName();
         Set<UUID> all = instance.getAllParticipants();
 
@@ -306,13 +407,36 @@ public class TeamDuelManager {
         }.runTaskLater(plugin, 60L);
     }
 
-    public void handleDisconnect(UUID playerId) {
-        TeamDuelInstance instance = activeByPlayer.get(playerId);
+    /**
+     * A living participant left the arena world (teleported away) — counts as
+     * a death for their team.
+     */
+    public void handleForfeit(Player player) {
+        TeamDuelInstance instance = activeByPlayer.get(player.getUniqueId());
         if (instance == null || !instance.isActive()) return;
-        instance.markDead(playerId);
+        if (!instance.isAlive(player.getUniqueId())) return;
+
+        instance.markDead(player.getUniqueId());
+        frozen.remove(player.getUniqueId());
+        Messages.send(player, "teamduel.left-arena");
+
         TeamDuelInstance.Team winner = instance.getWinningTeam();
         if (winner != null) {
             endTeamDuel(instance, winner);
+        }
+    }
+
+    public void handleDisconnect(UUID playerId) {
+        TeamDuelInstance instance = activeByPlayer.get(playerId);
+        if (instance == null) return;
+        // Also runs while the instance world is still being copied (instance
+        // not active yet) — always drop the player so they aren't stuck busy.
+        instance.markDead(playerId);
+        if (instance.isActive()) {
+            TeamDuelInstance.Team winner = instance.getWinningTeam();
+            if (winner != null) {
+                endTeamDuel(instance, winner);
+            }
         }
         activeByPlayer.remove(playerId);
         deadSpectators.remove(playerId);
@@ -320,8 +444,18 @@ public class TeamDuelManager {
     }
 
     public boolean isInTeamDuel(UUID playerId) {
-        TeamDuelInstance i = activeByPlayer.get(playerId);
-        return i != null && i.isActive();
+        // Map presence (not isActive) so players count as busy while the
+        // instance world is still being copied asynchronously and during the
+        // short post-match phase before they are returned to the lobby.
+        return activeByPlayer.containsKey(playerId);
+    }
+
+    /** True if any current team duel (active or starting) runs on the given arena. */
+    public boolean isArenaInUse(String arenaName) {
+        for (TeamDuelInstance i : activeById.values()) {
+            if (i.getArenaName().equalsIgnoreCase(arenaName)) return true;
+        }
+        return false;
     }
 
     public boolean isFrozen(UUID playerId) {
@@ -351,6 +485,10 @@ public class TeamDuelManager {
     }
 
     public void cleanupAll() {
+        if (timeLimitTask != null) {
+            timeLimitTask.cancel();
+            timeLimitTask = null;
+        }
         for (TeamDuelInstance instance : new HashSet<>(activeById.values())) {
             if (instance.isActive()) {
                 instance.setActive(false);
@@ -376,6 +514,8 @@ public class TeamDuelManager {
     }
 
     private void applyKit(Player player, Kit kit) {
+        // Use the player's personalized layout (Kit Editor) if one exists
+        kit = plugin.getPlayerKitManager().getPersonalizedKit(player.getUniqueId(), kit);
         player.getInventory().setContents(kit.getContents());
         if (kit.getArmorContents() != null) {
             player.getInventory().setArmorContents(kit.getArmorContents());

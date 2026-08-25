@@ -221,15 +221,15 @@ public class HologramManager {
     private List<Component> buildLines(Type type) {
         List<Component> lines = new ArrayList<>();
 
-        String title = type == Type.WINS ? "Top Wins" : "Top Score";
-        lines.add(Component.text("» " + title + " «", NamedTextColor.GOLD, TextDecoration.BOLD));
+        lines.add(dev.epicduels.i18n.Messages.get(type == Type.WINS
+                ? "leaderboard.hologram-title-wins" : "leaderboard.hologram-title-score"));
 
         List<StatsManager.LeaderboardEntry> top = type == Type.WINS
                 ? plugin.getStatsManager().getTopByWins(TOP)
                 : plugin.getStatsManager().getTopByScore(TOP);
 
         if (top.isEmpty()) {
-            lines.add(Component.text("No data yet", NamedTextColor.GRAY));
+            lines.add(dev.epicduels.i18n.Messages.get("leaderboard.hologram-empty"));
             return lines;
         }
 
@@ -239,12 +239,10 @@ public class HologramManager {
             int value = type == Type.WINS ? entry.wins : entry.score;
             NamedTextColor rankColor = rankColor(i + 1);
 
-            lines.add(Component.text()
-                    .append(Component.text("#" + (i + 1) + " ", rankColor, TextDecoration.BOLD))
-                    .append(Component.text(name, NamedTextColor.WHITE))
-                    .append(Component.text(" — ", NamedTextColor.GRAY))
-                    .append(Component.text(String.valueOf(value), NamedTextColor.YELLOW))
-                    .build());
+            lines.add(dev.epicduels.i18n.Messages.get("leaderboard.entry",
+                    dev.epicduels.i18n.Messages.unparsed("rank", i + 1),
+                    dev.epicduels.i18n.Messages.unparsed("name", name),
+                    dev.epicduels.i18n.Messages.unparsed("value", value)).color(rankColor));
         }
         return lines;
     }
