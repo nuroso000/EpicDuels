@@ -127,6 +127,14 @@ Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history 
 
 <img alt="Star the EpicDuels repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
 
+<a href="https://www.star-history.com/?repos=nuroso000%2Fepicduels&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=nuroso000/epicduels&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=nuroso000/epicduels&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=nuroso000/epicduels&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## License & usage
 
 Licensed under **CC BY-NC-SA 4.0**:
