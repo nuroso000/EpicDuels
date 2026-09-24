@@ -740,6 +740,11 @@ public class DuelManager {
         plugin.getStatsManager().addWin(winnerId);
         plugin.getStatsManager().addLoss(loserId);
 
+        // Run configured integrations once, after the complete match result is final.
+        plugin.getResultCommandManager().execute(
+                List.of(winnerId), List.of(loserId), duel.getArenaName(), duel.getKitName(),
+                duel.getWins(winnerId), duel.getWins(loserId));
+
         // Announce — server-wide or participants-only, per config
         Component announcement = Messages.get("duel.win-announce",
                 Messages.unparsed("winner", winnerName), Messages.unparsed("loser", loserName));

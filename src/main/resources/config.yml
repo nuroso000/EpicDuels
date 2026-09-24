@@ -1,7 +1,7 @@
 # ============================================================================
 #
 #   EpicDuels — Configuration
-#   Version 3.0.0  ·  Paper 1.21.1+  ·  Java 21
+#   Version 3.0.1  ·  Paper 1.21.1+  ·  Java 21
 #
 #   Documentation ... https://github.com/nuroso000/EpicDuels
 #   Release notes ... release/RELEASE.md
@@ -16,10 +16,11 @@
 #     2. Lobby protections .... 15 toggleable protection rules
 #     3. Duel settings ........ time limit, draws, sudden death,
 #                               countdown length, result broadcasts
-#     4. Feature toggles ...... switch every plugin feature on/off
+#     4. Result commands ...... commands run for winners and losers
+#     5. Feature toggles ...... switch every plugin feature on/off
 #                               individually (challenges, matchmaking,
 #                               rematch, parties, tournaments, ...)
-#     5. Stats backend ........ local / Supabase / Firebase sync
+#     6. Stats backend ........ local / Supabase / Firebase sync
 #
 #   GENERAL NOTES
 #
@@ -283,7 +284,40 @@ duel:
 
 
 # ============================================================================
-#   4. FEATURE TOGGLES
+#   4. RESULT COMMANDS
+# ============================================================================
+#
+# Optional console commands run after the complete match has ended. Commands
+# are not run after every Best-of-N round and are not run for draws.
+#
+# {player} is the winner in the winner list and the loser in the loser list.
+# In team duels each command runs once for every player on that side.
+#
+# Available placeholders:
+#   {player}        player name       {player_uuid}   player UUID
+#   {arena}         arena name        {kit}           kit name
+#   {score}         e.g. 3:1          {winner_score}  e.g. 3
+#   {loser_score}   e.g. 1
+#
+# Commands run as the server console. The leading slash is optional. Empty
+# lists disable the feature. Keep this file operator-only: these are privileged
+# console commands. Apply changes at runtime with /duel reload.
+# For team duels the score placeholders use the binary match result 1:0.
+# A tournament match resolved by coin flip is still a draw and runs no command.
+#
+# Example for a separate AC currency plugin:
+#   winner:
+#     - "ac add {player} 100"
+#   loser:
+#     - "ac take {player} 100"
+#
+result-commands:
+  winner: []
+  loser: []
+
+
+# ============================================================================
+#   5. FEATURE TOGGLES
 # ============================================================================
 #
 # Every player-facing feature of EpicDuels can be switched off
@@ -383,7 +417,7 @@ features:
 
 
 # ============================================================================
-#   5. STATS BACKEND
+#   6. STATS BACKEND
 # ============================================================================
 #
 # Controls where player statistics (wins / losses) are stored.

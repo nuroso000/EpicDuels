@@ -86,6 +86,12 @@ duel:
   countdown-seconds: 5
   broadcast-results: true      # false = results only to the fighters
 
+result-commands:               # optional console commands after a match
+  winner:
+    - "ac add {player} 100"
+  loser:
+    - "ac take {player} 100"
+
 features:             # switch any feature off individually
   challenges: true
   matchmaking: true
@@ -99,6 +105,16 @@ features:             # switch any feature off individually
 stats:
   backend: local      # local | supabase | firebase (cross-server sync)
 ```
+
+Result commands run once after the complete match (not after individual
+Best-of-N rounds). In the `winner` list, `{player}` is the winner; in the
+`loser` list, it is the loser. Team-duel commands run once per player. Empty
+lists disable the integration, draws run no commands, and `/duel reload`
+applies changes. Additional placeholders are `{player_uuid}`, `{arena}`,
+`{kit}`, `{score}`, `{winner_score}` and `{loser_score}`. Team matches expose
+the binary score `1:0`; a tournament draw resolved by coin flip still runs no
+result command. These are privileged console commands, so only trusted server
+operators should be able to edit `config.yml`.
 
 ## PlaceholderAPI
 
@@ -120,7 +136,7 @@ With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
 ```bash
 mvn clean package     # → target/EpicDuels.jar
 # or
-gradle clean build    # → build/libs/EpicDuels-3.0.0.jar
+gradle clean build    # → build/libs/EpicDuels-3.0.1.jar
 ```
 
 Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history and [release/RELEASE.md](release/RELEASE.md) for detailed release notes.

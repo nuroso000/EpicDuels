@@ -105,6 +105,7 @@ public class EpicDuels extends JavaPlugin {
     private TeamDuelManager teamDuelManager;
     private TournamentManager tournamentManager;
     private RematchManager rematchManager;
+    private ResultCommandManager resultCommandManager;
     private InventoryBackupManager inventoryBackupManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
@@ -133,6 +134,7 @@ public class EpicDuels extends JavaPlugin {
         teamDuelManager = new TeamDuelManager(this);
         tournamentManager = new TournamentManager(this);
         rematchManager = new RematchManager(this);
+        resultCommandManager = new ResultCommandManager(this);
 
         // Optional PlaceholderAPI hook (softdepend) — the expansion class is
         // only classloaded inside this guard
@@ -396,6 +398,10 @@ public class EpicDuels extends JavaPlugin {
 
     public RematchManager getRematchManager() {
         return rematchManager;
+    }
+
+    public ResultCommandManager getResultCommandManager() {
+        return resultCommandManager;
     }
 
     public InventoryBackupManager getInventoryBackupManager() {

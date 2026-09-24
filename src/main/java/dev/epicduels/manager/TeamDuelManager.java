@@ -341,6 +341,10 @@ public class TeamDuelManager {
         for (UUID id : winners) plugin.getStatsManager().addWin(id);
         for (UUID id : losers) plugin.getStatsManager().addLoss(id);
 
+        // Each configured command is run once per player on the matching side.
+        plugin.getResultCommandManager().execute(
+                winners, losers, instance.getArenaName(), instance.getKitName(), 1, 0);
+
         Title winTitle = Title.title(
                 Messages.get("teamduel.victory-title"),
                 Messages.get("teamduel.victory-subtitle"),
