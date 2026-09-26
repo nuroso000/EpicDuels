@@ -756,6 +756,8 @@ public class DuelCommand implements CommandExecutor {
         }
         plugin.reloadConfig();
         Messages.reload();
+        plugin.getMenuPresentationManager().reload();
+        plugin.getScoreboardManager().reload();
         Messages.send(player, "general.config-reloaded");
         Messages.send(player, "general.config-reloaded-note");
     }

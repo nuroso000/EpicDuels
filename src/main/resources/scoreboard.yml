@@ -1,0 +1,29 @@
+# Supports MiniMessage. Runtime placeholders are inserted as literal text.
+# Maximum 15 lines; duplicate lines and empty strings are supported.
+# Interval: 10..1200 ticks (20 ticks = one second).
+enabled: true
+update-interval-ticks: 20
+views:
+  lobby:
+    enabled: true
+    title: '<gold><bold>EpicDuels</bold></gold>'
+    lines: ['<gray>Welcome, <white><player>', '', '<yellow>/duel <gray>to play']
+  duel:
+    enabled: true
+    title: '<gold><bold>EpicDuels</bold></gold>'
+    lines:
+      - '<gray>Opponent: <white><opponent>'
+      - '<gray>Kit: <white><kit>'
+      - '<gray>Arena: <white><arena>'
+      - ''
+      - '<gray>Round: <white><round> / <best_of>'
+      - '<gray>Score: <green><score> <gray>: <red><opponent_score>'
+      - '<gray>Time left: <white><time>'
+  spectator:
+    enabled: true
+    title: '<aqua><bold>Spectating</bold></aqua>'
+    lines: ['<gray>Opponent: <white><opponent>', '<gray>Kit: <white><kit>', '<gray>Arena: <white><arena>', '<gray>Score: <white><score> : <opponent_score>', '<gray>Time left: <white><time>']
+  queue:
+    enabled: true
+    title: '<gold><bold>Matchmaking</bold></gold>'
+    lines: ['<gray>Player: <white><player>', '<gray>Kit: <white><kit>', '', '<yellow>Waiting for an opponent']

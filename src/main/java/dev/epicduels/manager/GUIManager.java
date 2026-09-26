@@ -91,7 +91,9 @@ public class GUIManager {
     }
 
     private Inventory createMenu(MenuType type, String context, int page, int size, Component title) {
-        return MenuHolder.createInventory(new MenuHolder(type, context, page), size, title);
+        return MenuHolder.createInventory(new MenuHolder(type, context, page),
+                plugin.getMenuPresentationManager().size(type, size),
+                plugin.getMenuPresentationManager().title(type, context, title));
     }
 
     // ========== MAIN MENU (27 slots, 3 rows) ==========
@@ -154,6 +156,7 @@ public class GUIManager {
                     "&cDisabled on this server."));
         }
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -189,6 +192,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -237,6 +241,7 @@ public class GUIManager {
         // Slot 22: Back
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to main menu"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -268,6 +273,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -303,6 +309,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -330,6 +337,7 @@ public class GUIManager {
                 "&7First to 3 round wins", "&7takes the match.", "", "&eClick to select"));
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to kit selection"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -369,6 +377,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -471,6 +480,7 @@ public class GUIManager {
 
         inv.setItem(53, createItem(Material.EMERALD, "&aSave Kit", "&7Click to save changes"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
     }
 
@@ -491,6 +501,7 @@ public class GUIManager {
         }
         if (kit.getOffHand() != null) inv.setItem(49, kit.getOffHand().clone());
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
     }
 
@@ -515,6 +526,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -561,6 +573,7 @@ public class GUIManager {
         inv.setItem(CUSTOMIZE_SAVE_SLOT, createItem(Material.EMERALD, "&aSave Layout",
                 "&7Save this arrangement.", "&7It is applied whenever you", "&7duel with this kit."));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -617,6 +630,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -647,6 +661,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -668,6 +683,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -766,6 +782,7 @@ public class GUIManager {
                     "&cDisabled on this server."));
         }
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -787,6 +804,7 @@ public class GUIManager {
         inv.setItem(15, sizeOption(Material.DIAMOND_SWORD, "4v4", 8, partySize));
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to mode selection"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -818,6 +836,7 @@ public class GUIManager {
                     "&7Click to select this kit"), MenuKeys.KIT, kit.getName()));
         }
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -846,6 +865,7 @@ public class GUIManager {
         inv.setItem(15, createItem(Material.RED_WOOL, "&c&lCancel",
                 "&7Close this menu"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }

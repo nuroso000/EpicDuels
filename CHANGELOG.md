@@ -1,3 +1,13 @@
+## 3.1.0
+
+- Add configurable context sidebars in scoreboard.yml with MiniMessage, real
+  match placeholders, bounded update interval, changed-content rendering, and cleanup.
+- Add menus.yml for titles, compatible sizes, button positions, item materials,
+  names, lore, and visibility while preserving holders and action IDs.
+- Reload presentation through /duel reload; validate unsafe positions and materials
+  with warnings and preserve previous configuration on YAML errors.
+- Document placeholders, editor/pagination constraints, and sidebar compatibility.
+
 # Changelog
 
 All notable changes to **EpicDuels** are documented in this file.

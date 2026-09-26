@@ -1,3 +1,10 @@
+## Version 3.1.0: configurable presentation
+
+Scoreboards provide lobby, duel, spectator, and queue views. Existing player and
+admin menus support configurable titles and button presentation with stable PDC
+actions. See [CONFIGURATION.md](CONFIGURATION.md) for examples, placeholders,
+layout constraints, and reload behavior.
+
 # <h1 align="center">EpicDuels</h1>
 <p align="center">
   <img src="https://i.ibb.co/VYNPYwxK/Neues-Projekt.png" width="100" alt="Logo">

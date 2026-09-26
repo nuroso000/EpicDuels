@@ -948,6 +948,8 @@ public class DuelManager {
         }
     }
 
+    public DuelInstance getSpectatedDuel(UUID playerId) { return spectators.get(playerId); }
+
     public boolean isSpectating(UUID playerId) {
         return spectators.containsKey(playerId);
     }

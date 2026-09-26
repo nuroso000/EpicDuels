@@ -85,7 +85,7 @@ import java.io.File;
  *   - PlayerListener: join (lobby TP), quit (cleanup), move
  *     freeze, damage cancel during countdown, death handling.
  *   - GUIListener: routes inventory clicks to the correct
- *     handler based on inventory title.
+ *     handler based on InventoryHolder and persistent button IDs.
  *   - WorldProtectionListener: protects lobby, allows admin
  *     building in templates, allows player block placement in
  *     instances but prevents breaking original map blocks.
@@ -100,6 +100,8 @@ public class EpicDuels extends JavaPlugin {
     private QueueManager queueManager;
     private StatsManager statsManager;
     private GUIManager guiManager;
+    private MenuPresentationManager menuPresentationManager;
+    private ScoreboardManager scoreboardManager;
     private HologramManager hologramManager;
     private PartyManager partyManager;
     private TeamDuelManager teamDuelManager;
@@ -126,6 +128,7 @@ public class EpicDuels extends JavaPlugin {
         playerKitManager = new PlayerKitManager(this);
         inventoryBackupManager = new InventoryBackupManager(this);
         statsManager = new StatsManager(this);
+        menuPresentationManager = new MenuPresentationManager(this);
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
         queueManager = new QueueManager(this);
@@ -135,6 +138,7 @@ public class EpicDuels extends JavaPlugin {
         tournamentManager = new TournamentManager(this);
         rematchManager = new RematchManager(this);
         resultCommandManager = new ResultCommandManager(this);
+        scoreboardManager = new ScoreboardManager(this);
 
         // Optional PlaceholderAPI hook (softdepend) — the expansion class is
         // only classloaded inside this guard
@@ -177,6 +181,7 @@ public class EpicDuels extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (scoreboardManager != null) scoreboardManager.shutdown();
         // Tear down party-related managers first so callbacks don't fire mid-shutdown
         if (tournamentManager != null) tournamentManager.cleanupAll();
         if (teamDuelManager != null) teamDuelManager.cleanupAll();
@@ -347,6 +352,8 @@ public class EpicDuels extends JavaPlugin {
     }
 
     // --- Manager getters ---
+    public MenuPresentationManager getMenuPresentationManager() { return menuPresentationManager; }
+    public ScoreboardManager getScoreboardManager() { return scoreboardManager; }
 
     public ArenaManager getArenaManager() {
         return arenaManager;

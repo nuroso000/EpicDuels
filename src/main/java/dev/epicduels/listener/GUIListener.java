@@ -54,10 +54,10 @@ public class GUIListener implements Listener {
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
-        if (clicked.getType().name().endsWith("STAINED_GLASS_PANE")) return;
+        if (dev.epicduels.manager.MenuPresentationManager.actionSlot(clicked) < 0) return;
 
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
-        int slot = event.getSlot();
+        int slot = dev.epicduels.manager.MenuPresentationManager.actionSlot(clicked);
 
         switch (holder.getType()) {
             case MAIN -> handleMainMenuClick(player, slot);
@@ -474,7 +474,7 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            if (slot == GUIManager.CUSTOMIZE_RESET_SLOT) {
+            if (dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == GUIManager.CUSTOMIZE_RESET_SLOT) {
                 boolean had = plugin.getPlayerKitManager().resetLayout(player.getUniqueId(), kit.getName());
                 Messages.send(player, had ? "kiteditor.reset" : "kiteditor.no-layout",
                         Messages.unparsed("kit", kit.getName()));
@@ -483,7 +483,7 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            if (slot == GUIManager.CUSTOMIZE_SAVE_SLOT) {
+            if (dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == GUIManager.CUSTOMIZE_SAVE_SLOT) {
                 Inventory inv = event.getInventory();
 
                 ItemStack[] contents = new ItemStack[36];
@@ -551,12 +551,12 @@ public class GUIListener implements Listener {
     private void handleKitEditClick(InventoryClickEvent event, Player player, MenuHolder holder) {
         int slot = event.getRawSlot();
 
-        if (slot >= 41 && slot <= 52) {
+        if (slot >= 41 && slot <= 53 && dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) != 53) {
             event.setCancelled(true);
             return;
         }
 
-        if (slot == 53) {
+        if (slot >= 41 && slot <= 53 && dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == 53) {
             event.setCancelled(true);
 
             String kitName = holder.getContext();
