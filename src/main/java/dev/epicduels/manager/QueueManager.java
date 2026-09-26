@@ -37,6 +37,8 @@ public class QueueManager {
     }
 
     public boolean joinQueue(UUID playerId, String kitName) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (!plugin.isFeatureEnabled("matchmaking") || player == null || !player.hasPermission("epicduels.duel")) return false;
         if (playerQueue.containsKey(playerId)) return false;
         if (plugin.getDuelManager().isBusy(playerId)) return false;
 
@@ -109,6 +111,10 @@ public class QueueManager {
         matchmakingTask = new BukkitRunnable() {
             @Override
             public void run() {
+                if (!plugin.isFeatureEnabled("matchmaking")) {
+                    clearWaitingPlayers();
+                    return;
+                }
                 for (Map.Entry<String, List<UUID>> entry : queues.entrySet()) {
                     List<UUID> queue = entry.getValue();
                     if (queue.size() < 2) continue;
@@ -126,8 +132,8 @@ public class QueueManager {
                     Player p1 = Bukkit.getPlayer(player1Id);
                     Player p2 = Bukkit.getPlayer(player2Id);
 
-                    boolean valid1 = p1 != null && p1.isOnline() && !plugin.getDuelManager().isBusy(player1Id);
-                    boolean valid2 = p2 != null && p2.isOnline() && !plugin.getDuelManager().isBusy(player2Id);
+                    boolean valid1 = p1 != null && p1.isOnline() && p1.hasPermission("epicduels.duel") && !plugin.getDuelManager().isBusy(player1Id);
+                    boolean valid2 = p2 != null && p2.isOnline() && p2.hasPermission("epicduels.duel") && !plugin.getDuelManager().isBusy(player2Id);
                     if (!valid1 || !valid2) {
                         // Put back whoever is still eligible instead of
                         // silently dropping them from the queue
@@ -169,6 +175,16 @@ public class QueueManager {
                 }
             }
         }.runTaskTimer(plugin, 40L, 20L); // Check every second, start after 2s
+    }
+
+    public void clearWaitingPlayers() {
+        for (UUID id : playerQueue.keySet()) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) player.sendActionBar(Component.empty());
+        }
+        queues.clear();
+        playerQueue.clear();
+        queueJoinTime.clear();
     }
 
     public void cleanup() {

@@ -454,32 +454,12 @@ stats:
   # --------------------------------------------------------------------------
   # Supabase (only used when backend: "supabase")
   # --------------------------------------------------------------------------
-  # Setup:
-  #
-  #   1. Create a project at https://supabase.com (free tier is fine).
-  #
-  #   2. Open SQL Editor and create the stats table:
-  #
-  #        CREATE TABLE IF NOT EXISTS player_stats (
-  #          uuid   TEXT PRIMARY KEY,
-  #          wins   INTEGER NOT NULL DEFAULT 0,
-  #          losses INTEGER NOT NULL DEFAULT 0
-  #        );
-  #
-  #   3. Copy your project URL and "anon" API key from
-  #      Project Settings -> API into the fields below.
-  #
-  #   4. Set backend: "supabase" above and RESTART the server.
-  #
-  # The plugin tests the connection on startup and logs a clear error
-  # if the URL or key is wrong. If pushes fail with HTTP 401/403,
-  # check the Row-Level Security policy of the table in the Supabase
-  # dashboard (the anon role needs SELECT + INSERT/UPDATE).
-  #
-  # url ....... your project URL, e.g. "https://abcdefgh.supabase.co"
-  # api-key ... the "anon" (public) API key — NOT the service_role key
-  # table ..... table name; keep "player_stats" unless you renamed it
-  #
+  # Setup: run database/supabase-results.sql before enabling this backend.
+  # Use a private server credential with permission to call <table>_record_result.
+  # Never use an anon key with public write access and never disable RLS.
+  # The bundled compatibility SQL permits only service_role; keep that key server-only.
+  # Prefer a dedicated server role with narrowly scoped policies when available.
+  # A custom table requires matching table, events table and RPC function names.
   supabase:
     url: ""
     api-key: ""
@@ -498,16 +478,11 @@ stats:
   #      (region-specific URLs like ...europe-west1.firebasedatabase.app
   #      work too).
   #
-  #   3. Either set database rules to allow public read/write on the
-  #      stats path, OR paste your database secret into auth-token for
-  #      authenticated access.
-  #
-  #   4. Set backend: "firebase" above and RESTART the server.
-  #
-  # database-url ... full URL of the Realtime Database
-  # auth-token ..... optional database secret; leave empty when your
-  #                  rules allow unauthenticated read/write
-  #
+  #   3. Configure restrictive rules and a private server authentication token.
+  #      Never allow unauthenticated writes. The transaction updates the player's
+  #      counters and event IDs together using ETag / If-Match conflict checks.
+  #   4. Set backend: "firebase" and restart the server.
+  # auth-token: required server credential; do not publish it.
   firebase:
     database-url: ""
     auth-token: ""

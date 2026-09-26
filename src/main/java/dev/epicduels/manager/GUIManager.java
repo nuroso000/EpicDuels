@@ -108,7 +108,7 @@ public class GUIManager {
         }
 
         // Slot 10: Diamond Sword — Duels
-        if (plugin.isFeatureEnabled("challenges")) {
+        if (plugin.isFeatureEnabled("challenges") && player.hasPermission("epicduels.duel")) {
             inv.setItem(10, createItem(Material.DIAMOND_SWORD, "&a&lDuels",
                     "&7Challenge another player", "&7to a private duel!"));
         } else {
@@ -127,10 +127,11 @@ public class GUIManager {
                         .decoration(TextDecoration.ITALIC, false)
         ));
         head.setItemMeta(headMeta);
-        inv.setItem(13, head);
+        inv.setItem(13, player.hasPermission("epicduels.stats") ? head
+                : createItem(Material.BARRIER, "&8Stats", "&cYou do not have permission."));
 
         // Slot 4: Ender Eye — Spectate
-        if (plugin.isFeatureEnabled("spectating")) {
+        if (plugin.isFeatureEnabled("spectating") && player.hasPermission("epicduels.spectate")) {
             inv.setItem(4, createItem(Material.ENDER_EYE, "&3&lSpectate",
                     "&7Watch the duels that are", "&7being fought right now!"));
         } else {
@@ -139,7 +140,7 @@ public class GUIManager {
         }
 
         // Slot 22: Anvil — Kit Editor
-        if (plugin.isFeatureEnabled("kit-editor")) {
+        if (plugin.isFeatureEnabled("kit-editor") && player.hasPermission("epicduels.duel")) {
             inv.setItem(22, createItem(Material.ANVIL, "&e&lKit Editor",
                     "&7Personalize the item layout", "&7of any kit — just for you!"));
         } else {
@@ -148,7 +149,7 @@ public class GUIManager {
         }
 
         // Slot 16: Hopper — Matchmaking
-        if (plugin.isFeatureEnabled("matchmaking")) {
+        if (plugin.isFeatureEnabled("matchmaking") && player.hasPermission("epicduels.duel")) {
             inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
                     "&7Join a queue to find", "&7an opponent automatically!"));
         } else {

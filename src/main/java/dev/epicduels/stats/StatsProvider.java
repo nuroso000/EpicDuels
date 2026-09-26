@@ -18,7 +18,7 @@ public interface StatsProvider {
     CompletableFuture<PlayerStats> fetch(UUID playerId);
 
     /**
-     * Push (upsert) a player's stats to the remote backend.
+     * Record an idempotent result; retries with the same event ID must not increment twice.
      */
-    CompletableFuture<Void> push(UUID playerId, PlayerStats stats);
+    CompletableFuture<Void> recordResult(UUID eventId, UUID playerId, boolean win);
 }

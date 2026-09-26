@@ -24,8 +24,8 @@ import java.util.logging.Level;
  * <p>
  * The local YAML file (stats.yml) always acts as the primary cache.
  * When a remote backend is configured (Supabase or Firebase), stats are
- * fetched on first access and pushed after every change, so multiple
- * servers share the same data.
+ * refreshed with a bounded cache lifetime. Result events use a durable
+ * outbox and idempotent backend transactions; cached totals are never uploaded.
  */
 public class StatsManager {
 
@@ -41,6 +41,9 @@ public class StatsManager {
         this.dataFile = new File(plugin.getDataFolder(), "stats.yml");
         initRemoteProvider();
         loadStats();
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (UUID uuid : new java.util.HashSet<>(pending.values().stream().map(PendingResult::playerId).toList())) flushPending(uuid);
+        }, 20L, 600L);
     }
 
     // ========== Remote provider setup ==========
@@ -63,8 +66,8 @@ public class StatsManager {
             case "firebase" -> {
                 String dbUrl = plugin.getConfig().getString("stats.firebase.database-url", "");
                 String auth = plugin.getConfig().getString("stats.firebase.auth-token", "");
-                if (dbUrl.isEmpty()) {
-                    plugin.getLogger().warning("Firebase backend selected but database-url is missing — falling back to local.");
+                if (dbUrl.isEmpty() || auth.isEmpty()) {
+                    plugin.getLogger().warning("Firebase backend selected but database-url/server auth-token is missing — falling back to local.");
                     return;
                 }
                 remoteProvider = new FirebaseProvider(dbUrl, auth, plugin.getLogger());
@@ -76,11 +79,27 @@ public class StatsManager {
 
     // ========== Load / Save (local YAML) ==========
 
+    private record PendingResult(UUID id, UUID playerId, boolean win) {}
+    private final Map<UUID, PendingResult> pending = new java.util.LinkedHashMap<>();
+    private final java.util.Set<UUID> sending = new java.util.HashSet<>();
+    private final java.util.Set<UUID> fetching = new java.util.HashSet<>();
+    private final Map<UUID, Long> refreshed = new HashMap<>();
+    private final Map<UUID, Long> revisions = new HashMap<>();
+    private final java.util.List<CompletableFuture<Void>> remoteWrites = new ArrayList<>();
+
     public void loadStats() {
         stats.clear();
+        pending.clear();
         if (!dataFile.exists()) return;
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+        org.bukkit.configuration.ConfigurationSection outbox = config.getConfigurationSection("_pending");
+        if (outbox != null) for (String key : outbox.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(key);
+                pending.put(id, new PendingResult(id, UUID.fromString(outbox.getString(key + ".player")), outbox.getBoolean(key + ".win")));
+            } catch (RuntimeException error) { throw new IllegalStateException("Invalid stats outbox: " + key, error); }
+        }
         for (String key : config.getKeys(false)) {
             try {
                 UUID uuid = UUID.fromString(key);
@@ -92,9 +111,10 @@ public class StatsManager {
         }
     }
 
-    public void saveStats() {
-        String data = serializeStats();
-        writeStatsFile(data);
+    public void saveStats() { persistStats(); }
+
+    private boolean persistStats() {
+        return writeStatsFile(serializeStats(), ++snapshotVersion);
     }
 
     /**
@@ -102,13 +122,15 @@ public class StatsManager {
      * writes the file asynchronously so wins/losses don't block the tick.
      * Falls back to a synchronous write during shutdown.
      */
+    private long snapshotVersion;
+    private long writtenVersion;
+
     private void saveStatsAsync() {
         String data = serializeStats();
+        long version = ++snapshotVersion;
         if (plugin.isEnabled()) {
-            org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> writeStatsFile(data));
-        } else {
-            writeStatsFile(data);
-        }
+            org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> writeStatsFile(data, version));
+        } else writeStatsFile(data, version);
     }
 
     private String serializeStats() {
@@ -118,17 +140,31 @@ public class StatsManager {
             config.set(key + ".wins", entry.getValue().getWins());
             config.set(key + ".losses", entry.getValue().getLosses());
         }
+        for (PendingResult result : pending.values()) {
+            config.set("_pending." + result.id() + ".player", result.playerId().toString());
+            config.set("_pending." + result.id() + ".win", result.win());
+        }
         return config.saveToString();
     }
 
     private final Object saveLock = new Object();
 
-    private void writeStatsFile(String data) {
+    private boolean writeStatsFile(String data, long version) {
         synchronized (saveLock) {
+            if (version <= writtenVersion) return true;
+            java.nio.file.Path temporary = null;
             try {
-                java.nio.file.Files.writeString(dataFile.toPath(), data);
+                temporary = java.nio.file.Files.createTempFile(dataFile.toPath().getParent(), "stats-", ".tmp");
+                java.nio.file.Files.writeString(temporary, data);
+                java.nio.file.Files.move(temporary, dataFile.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                writtenVersion = version;
+                return true;
             } catch (IOException e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to save stats.yml", e);
+                return false;
+            } finally {
+                if (temporary != null) try { java.nio.file.Files.deleteIfExists(temporary); } catch (IOException ignored) {}
             }
         }
     }
@@ -137,78 +173,100 @@ public class StatsManager {
 
     /**
      * Get stats for a player. If a remote provider is configured and we
-     * don't have local data yet, an async fetch is kicked off. The local
+     * the cache lifetime expires, an async fetch is kicked off. The local
      * cache is always returned immediately (may be 0/0 on the very first
      * call until the remote responds).
      */
     public PlayerStats getStats(UUID uuid) {
-        PlayerStats local = stats.get(uuid);
-        if (local != null) return local;
-
-        // First access — create default
-        local = new PlayerStats(0, 0);
-        stats.put(uuid, local);
-
-        // If remote provider is configured, try to pull data. The HTTP callback
-        // runs on the HttpClient's thread pool — hop back onto the main thread
-        // before touching the stats map or saving, since neither is thread-safe.
-        if (remoteProvider != null) {
-            final PlayerStats placeholder = local;
-            remoteProvider.fetch(uuid).thenAccept(remote -> {
-                if (remote == null || !plugin.isEnabled()) return;
-                org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
-                    // Merge: take the higher value for each field so no data is lost
-                    int mergedWins = Math.max(placeholder.getWins(), remote.getWins());
-                    int mergedLosses = Math.max(placeholder.getLosses(), remote.getLosses());
-                    placeholder.setWins(mergedWins);
-                    placeholder.setLosses(mergedLosses);
-                    // Persist merged data locally
-                    saveStatsAsync();
-                    plugin.getLogger().info("Synced stats for " + uuid + " from remote (" + mergedWins + "W/" + mergedLosses + "L).");
-                });
-            });
-        }
-
+        PlayerStats local = stats.computeIfAbsent(uuid, ignored -> new PlayerStats(0, 0));
+        flushPending(uuid);
+        refresh(uuid);
         return local;
     }
 
-    public void addWin(UUID uuid) {
-        getStats(uuid).addWin();
-        saveStatsAsync();
-        pushToRemote(uuid);
+    private void refresh(UUID uuid) {
+        if (remoteProvider == null || sending.contains(uuid) || fetching.contains(uuid)
+                || pending.values().stream().anyMatch(result -> result.playerId().equals(uuid))
+                || System.currentTimeMillis() - refreshed.getOrDefault(uuid, 0L) < 30_000) return;
+        fetching.add(uuid);
+        long revision = revisions.getOrDefault(uuid, 0L);
+        remoteProvider.fetch(uuid).whenComplete((remote, error) -> {
+            if (!plugin.isEnabled()) return;
+            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+                fetching.remove(uuid);
+                if (revision != revisions.getOrDefault(uuid, 0L) || sending.contains(uuid)) return;
+                if (error != null) return;
+                if (remote != null) {
+                    PlayerStats local = stats.computeIfAbsent(uuid, ignored -> new PlayerStats(0, 0));
+                    local.setWins(remote.getWins());
+                    local.setLosses(remote.getLosses());
+                    saveStatsAsync();
+                }
+                refreshed.put(uuid, System.currentTimeMillis());
+            });
+        });
     }
 
-    public void addLoss(UUID uuid) {
-        getStats(uuid).addLoss();
-        saveStatsAsync();
-        pushToRemote(uuid);
-    }
+    public void addWin(UUID uuid) { recordMatch(List.of(uuid), List.of()); }
+    public void addLoss(UUID uuid) { recordMatch(List.of(), List.of(uuid)); }
 
-    /**
-     * Push a player's stats to the remote backend asynchronously.
-     */
-    private void pushToRemote(UUID uuid) {
-        if (remoteProvider == null) return;
-        PlayerStats s = stats.get(uuid);
-        if (s == null) return;
-        remoteProvider.push(uuid, s);
-    }
-
-    /**
-     * Push ALL cached stats to the remote (called on shutdown so nothing is lost).
-     */
-    public void pushAllToRemote() {
-        if (remoteProvider == null) return;
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
-            futures.add(remoteProvider.push(entry.getKey(), entry.getValue()));
+    public void recordMatch(java.util.Collection<UUID> winners, java.util.Collection<UUID> losers) {
+        for (UUID uuid : winners) appendResult(uuid, true);
+        for (UUID uuid : losers) appendResult(uuid, false);
+        // A complete match and its outbox events share one local snapshot.
+        if (remoteProvider == null) saveStatsAsync();
+        else {
+            saveStats();
+            for (UUID uuid : winners) flushPending(uuid);
+            for (UUID uuid : losers) flushPending(uuid);
         }
+    }
+
+    private void appendResult(UUID uuid, boolean win) {
+        PlayerStats local = stats.computeIfAbsent(uuid, ignored -> new PlayerStats(0, 0));
+        if (win) local.addWin(); else local.addLoss();
+        revisions.merge(uuid, 1L, Long::sum);
+        refreshed.remove(uuid);
+        if (remoteProvider != null) {
+            UUID eventId = UUID.randomUUID();
+            pending.put(eventId, new PendingResult(eventId, uuid, win));
+        }
+    }
+
+    private void flushPending(UUID uuid) {
+        if (remoteProvider == null || sending.contains(uuid)) return;
+        PendingResult next = pending.values().stream().filter(result -> result.playerId().equals(uuid)).findFirst().orElse(null);
+        if (next == null) return;
+        if (!persistStats()) return; // Never send an event that is not yet durable.
+        sending.add(uuid);
+        CompletableFuture<Void> write = remoteProvider.recordResult(next.id(), uuid, next.win());
+        remoteWrites.removeIf(CompletableFuture::isDone);
+        remoteWrites.add(write);
+        write.whenComplete((unused, error) -> {
+            if (!plugin.isEnabled()) return; // Unacknowledged disk events are safe to replay after restart.
+            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+                sending.remove(uuid);
+                if (error != null) {
+                    plugin.getLogger().warning("Remote result retained for retry: " + next.id());
+                    return;
+                }
+                pending.remove(next.id());
+                revisions.merge(uuid, 1L, Long::sum);
+                saveStats();
+                flushPending(uuid);
+                refresh(uuid);
+            });
+        });
+    }
+
+    public void pushAllToRemote() {
+        // Never upload absolute cache totals; retain unacknowledged idempotent events on disk.
+        saveStats();
+        for (UUID uuid : new java.util.HashSet<>(pending.values().stream().map(PendingResult::playerId).toList())) flushPending(uuid);
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .get(15, TimeUnit.SECONDS);
-            plugin.getLogger().info("Pushed all stats to remote backend (" + futures.size() + " players).");
-        } catch (Exception e) {
-            plugin.getLogger().warning("Some stats may not have been pushed to remote: " + e.getMessage());
+            CompletableFuture.allOf(remoteWrites.toArray(new CompletableFuture[0])).get(15, TimeUnit.SECONDS);
+        } catch (Exception error) {
+            plugin.getLogger().warning("Remote results remain in the durable outbox for retry.");
         }
     }
 

@@ -94,6 +94,7 @@ public class ArenaManager {
             world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
             world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
             world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+            world.setGameRule(GameRule.DO_FIRE_TICK, false);
             world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
             world.setTime(6000);
             world.setDifficulty(Difficulty.NORMAL);
@@ -169,7 +170,7 @@ public class ArenaManager {
 
     public boolean deleteArena(String name) {
         String key = name.toLowerCase();
-        Arena arena = arenas.remove(key);
+        Arena arena = arenas.get(key);
         if (arena == null) return false;
 
         World world = Bukkit.getWorld(arena.getWorldName());
@@ -178,9 +179,10 @@ public class ArenaManager {
             for (Player p : world.getPlayers()) {
                 p.teleport(fallback.getSpawnLocation());
             }
-            Bukkit.unloadWorld(world, false);
+            if (!Bukkit.unloadWorld(world, false)) return false;
         }
 
+        arenas.remove(key);
         deleteWorldFolder(new File(Bukkit.getWorldContainer(), arena.getWorldName()));
         saveArenas();
         return true;
@@ -244,30 +246,34 @@ public class ArenaManager {
             }
 
             return instanceName;
-        }).thenApply(instanceName -> {
-            if (instanceName == null) return null;
+        }).thenCompose(instanceName -> {
+            if (instanceName == null) return CompletableFuture.completedFuture(null);
 
             CompletableFuture<World> worldFuture = new CompletableFuture<>();
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                WorldCreator creator = new WorldCreator((String) instanceName);
-                creator.generator(new VoidWorldGenerator());
-                creator.type(WorldType.FLAT);
-                World world = Bukkit.createWorld(creator);
-                if (world != null) {
-                    world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-                    world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-                    world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-                    world.setAutoSave(false);
-                }
-                worldFuture.complete(world);
-            });
-
             try {
-                return worldFuture.get();
-            } catch (Exception e) {
-                plugin.getLogger().log(Level.SEVERE, "Failed to load instance world", e);
-                return null;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        WorldCreator creator = new WorldCreator(instanceName);
+                        creator.generator(new VoidWorldGenerator());
+                        creator.type(WorldType.FLAT);
+                        World world = Bukkit.createWorld(creator);
+                        if (world != null) {
+                            world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+                            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                            world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+                            world.setGameRule(GameRule.DO_FIRE_TICK, false);
+                            world.setAutoSave(false);
+                        }
+                        worldFuture.complete(world);
+                    } catch (Throwable error) {
+                        worldFuture.completeExceptionally(error);
+                    }
+                });
+            } catch (Throwable error) {
+                worldFuture.completeExceptionally(error);
             }
+            return worldFuture;
+
         });
     }
 
@@ -279,7 +285,8 @@ public class ArenaManager {
             }
             boolean unloaded = Bukkit.unloadWorld(world, false);
             if (!unloaded) {
-                plugin.getLogger().warning("Failed to unload instance world: " + worldName);
+                plugin.getLogger().warning("Failed to unload instance world; folder retained: " + worldName);
+                return;
             }
         }
 
@@ -306,6 +313,7 @@ public class ArenaManager {
                 world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
                 world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
                 world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+                world.setGameRule(GameRule.DO_FIRE_TICK, false);
             }
         }
     }

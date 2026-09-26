@@ -160,6 +160,7 @@ public class EpicDuels extends JavaPlugin {
         }
 
         // Register listeners
+        getServer().getPluginManager().registerEvents(new dev.epicduels.listener.InventoryGuardListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
@@ -231,7 +232,10 @@ public class EpicDuels extends JavaPlugin {
                     for (org.bukkit.entity.Player p : w.getPlayers()) {
                         p.teleport(getLobbyLocation());
                     }
-                    Bukkit.unloadWorld(w, false);
+                    if (!Bukkit.unloadWorld(w, false)) {
+                        getLogger().warning("Retaining loaded instance: " + dir.getName());
+                        continue;
+                    }
                 }
                 ArenaManager.deleteWorldFolder(dir);
                 cleaned++;
@@ -243,7 +247,13 @@ public class EpicDuels extends JavaPlugin {
     }
 
     private void setupVoidWorld() {
-        World defaultWorld = Bukkit.getWorld("world");
+        if (!getConfig().getBoolean("lobby.configure-void-world", false)) return;
+        org.bukkit.Location lobby = getLobbyLocation();
+        World defaultWorld = lobby == null ? null : lobby.getWorld();
+        if (defaultWorld == null || !(defaultWorld.getGenerator() instanceof VoidWorldGenerator)) {
+            getLogger().warning("Lobby setup requires an explicitly configured void world.");
+            return;
+        }
         if (defaultWorld != null) {
             File markerFile = new File(getDataFolder(), ".void-setup-complete");
             if (!markerFile.exists()) {

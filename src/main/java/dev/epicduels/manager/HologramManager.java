@@ -170,7 +170,8 @@ public class HologramManager {
             }
             stand.customName(lines.get(i));
             Location target = anchor.clone().add(0, -(i * LINE_HEIGHT), 0);
-            if (stand.getLocation().distanceSquared(target) > 0.01) {
+            if (!java.util.Objects.equals(stand.getWorld(), target.getWorld())
+                    || stand.getLocation().distanceSquared(target) > 0.01) {
                 stand.teleport(target);
             }
         }

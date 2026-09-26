@@ -755,6 +755,7 @@ public class DuelCommand implements CommandExecutor {
             return;
         }
         plugin.reloadConfig();
+        if (!plugin.isFeatureEnabled("matchmaking")) plugin.getQueueManager().clearWaitingPlayers();
         Messages.reload();
         plugin.getMenuPresentationManager().reload();
         plugin.getScoreboardManager().reload();

@@ -138,3 +138,21 @@ runtime placeholders. After compilation, run it with `target/classes`,
 `target/test-classes`, and the resolved Adventure dependency JARs on the Java
 classpath. It exits with an assertion failure on regression. These 15 assertions
 were run successfully for this change; they do not simulate a Paper server.
+
+
+## Inventory recovery and remote statistics upgrade
+
+Every duel mode now saves the personal inventory before equipment changes. Failed snapshots abort the start before either inventory changes. Invalid snapshots remain in `inventories/` for operator recovery; never delete them without inspecting the player's saved items. Successful restoration saves player data and atomically consumes the recovery file. Files ending in `.consumed` are housekeeping leftovers and are never replayed.
+
+When `lobby.handle-join: false`, recovery restores the saved location and game mode. Otherwise it resets combat effects and returns the player to the configured lobby. Failed return teleports keep the session protected and retry once per second while the plugin remains enabled. During an unresolved recovery, storage access, item drops outside active combat, and external commands are blocked. `/duel forfeit` and `/d forfeit` remain available. Plugins that directly mutate inventories or dispatch commands from the console require their own integration with this boundary.
+
+Automatic lobby world configuration is now opt-in with `lobby.configure-void-world: true` and requires the configured lobby to use EpicDuels' void generator. Existing survival worlds are not reconfigured. Fire destruction and pistons are disabled in battle instances to preserve the original arena across rounds.
+
+Remote statistics no longer upload absolute cached totals. Supabase requires `database/supabase-results.sql` to be installed before restarting with the remote backend. Custom table names require matching event table and RPC names. Use a private server credential and keep RLS enabled; the supplied compatibility SQL grants access only to `service_role`. Prefer a dedicated server identity with narrower permissions when your deployment supports it. Firebase requires server authentication and restrictive rules; transactions use ETags to commit a counter and its event ID together. Do not delete result event IDs while a server could still replay its outbox.
+
+Back up existing statistics before upgrading. Treat existing remote totals as the baseline. Old local cache totals are not automatically imported, because they may already be included remotely. If local-only history needs migration, reconcile it once with the remote baseline before enabling remote recording. Unacknowledged events survive in the `_pending` section of `stats.yml`; keep that section intact. Local display refreshes on access after at most 30 seconds, once pending writes are acknowledged. HTTP failures retain results for retry. A full filesystem cannot durably record new results; it is logged and prevents sending undurable events, while match cleanup continues.
+
+
+## Running regression checks
+
+Use `python3 scripts/checks.py` (`--offline` when dependencies are already cached). This compiles tests and then executes both standalone suites with Maven's actual dependency classpath. `mvn test` by itself only compiles these main-based suites; it does not execute their assertions. The bug suite binds an HTTP server exclusively to localhost and uses API doubles rather than a live Paper server. JDK 21 or newer, Maven, Python 3 and permission to bind localhost are required.

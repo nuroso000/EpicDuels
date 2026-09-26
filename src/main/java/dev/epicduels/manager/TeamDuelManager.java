@@ -96,7 +96,12 @@ public class TeamDuelManager {
     }
 
     public boolean startTeamDuel(List<UUID> partyMembers, dev.epicduels.model.TeamSize size, Arena arena, Kit kit) {
+        if (!plugin.isFeatureEnabled("parties") || !plugin.isFeatureEnabled("team-duels")) return false;
         if (partyMembers.size() < size.getTotalPlayers()) return false;
+        for (UUID id : partyMembers.subList(0, size.getTotalPlayers())) {
+            Player player = Bukkit.getPlayer(id);
+            if (player == null || !player.hasPermission("epicduels.duel") || plugin.getDuelManager().isBusy(id)) return false;
+        }
 
         // Take the first N players, shuffle them for fair team split
         List<UUID> participants = new ArrayList<>(partyMembers.subList(0, size.getTotalPlayers()));
@@ -122,7 +127,7 @@ public class TeamDuelManager {
             if (p != null) Messages.send(p, "teamduel.preparing");
         }
 
-        plugin.getArenaManager().createInstanceWorld(arena, instance.getInstanceWorldName()).thenAccept(world -> {
+        plugin.getArenaManager().createInstanceWorld(arena, instance.getInstanceWorldName()).handle((world, error) -> world).thenAccept(world -> {
             if (world == null) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     failStart(instance, "teamduel.fail-create");
@@ -131,13 +136,29 @@ public class TeamDuelManager {
             }
             Bukkit.getScheduler().runTask(plugin, () -> {
                 instance.setInstanceWorld(world);
-                instance.setActive(true);
+                if (activeById.get(instance.getId()) != instance
+                        || instance.getAllParticipants().stream().anyMatch(id -> Bukkit.getPlayer(id) == null
+                        || activeByPlayer.get(id) != instance || !instance.isAlive(id))) {
+                    failStart(instance, "teamduel.fail-create");
+                    return;
+                }
 
                 if (arena.getSpawn1() == null || arena.getSpawn2() == null) {
                     failStart(instance, "teamduel.fail-spawns");
                     return;
                 }
 
+                java.util.List<Player> saved = new ArrayList<>();
+                for (UUID id : instance.getAllParticipants()) {
+                    Player player = Bukkit.getPlayer(id);
+                    if (!plugin.getInventoryBackupManager().backup(player)) {
+                        saved.forEach(p -> plugin.getInventoryBackupManager().restore(p));
+                        failStart(instance, "teamduel.fail-create");
+                        return;
+                    }
+                    saved.add(player);
+                }
+                instance.setActive(true);
                 Location base1 = arena.getSpawn1().clone();
                 base1.setWorld(world);
                 Location base2 = arena.getSpawn2().clone();
@@ -214,7 +235,7 @@ public class TeamDuelManager {
         for (UUID id : instance.getAllParticipants()) {
             Player p = Bukkit.getPlayer(id);
             if (p != null) Messages.send(p, reasonKey);
-            activeByPlayer.remove(id);
+            activeByPlayer.remove(id, instance);
             frozen.remove(id);
         }
         activeById.remove(instance.getId());
@@ -319,7 +340,7 @@ public class TeamDuelManager {
             // Move the player into spectator mode within the arena
             deadSpectators.add(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!player.isOnline()) return;
+                if (!player.isOnline() || activeByPlayer.get(player.getUniqueId()) != instance || !instance.isActive()) return;
                 player.getInventory().clear();
                 player.setGameMode(GameMode.SPECTATOR);
                 if (instance.getInstanceWorld() != null) {
@@ -338,8 +359,7 @@ public class TeamDuelManager {
         Set<UUID> winners = instance.getTeam(winningTeam);
         Set<UUID> losers = winningTeam == TeamDuelInstance.Team.A ? instance.getTeamB() : instance.getTeamA();
 
-        for (UUID id : winners) plugin.getStatsManager().addWin(id);
-        for (UUID id : losers) plugin.getStatsManager().addLoss(id);
+        plugin.getStatsManager().recordMatch(winners, losers);
 
         // Each configured command is run once per player on the matching side.
         plugin.getResultCommandManager().execute(
@@ -381,34 +401,30 @@ public class TeamDuelManager {
      * the instance world.
      */
     private void scheduleReturnToLobby(TeamDuelInstance instance) {
-        String instanceWorldName = instance.getInstanceWorldName();
-        Set<UUID> all = instance.getAllParticipants();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> finishReturn(instance), 60L);
+    }
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                Location lobby = plugin.getLobbyLocation();
-                for (UUID id : all) {
-                    Player p = Bukkit.getPlayer(id);
-                    if (p != null && p.isOnline()) {
-                        p.getInventory().clear();
-                        p.setHealth(p.getMaxHealth());
-                        p.setFoodLevel(20);
-                        p.setSaturation(20f);
-                        p.setGameMode(GameMode.ADVENTURE);
-                        p.teleport(lobby);
-                    }
-                    activeByPlayer.remove(id);
-                    deadSpectators.remove(id);
-                    frozen.remove(id);
-                }
-                activeById.remove(instance.getId());
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    plugin.getArenaManager().deleteInstanceWorld(instanceWorldName);
-                }, 20L);
+    private void finishReturn(TeamDuelInstance instance) {
+        instance.setActive(false);
+        boolean pendingReturn = false;
+        for (UUID id : instance.getAllParticipants()) {
+            if (activeByPlayer.get(id) != instance) continue;
+            Player player = Bukkit.getPlayer(id);
+            if (player != null && player.isOnline() && plugin.getInventoryBackupManager().hasBackup(id)
+                    && !plugin.getDuelManager().resetAfterBattle(player)) {
+                pendingReturn = true;
+                continue;
             }
-        }.runTaskLater(plugin, 60L);
+            activeByPlayer.remove(id, instance);
+            deadSpectators.remove(id);
+            frozen.remove(id);
+        }
+        if (pendingReturn) {
+            if (plugin.isEnabled()) Bukkit.getScheduler().runTaskLater(plugin, () -> finishReturn(instance), 20L);
+            return;
+        }
+        activeById.remove(instance.getId(), instance);
+        plugin.getArenaManager().deleteInstanceWorld(instance.getInstanceWorldName());
     }
 
     /**
@@ -420,14 +436,7 @@ public class TeamDuelManager {
         if (instance == null || !instance.isActive()) return;
         if (!instance.isAlive(player.getUniqueId())) return;
 
-        instance.markDead(player.getUniqueId());
-        frozen.remove(player.getUniqueId());
-        Messages.send(player, "teamduel.left-arena");
-
-        TeamDuelInstance.Team winner = instance.getWinningTeam();
-        if (winner != null) {
-            endTeamDuel(instance, winner);
-        }
+        eliminate(player, Messages.get("teamduel.left-arena"));
     }
 
     public void handleDisconnect(UUID playerId) {
@@ -463,7 +472,9 @@ public class TeamDuelManager {
     }
 
     public boolean isFrozen(UUID playerId) {
-        return frozen.contains(playerId);
+        TeamDuelInstance instance = activeByPlayer.get(playerId);
+        return frozen.contains(playerId) || (instance != null && instance.getInstanceWorld() != null
+                && (!instance.isActive() || !instance.isAlive(playerId)));
     }
 
     public boolean isDeadSpectator(UUID playerId) {
@@ -493,14 +504,7 @@ public class TeamDuelManager {
             timeLimitTask.cancel();
             timeLimitTask = null;
         }
-        for (TeamDuelInstance instance : new HashSet<>(activeById.values())) {
-            if (instance.isActive()) {
-                instance.setActive(false);
-                if (instance.getInstanceWorld() != null) {
-                    plugin.getArenaManager().deleteInstanceWorld(instance.getInstanceWorldName());
-                }
-            }
-        }
+        for (TeamDuelInstance instance : new HashSet<>(activeById.values())) finishReturn(instance);
         activeById.clear();
         activeByPlayer.clear();
         deadSpectators.clear();
