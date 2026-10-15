@@ -1,0 +1,84 @@
+# EpicDuels 3.1.0. Missing settings preserve the existing English presentation.
+# Menu IDs correspond to MenuType, in lower-case with hyphens.
+# Buttons use stable IDs slot-N (N is their ORIGINAL built-in slot).
+# MiniMessage placeholders: <name> (original plain name), <kit>, <arena>.
+# See CONFIGURATION.md for layout constraints and examples.
+menus:
+  main:
+    title: '<gold><bold>EpicDuels</bold></gold>'
+    size: 27
+    buttons:
+      slot-10:
+        slot: 10
+        material: DIAMOND_SWORD
+        name: '<aqua><bold>Duels</bold></aqua>'
+        lore: ['<gray>Choose a player to challenge.</gray>']
+        visible: true
+  duels:
+    title: '<aqua><bold>Select Player</bold></aqua>'
+    size: 54
+    buttons: {}
+  stats:
+    title: '<aqua><bold>Your Stats</bold></aqua>'
+    size: 27
+    buttons: {}
+  matchmaking:
+    title: '<aqua><bold>Matchmaking</bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-select:
+    title: '<aqua><bold>Select Kit</bold></aqua>'
+    size: 54
+    buttons: {}
+  rounds-select:
+    title: '<aqua><bold>Select Rounds</bold></aqua>'
+    size: 27
+    buttons: {}
+  arena-select:
+    title: '<aqua><bold>Select Map</bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-edit:
+    title: '<aqua><bold>Edit Kit: <kit></bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-preview:
+    title: '<aqua><bold>Preview Kit: <kit></bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-customize:
+    title: '<aqua><bold>Customize Kit: <kit></bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-list:
+    title: '<aqua><bold>Kits</bold></aqua>'
+    size: 54
+    buttons: {}
+  kit-editor-list:
+    title: '<aqua><bold>Kit Editor</bold></aqua>'
+    size: 54
+    buttons: {}
+  arena-list:
+    title: '<aqua><bold>Arenas</bold></aqua>'
+    size: 54
+    buttons: {}
+  party-mode:
+    title: '<aqua><bold>Party - Choose Mode</bold></aqua>'
+    size: 27
+    buttons: {}
+  party-team-size:
+    title: '<aqua><bold>Party - Team Size</bold></aqua>'
+    size: 27
+    buttons: {}
+  party-kit:
+    title: '<aqua><bold>Party - Select Kit</bold></aqua>'
+    size: 54
+    buttons: {}
+  party-confirm:
+    title: '<aqua><bold>Party - Confirm</bold></aqua>'
+    size: 27
+    buttons: {}
+  spectate:
+    title: '<aqua><bold>Spectate - Live Duels</bold></aqua>'
+    size: 54
+    buttons: {}

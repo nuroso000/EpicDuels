@@ -19,8 +19,7 @@ import java.util.logging.Logger;
  * /player_stats/{uuid}: { "wins": 0, "losses": 0 }
  * </pre>
  *
- * No authentication token is needed when the database rules allow public read/write,
- * or you can supply a database secret for legacy auth.
+ * Use server-only authentication and restrictive database rules; never allow public writes.
  */
 public class FirebaseProvider implements StatsProvider {
 
@@ -64,27 +63,37 @@ public class FirebaseProvider implements StatsProvider {
     }
 
     @Override
-    public CompletableFuture<Void> push(UUID playerId, PlayerStats stats) {
+    public CompletableFuture<Void> recordResult(UUID eventId, UUID playerId, boolean win) {
+        return commitResult(eventId, playerId, win, 0);
+    }
+
+    private CompletableFuture<Void> commitResult(UUID eventId, UUID playerId, boolean win, int attempt) {
         String uri = databaseUrl + "/player_stats/" + playerId + ".json" + authParam();
-        String json = "{\"wins\":" + stats.getWins() + ",\"losses\":" + stats.getLosses() + "}";
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(uri))
-                .header("Content-Type", "application/json")
-                .PUT(HttpRequest.BodyPublishers.ofString(json))
-                .timeout(Duration.ofSeconds(10))
-                .build();
-
-        return http.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> {
-                    if (response.statusCode() != 200) {
-                        logger.warning("[Firebase] PUT failed (" + response.statusCode() + "): " + response.body());
-                    }
-                })
-                .exceptionally(ex -> {
-                    logger.warning("[Firebase] push error for " + playerId + ": " + ex.getMessage());
-                    return null;
-                });
+        HttpRequest read = HttpRequest.newBuilder(URI.create(uri)).header("X-Firebase-ETag", "true")
+                .timeout(Duration.ofSeconds(10)).GET().build();
+        return http.sendAsync(read, HttpResponse.BodyHandlers.ofString()).thenCompose(response -> {
+            if (response.statusCode() != 200) return CompletableFuture.failedFuture(
+                    new IllegalStateException("Firebase transaction read HTTP " + response.statusCode()));
+            com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseString(response.body());
+            com.google.gson.JsonObject data = parsed.isJsonNull() ? new com.google.gson.JsonObject() : parsed.getAsJsonObject();
+            com.google.gson.JsonObject events = data.has("events") ? data.getAsJsonObject("events") : new com.google.gson.JsonObject();
+            if (events.has(eventId.toString())) return CompletableFuture.completedFuture(null);
+            int wins = data.has("wins") && !data.get("wins").isJsonNull() ? data.get("wins").getAsInt() : 0;
+            int losses = data.has("losses") && !data.get("losses").isJsonNull() ? data.get("losses").getAsInt() : 0;
+            data.addProperty("wins", win ? Math.addExact(wins, 1) : wins);
+            data.addProperty("losses", win ? losses : Math.addExact(losses, 1));
+            events.addProperty(eventId.toString(), true);
+            data.add("events", events);
+            String etag = response.headers().firstValue("ETag").orElseThrow();
+            HttpRequest write = HttpRequest.newBuilder(URI.create(uri)).header("Content-Type", "application/json")
+                    .header("If-Match", etag).timeout(Duration.ofSeconds(10))
+                    .PUT(HttpRequest.BodyPublishers.ofString(data.toString())).build();
+            return http.sendAsync(write, HttpResponse.BodyHandlers.ofString()).thenCompose(result -> {
+                if (result.statusCode() == 200) return CompletableFuture.completedFuture(null);
+                if (result.statusCode() == 412 && attempt < 8) return commitResult(eventId, playerId, win, attempt + 1);
+                return CompletableFuture.failedFuture(new IllegalStateException("Firebase transaction HTTP " + result.statusCode()));
+            });
+        });
     }
 
     private String authParam() {
@@ -96,29 +105,12 @@ public class FirebaseProvider implements StatsProvider {
      * Parse a Firebase JSON object: {"wins":0,"losses":0} or "null".
      */
     private PlayerStats parseResponse(String json) {
-        if (json == null) return null;
-        json = json.trim();
-        if (json.equals("null") || json.isEmpty()) return null;
-
-        int wins = extractInt(json, "wins");
-        int losses = extractInt(json, "losses");
+        com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseString(json);
+        if (parsed.isJsonNull()) return null;
+        com.google.gson.JsonObject data = parsed.getAsJsonObject();
+        int wins = data.has("wins") && !data.get("wins").isJsonNull() ? data.get("wins").getAsInt() : 0;
+        int losses = data.has("losses") && !data.get("losses").isJsonNull() ? data.get("losses").getAsInt() : 0;
+        if (wins < 0 || losses < 0) throw new IllegalArgumentException("Negative remote statistics");
         return new PlayerStats(wins, losses);
-    }
-
-    private int extractInt(String json, String key) {
-        String search = "\"" + key + "\":";
-        int idx = json.indexOf(search);
-        if (idx == -1) return 0;
-        idx += search.length();
-        StringBuilder sb = new StringBuilder();
-        while (idx < json.length() && (Character.isDigit(json.charAt(idx)) || json.charAt(idx) == '-')) {
-            sb.append(json.charAt(idx));
-            idx++;
-        }
-        try {
-            return Integer.parseInt(sb.toString());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 }

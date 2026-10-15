@@ -85,7 +85,7 @@ import java.io.File;
  *   - PlayerListener: join (lobby TP), quit (cleanup), move
  *     freeze, damage cancel during countdown, death handling.
  *   - GUIListener: routes inventory clicks to the correct
- *     handler based on inventory title.
+ *     handler based on InventoryHolder and persistent button IDs.
  *   - WorldProtectionListener: protects lobby, allows admin
  *     building in templates, allows player block placement in
  *     instances but prevents breaking original map blocks.
@@ -100,11 +100,14 @@ public class EpicDuels extends JavaPlugin {
     private QueueManager queueManager;
     private StatsManager statsManager;
     private GUIManager guiManager;
+    private MenuPresentationManager menuPresentationManager;
+    private ScoreboardManager scoreboardManager;
     private HologramManager hologramManager;
     private PartyManager partyManager;
     private TeamDuelManager teamDuelManager;
     private TournamentManager tournamentManager;
     private RematchManager rematchManager;
+    private ResultCommandManager resultCommandManager;
     private InventoryBackupManager inventoryBackupManager;
     private LobbyProtectionListener lobbyProtectionListener;
 
@@ -125,6 +128,7 @@ public class EpicDuels extends JavaPlugin {
         playerKitManager = new PlayerKitManager(this);
         inventoryBackupManager = new InventoryBackupManager(this);
         statsManager = new StatsManager(this);
+        menuPresentationManager = new MenuPresentationManager(this);
         guiManager = new GUIManager(this);
         duelManager = new DuelManager(this);
         queueManager = new QueueManager(this);
@@ -133,6 +137,8 @@ public class EpicDuels extends JavaPlugin {
         teamDuelManager = new TeamDuelManager(this);
         tournamentManager = new TournamentManager(this);
         rematchManager = new RematchManager(this);
+        resultCommandManager = new ResultCommandManager(this);
+        scoreboardManager = new ScoreboardManager(this);
 
         // Optional PlaceholderAPI hook (softdepend) — the expansion class is
         // only classloaded inside this guard
@@ -154,6 +160,7 @@ public class EpicDuels extends JavaPlugin {
         }
 
         // Register listeners
+        getServer().getPluginManager().registerEvents(new dev.epicduels.listener.InventoryGuardListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldProtectionListener(this), this);
@@ -175,6 +182,7 @@ public class EpicDuels extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (scoreboardManager != null) scoreboardManager.shutdown();
         // Tear down party-related managers first so callbacks don't fire mid-shutdown
         if (tournamentManager != null) tournamentManager.cleanupAll();
         if (teamDuelManager != null) teamDuelManager.cleanupAll();
@@ -224,7 +232,10 @@ public class EpicDuels extends JavaPlugin {
                     for (org.bukkit.entity.Player p : w.getPlayers()) {
                         p.teleport(getLobbyLocation());
                     }
-                    Bukkit.unloadWorld(w, false);
+                    if (!Bukkit.unloadWorld(w, false)) {
+                        getLogger().warning("Retaining loaded instance: " + dir.getName());
+                        continue;
+                    }
                 }
                 ArenaManager.deleteWorldFolder(dir);
                 cleaned++;
@@ -236,7 +247,13 @@ public class EpicDuels extends JavaPlugin {
     }
 
     private void setupVoidWorld() {
-        World defaultWorld = Bukkit.getWorld("world");
+        if (!getConfig().getBoolean("lobby.configure-void-world", false)) return;
+        org.bukkit.Location lobby = getLobbyLocation();
+        World defaultWorld = lobby == null ? null : lobby.getWorld();
+        if (defaultWorld == null || !(defaultWorld.getGenerator() instanceof VoidWorldGenerator)) {
+            getLogger().warning("Lobby setup requires an explicitly configured void world.");
+            return;
+        }
         if (defaultWorld != null) {
             File markerFile = new File(getDataFolder(), ".void-setup-complete");
             if (!markerFile.exists()) {
@@ -345,6 +362,8 @@ public class EpicDuels extends JavaPlugin {
     }
 
     // --- Manager getters ---
+    public MenuPresentationManager getMenuPresentationManager() { return menuPresentationManager; }
+    public ScoreboardManager getScoreboardManager() { return scoreboardManager; }
 
     public ArenaManager getArenaManager() {
         return arenaManager;
@@ -396,6 +415,10 @@ public class EpicDuels extends JavaPlugin {
 
     public RematchManager getRematchManager() {
         return rematchManager;
+    }
+
+    public ResultCommandManager getResultCommandManager() {
+        return resultCommandManager;
     }
 
     public InventoryBackupManager getInventoryBackupManager() {

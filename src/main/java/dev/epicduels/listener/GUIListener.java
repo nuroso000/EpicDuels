@@ -35,6 +35,11 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!(event.getInventory().getHolder(false) instanceof MenuHolder holder)) return;
 
+        if (!mayUseMenu(player, holder.getType())) {
+            event.setCancelled(true);
+            return;
+        }
+
         // Kit edit (admin) and kit customize (player) are the only non-read-only GUIs
         if (holder.getType() == MenuType.KIT_EDIT) {
             handleKitEditClick(event, player, holder);
@@ -54,10 +59,10 @@ public class GUIListener implements Listener {
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
-        if (clicked.getType().name().endsWith("STAINED_GLASS_PANE")) return;
+        if (dev.epicduels.manager.MenuPresentationManager.actionSlot(clicked) < 0) return;
 
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
-        int slot = event.getSlot();
+        int slot = dev.epicduels.manager.MenuPresentationManager.actionSlot(clicked);
 
         switch (holder.getType()) {
             case MAIN -> handleMainMenuClick(player, slot);
@@ -106,16 +111,36 @@ public class GUIListener implements Listener {
         });
     }
 
+    private boolean mayUseMenu(Player player, MenuType type) {
+        return switch (type) {
+            case KIT_EDIT -> player.hasPermission("epicduels.admin");
+            case STATS -> player.hasPermission("epicduels.stats");
+            case MATCHMAKING -> player.hasPermission("epicduels.duel") && plugin.isFeatureEnabled("matchmaking");
+            case KIT_EDITOR_LIST, KIT_CUSTOMIZE -> player.hasPermission("epicduels.duel") && plugin.isFeatureEnabled("kit-editor");
+            case DUELS, KIT_SELECT, ROUNDS_SELECT, ARENA_SELECT -> player.hasPermission("epicduels.duel") && plugin.isFeatureEnabled("challenges");
+            case PARTY_MODE, PARTY_TEAM_SIZE, PARTY_KIT, PARTY_CONFIRM -> player.hasPermission("epicduels.party") && player.hasPermission("epicduels.duel") && plugin.isFeatureEnabled("parties");
+            case SPECTATE -> player.hasPermission("epicduels.spectate") && plugin.isFeatureEnabled("spectating");
+            default -> true;
+        };
+    }
+
+    @EventHandler
+    public void onEditorDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+        if (event.getPlayer().getOpenInventory().getTopInventory().getHolder(false) instanceof MenuHolder holder
+                && holder.getType() == MenuType.KIT_CUSTOMIZE) event.setCancelled(true);
+    }
+
     // ========== MAIN MENU ==========
 
     private void handleMainMenuClick(Player player, int slot) {
         switch (slot) {
             case 10 -> { // Diamond Sword — Duels
-                if (!plugin.isFeatureEnabled("challenges")) return;
+                if (!mayUseMenu(player, MenuType.DUELS)) return;
                 player.closeInventory();
                 plugin.getGUIManager().openDuelsMenu(player, 0);
             }
             case 13 -> { // Player Head — Stats
+                if (!mayUseMenu(player, MenuType.STATS)) return;
                 player.closeInventory();
                 plugin.getGUIManager().openStatsMenu(player);
             }
@@ -126,12 +151,12 @@ public class GUIListener implements Listener {
                 plugin.getGUIManager().openSpectateMenu(player, 0);
             }
             case 16 -> { // Hopper — Matchmaking
-                if (!plugin.isFeatureEnabled("matchmaking")) return;
+                if (!mayUseMenu(player, MenuType.MATCHMAKING)) return;
                 player.closeInventory();
                 plugin.getGUIManager().openMatchmakingMenu(player, 0);
             }
             case 22 -> { // Anvil — Kit Editor
-                if (!plugin.isFeatureEnabled("kit-editor")) return;
+                if (!mayUseMenu(player, MenuType.KIT_CUSTOMIZE)) return;
                 player.closeInventory();
                 plugin.getGUIManager().openKitEditorList(player, 0);
             }
@@ -298,7 +323,7 @@ public class GUIListener implements Listener {
             case 15 -> 5;
             default -> 0;
         };
-        if (bestOf == 0) return;
+        if (bestOf == 0 || (!plugin.isFeatureEnabled("best-of-n") && bestOf != 1)) return;
 
         if (targetUUID == null || kitName == null) {
             player.closeInventory();
@@ -319,7 +344,7 @@ public class GUIListener implements Listener {
             UUID targetUUID = plugin.getGUIManager().getChallengeTarget(player.getUniqueId());
             String kitName = plugin.getGUIManager().getChallengeKit(player.getUniqueId());
             player.closeInventory();
-            if (targetUUID != null && kitName != null) {
+            if (targetUUID != null && kitName != null && plugin.isFeatureEnabled("best-of-n")) {
                 plugin.getGUIManager().openRoundsSelect(player, targetUUID, kitName);
             } else if (targetUUID != null) {
                 plugin.getGUIManager().openKitSelect(player, targetUUID);
@@ -451,13 +476,14 @@ public class GUIListener implements Listener {
         // player's own inventory (and never let own items in): block every
         // interaction with the bottom inventory and every cross-inventory move.
         switch (event.getAction()) {
-            case MOVE_TO_OTHER_INVENTORY, COLLECT_TO_CURSOR, HOTBAR_SWAP, HOTBAR_MOVE_AND_READD -> {
+            case MOVE_TO_OTHER_INVENTORY, COLLECT_TO_CURSOR, HOTBAR_SWAP, HOTBAR_MOVE_AND_READD,
+                    DROP_ONE_SLOT, DROP_ALL_SLOT, DROP_ONE_CURSOR, DROP_ALL_CURSOR, CLONE_STACK, UNKNOWN -> {
                 event.setCancelled(true);
                 return;
             }
             default -> { }
         }
-        if (slot >= 54) {
+        if (slot < 0 || slot >= 54) {
             event.setCancelled(true);
             return;
         }
@@ -474,7 +500,7 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            if (slot == GUIManager.CUSTOMIZE_RESET_SLOT) {
+            if (dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == GUIManager.CUSTOMIZE_RESET_SLOT) {
                 boolean had = plugin.getPlayerKitManager().resetLayout(player.getUniqueId(), kit.getName());
                 Messages.send(player, had ? "kiteditor.reset" : "kiteditor.no-layout",
                         Messages.unparsed("kit", kit.getName()));
@@ -483,7 +509,7 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            if (slot == GUIManager.CUSTOMIZE_SAVE_SLOT) {
+            if (dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == GUIManager.CUSTOMIZE_SAVE_SLOT) {
                 Inventory inv = event.getInventory();
 
                 ItemStack[] contents = new ItemStack[36];
@@ -520,6 +546,10 @@ public class GUIListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         if (!(event.getInventory().getHolder(false) instanceof MenuHolder holder)) return;
 
+        if (!mayUseMenu((Player) event.getWhoClicked(), holder.getType())) {
+            event.setCancelled(true);
+            return;
+        }
         switch (holder.getType()) {
             case KIT_CUSTOMIZE -> {
                 // Only allow drags fully inside the editable kit slots (0-40)
@@ -551,12 +581,12 @@ public class GUIListener implements Listener {
     private void handleKitEditClick(InventoryClickEvent event, Player player, MenuHolder holder) {
         int slot = event.getRawSlot();
 
-        if (slot >= 41 && slot <= 52) {
+        if (slot >= 41 && slot <= 53 && dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) != 53) {
             event.setCancelled(true);
             return;
         }
 
-        if (slot == 53) {
+        if (slot >= 41 && slot <= 53 && dev.epicduels.manager.MenuPresentationManager.actionSlot(event.getCurrentItem()) == 53) {
             event.setCancelled(true);
 
             String kitName = holder.getContext();
@@ -728,6 +758,8 @@ Messages.send(player, "party.not-enough-members", Messages.unparsed("size", size
         String kitName = plugin.getGUIManager().getPartyFlowKit(player.getUniqueId());
         dev.epicduels.model.Party party = plugin.getPartyManager().getPartyOf(player.getUniqueId());
 
+        if (mode != null && !plugin.isFeatureEnabled(mode == dev.epicduels.model.PartyMode.TEAM_DUEL
+                ? "team-duels" : "tournaments")) return;
         if (mode == null || kitName == null || party == null) {
             Messages.send(player, "party.missing-data");
             player.closeInventory();

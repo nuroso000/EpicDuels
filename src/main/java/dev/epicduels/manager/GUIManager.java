@@ -91,7 +91,9 @@ public class GUIManager {
     }
 
     private Inventory createMenu(MenuType type, String context, int page, int size, Component title) {
-        return MenuHolder.createInventory(new MenuHolder(type, context, page), size, title);
+        return MenuHolder.createInventory(new MenuHolder(type, context, page),
+                plugin.getMenuPresentationManager().size(type, size),
+                plugin.getMenuPresentationManager().title(type, context, title));
     }
 
     // ========== MAIN MENU (27 slots, 3 rows) ==========
@@ -106,7 +108,7 @@ public class GUIManager {
         }
 
         // Slot 10: Diamond Sword — Duels
-        if (plugin.isFeatureEnabled("challenges")) {
+        if (plugin.isFeatureEnabled("challenges") && player.hasPermission("epicduels.duel")) {
             inv.setItem(10, createItem(Material.DIAMOND_SWORD, "&a&lDuels",
                     "&7Challenge another player", "&7to a private duel!"));
         } else {
@@ -125,10 +127,11 @@ public class GUIManager {
                         .decoration(TextDecoration.ITALIC, false)
         ));
         head.setItemMeta(headMeta);
-        inv.setItem(13, head);
+        inv.setItem(13, player.hasPermission("epicduels.stats") ? head
+                : createItem(Material.BARRIER, "&8Stats", "&cYou do not have permission."));
 
         // Slot 4: Ender Eye — Spectate
-        if (plugin.isFeatureEnabled("spectating")) {
+        if (plugin.isFeatureEnabled("spectating") && player.hasPermission("epicduels.spectate")) {
             inv.setItem(4, createItem(Material.ENDER_EYE, "&3&lSpectate",
                     "&7Watch the duels that are", "&7being fought right now!"));
         } else {
@@ -137,7 +140,7 @@ public class GUIManager {
         }
 
         // Slot 22: Anvil — Kit Editor
-        if (plugin.isFeatureEnabled("kit-editor")) {
+        if (plugin.isFeatureEnabled("kit-editor") && player.hasPermission("epicduels.duel")) {
             inv.setItem(22, createItem(Material.ANVIL, "&e&lKit Editor",
                     "&7Personalize the item layout", "&7of any kit — just for you!"));
         } else {
@@ -146,7 +149,7 @@ public class GUIManager {
         }
 
         // Slot 16: Hopper — Matchmaking
-        if (plugin.isFeatureEnabled("matchmaking")) {
+        if (plugin.isFeatureEnabled("matchmaking") && player.hasPermission("epicduels.duel")) {
             inv.setItem(16, createItem(Material.HOPPER, "&b&lMatchmaking",
                     "&7Join a queue to find", "&7an opponent automatically!"));
         } else {
@@ -154,6 +157,7 @@ public class GUIManager {
                     "&cDisabled on this server."));
         }
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -189,6 +193,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -237,6 +242,7 @@ public class GUIManager {
         // Slot 22: Back
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to main menu"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -268,6 +274,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -303,6 +310,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -330,6 +338,7 @@ public class GUIManager {
                 "&7First to 3 round wins", "&7takes the match.", "", "&eClick to select"));
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to kit selection"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -369,6 +378,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -471,6 +481,7 @@ public class GUIManager {
 
         inv.setItem(53, createItem(Material.EMERALD, "&aSave Kit", "&7Click to save changes"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
     }
 
@@ -491,6 +502,7 @@ public class GUIManager {
         }
         if (kit.getOffHand() != null) inv.setItem(49, kit.getOffHand().clone());
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
     }
 
@@ -515,6 +527,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -561,6 +574,7 @@ public class GUIManager {
         inv.setItem(CUSTOMIZE_SAVE_SLOT, createItem(Material.EMERALD, "&aSave Layout",
                 "&7Save this arrangement.", "&7It is applied whenever you", "&7duel with this kit."));
 
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -617,6 +631,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -647,6 +662,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -668,6 +684,7 @@ public class GUIManager {
         }
 
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         player.openInventory(inv);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -766,6 +783,7 @@ public class GUIManager {
                     "&cDisabled on this server."));
         }
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -787,6 +805,7 @@ public class GUIManager {
         inv.setItem(15, sizeOption(Material.DIAMOND_SWORD, "4v4", 8, partySize));
         inv.setItem(22, createItem(Material.ARROW, "&7Back", "&7Return to mode selection"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -818,6 +837,7 @@ public class GUIManager {
                     "&7Click to select this kit"), MenuKeys.KIT, kit.getName()));
         }
         addNavigation(inv, page, totalPages);
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }
@@ -846,6 +866,7 @@ public class GUIManager {
         inv.setItem(15, createItem(Material.RED_WOOL, "&c&lCancel",
                 "&7Close this menu"));
 
+        plugin.getMenuPresentationManager().apply(inv);
         owner.openInventory(inv);
         owner.playSound(owner.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1.2f);
     }

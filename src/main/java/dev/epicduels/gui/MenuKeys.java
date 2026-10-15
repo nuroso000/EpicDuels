@@ -15,6 +15,7 @@ public final class MenuKeys {
 
     /** Marker for special buttons, e.g. "own-inventory" or "random-map". */
     public static NamespacedKey ACTION;
+    public static NamespacedKey BUTTON;
     /** Kit name a button refers to. */
     public static NamespacedKey KIT;
     /** Arena name a button refers to. */
@@ -27,6 +28,7 @@ public final class MenuKeys {
 
     public static void init(Plugin plugin) {
         ACTION = new NamespacedKey(plugin, "action");
+        BUTTON = new NamespacedKey(plugin, "menu-button");
         KIT = new NamespacedKey(plugin, "kit");
         ARENA = new NamespacedKey(plugin, "arena");
         PLAYER = new NamespacedKey(plugin, "player");

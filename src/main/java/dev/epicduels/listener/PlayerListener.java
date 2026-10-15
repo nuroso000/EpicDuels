@@ -31,7 +31,8 @@ public class PlayerListener implements Listener {
 
         // Full reset + lobby teleport assumes a dedicated duels server —
         // disable via lobby.handle-join when running alongside other gameplay
-        if (plugin.getConfig().getBoolean("lobby.handle-join", true)) {
+        if (!plugin.getInventoryBackupManager().hasBackup(player.getUniqueId())
+                && plugin.getConfig().getBoolean("lobby.handle-join", true)) {
             player.getInventory().clear();
             player.getInventory().setArmorContents(null);
             player.setHealth(player.getMaxHealth());
@@ -45,7 +46,8 @@ public class PlayerListener implements Listener {
 
         // Restore the inventory saved for an own-inventory duel that never
         // finished cleanly (disconnect or server crash mid-duel)
-        if (plugin.getInventoryBackupManager().restore(player)) {
+        if (plugin.getInventoryBackupManager().hasBackup(player.getUniqueId())
+                && plugin.getDuelManager().resetAfterBattle(player)) {
             Messages.send(player, "duel.inventory-restored");
         }
     }
@@ -75,7 +77,7 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerMove(PlayerMoveEvent event) {
         UUID id = event.getPlayer().getUniqueId();
-        if (!plugin.getDuelManager().isFrozen(id) && !plugin.getTeamDuelManager().isFrozen(id)) return;
+        if (!plugin.getDuelManager().isFrozen(id) && !plugin.getTeamDuelManager().isMovementFrozen(id)) return;
 
         // Allow head rotation but not movement
         if (event.getFrom().getBlockX() != event.getTo().getBlockX()
@@ -133,7 +135,7 @@ public class PlayerListener implements Listener {
         DuelInstance duel = plugin.getDuelManager().getDuel(deceased.getUniqueId());
         dev.epicduels.model.TeamDuelInstance teamDuel = plugin.getTeamDuelManager().getTeamDuelOf(deceased.getUniqueId());
 
-        if ((duel == null || !duel.isActive()) && (teamDuel == null || !teamDuel.isActive())) return;
+        if (duel == null && teamDuel == null) return;
 
         // Suppress death message and drops
         event.deathMessage(null);
@@ -158,6 +160,7 @@ public class PlayerListener implements Listener {
 
         // Score the 1v1 round for the opponent — DuelManager ends the match
         // or starts the next round (best-of-N)
+        if (duel == null || !duel.isActive()) return;
         java.util.UUID winnerId = duel.getOpponent(deceased.getUniqueId());
         plugin.getDuelManager().handleRoundEnd(duel, winnerId, deceased.getUniqueId());
     }
@@ -195,7 +198,10 @@ public class PlayerListener implements Listener {
         // Admins building in a template world keep the default respawn
         if (player.getWorld().getName().startsWith("arena_template_")) return;
 
-        event.setRespawnLocation(plugin.getLobbyLocation());
+        if (duel != null || teamDuel != null || (plugin.getConfig().getBoolean("lobby.handle-join", true)
+                && player.getWorld().equals(plugin.getLobbyLocation().getWorld()))) {
+            event.setRespawnLocation(plugin.getLobbyLocation());
+        }
     }
 
     /**

@@ -34,8 +34,6 @@ public class WorldProtectionListener implements Listener {
                 event.setCancelled(true);
                 return;
             }
-            Block b = event.getBlock();
-            battle.recordPlayerBlock(b.getX(), b.getY(), b.getZ());
             return;
         }
 
@@ -63,11 +61,7 @@ public class WorldProtectionListener implements Listener {
             }
 
             Block b = event.getBlock();
-            if (battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
-                battle.removePlayerBlock(b.getX(), b.getY(), b.getZ());
-            } else {
-                event.setCancelled(true);
-            }
+            if (!battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) event.setCancelled(true);
             return;
         }
 
@@ -93,8 +87,7 @@ public class WorldProtectionListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        Block b = event.getBlock();
-        battle.recordPlayerBlock(b.getX(), b.getY(), b.getZ());
+
     }
 
     @EventHandler(priority = EventPriority.LOW)
@@ -109,21 +102,17 @@ public class WorldProtectionListener implements Listener {
             return;
         }
         Block b = event.getBlock();
-        if (battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
-            battle.removePlayerBlock(b.getX(), b.getY(), b.getZ());
-        } else {
-            event.setCancelled(true);
-        }
+        if (!battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) event.setCancelled(true);
     }
 
     // Explosions (TNT, end crystals, ...) must not destroy original map
     // blocks — only player-placed ones may break.
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
         filterExplodedBlocks(event.getLocation().getWorld().getName(), event.blockList());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
         filterExplodedBlocks(event.getBlock().getWorld().getName(), event.blockList());
     }
@@ -137,11 +126,54 @@ public class WorldProtectionListener implements Listener {
         }
         blocks.removeIf(b -> {
             if (battle.isPlayerPlacedBlock(b.getX(), b.getY(), b.getZ())) {
-                battle.removePlayerBlock(b.getX(), b.getY(), b.getZ());
                 return false;
             }
             return true;
         });
+    }
+
+    private void track(Block block, boolean placed) {
+        BattleInstance battle = lookupBattle(block.getWorld().getName());
+        if (battle == null) return;
+        if (placed) battle.recordPlayerBlock(block.getX(), block.getY(), block.getZ());
+        else battle.removePlayerBlock(block.getX(), block.getY(), block.getZ());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackPlace(BlockPlaceEvent event) { track(event.getBlock(), true); }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackBreak(BlockBreakEvent event) { track(event.getBlock(), false); }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackEmpty(org.bukkit.event.player.PlayerBucketEmptyEvent event) { track(event.getBlock(), true); }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackFill(org.bukkit.event.player.PlayerBucketFillEvent event) { track(event.getBlock(), false); }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackEntityExplosion(org.bukkit.event.entity.EntityExplodeEvent event) {
+        event.blockList().forEach(block -> track(block, false));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackBlockExplosion(org.bukkit.event.block.BlockExplodeEvent event) {
+        event.blockList().forEach(block -> track(block, false));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBurn(org.bukkit.event.block.BlockBurnEvent event) {
+        if (event.getBlock().getWorld().getName().startsWith("arena_instance_")) event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPistonExtend(org.bukkit.event.block.BlockPistonExtendEvent event) {
+        if (event.getBlock().getWorld().getName().startsWith("arena_instance_")) event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPistonRetract(org.bukkit.event.block.BlockPistonRetractEvent event) {
+        if (event.getBlock().getWorld().getName().startsWith("arena_instance_")) event.setCancelled(true);
     }
 
     private BattleInstance lookupBattle(String worldName) {

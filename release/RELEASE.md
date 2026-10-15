@@ -2,6 +2,36 @@
 
 ---
 
+## v3.0.1 — Result Command Hooks
+
+**Date:** September 2026
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+EpicDuels can now run different server-console commands for winners and
+losers after a completed match. This lets another plugin own currencies,
+rankings or rewards without requiring Vault.
+
+```yaml
+result-commands:
+  winner:
+    - "ac add {player} 100"
+  loser:
+    - "ac take {player} 100"
+```
+
+`{player}` means the winner inside the winner list and the loser inside the
+loser list. Commands run once per affected player, only after the complete
+match; draws (including tournament coin flips) do not run commands. Team score
+placeholders use `1:0`. `/duel reload` applies changes. Supported
+additional placeholders: `{player_uuid}`, `{arena}`, `{kit}`, `{score}`,
+`{winner_score}` and `{loser_score}`.
+
+Existing installations keep their current `config.yml`; copy the
+`result-commands` section from the bundled configuration or this example when
+upgrading. Commands execute with console privileges, so the configuration must
+remain writable only by trusted server operators.
+
 ## v3.0.0 — Gameplay Update: Rounds, Rematch, Kit Editor, Spectating, Localization & More
 
 **Date:** July 2026

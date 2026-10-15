@@ -34,9 +34,14 @@ public class TournamentManager {
     }
 
     public boolean startTournament(Party party, Kit kit) {
+        if (!plugin.isFeatureEnabled("parties") || !plugin.isFeatureEnabled("tournaments")) return false;
         if (party == null) return false;
         List<UUID> participants = new ArrayList<>(party.getMembers());
         if (participants.size() < 2) return false;
+        for (UUID id : participants) {
+            Player player = Bukkit.getPlayer(id);
+            if (player == null || !player.hasPermission("epicduels.duel") || plugin.getDuelManager().isBusy(id)) return false;
+        }
 
         Tournament t = new Tournament(party.getId(), participants, kit.getName());
         tournaments.put(t.getId(), t);
@@ -159,7 +164,7 @@ public class TournamentManager {
         match.finished = true;
         match.winner = winnerId;
         t.getActiveMatches().remove(match);
-        t.getCurrentRoundWinners().add(winnerId);
+        if (winnerId != null) t.getCurrentRoundWinners().add(winnerId);
 
         // Loser becomes eliminated
         if (loserId != null) {
@@ -177,6 +182,10 @@ public class TournamentManager {
         // Re-route any spectators that were watching this just-ended match
         rerouteEliminatedSpectators(t, match.duelInstanceId);
 
+        if (winnerId == null) {
+            failTournament(t, "tournament.reason-no-arenas");
+            return;
+        }
         Player wp = Bukkit.getPlayer(winnerId);
         if (wp != null) {
             Messages.send(wp, "tournament.advanced");
@@ -230,11 +239,10 @@ public class TournamentManager {
 
     private void rerouteEliminatedSpectators(Tournament t, UUID endedDuelId) {
         // Move eliminated players who were watching the just-ended match (or any non-existent match)
-        for (Map.Entry<UUID, UUID> entry : new HashMap<>(eliminatedSpectatingDuelId).entrySet()) {
-            UUID specId = entry.getKey();
-            if (!playerToTournament.getOrDefault(specId, new UUID(0, 0)).equals(t.getId())) continue;
-            UUID watchingId = entry.getValue();
-            if (endedDuelId != null && !watchingId.equals(endedDuelId)) continue;
+        for (UUID specId : new HashSet<>(t.getEliminated())) {
+            if (!t.getId().equals(playerToTournament.get(specId))) continue;
+            UUID watchingId = eliminatedSpectatingDuelId.get(specId);
+            if (endedDuelId != null && watchingId != null && !watchingId.equals(endedDuelId)) continue;
             Bukkit.getScheduler().runTaskLater(plugin, () -> routeEliminatedToSpectate(t, specId), 60L);
         }
     }
