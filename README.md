@@ -143,7 +143,7 @@ With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
 ```bash
 mvn clean package     # → target/EpicDuels.jar
 # or
-gradle clean build    # → build/libs/EpicDuels-3.0.1.jar
+gradle clean build    # → build/libs/EpicDuels-3.1.0.jar
 ```
 
 Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history and [release/RELEASE.md](release/RELEASE.md) for detailed release notes.

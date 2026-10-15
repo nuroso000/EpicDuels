@@ -121,8 +121,8 @@ public class SupabaseProvider implements StatsProvider {
         com.google.gson.JsonArray rows = parsed.getAsJsonArray();
         if (rows.isEmpty()) return null;
         com.google.gson.JsonObject data = rows.get(0).getAsJsonObject();
-        int wins = data.get("wins").getAsInt();
-        int losses = data.get("losses").getAsInt();
+        int wins = data.has("wins") && !data.get("wins").isJsonNull() ? data.get("wins").getAsInt() : 0;
+        int losses = data.has("losses") && !data.get("losses").isJsonNull() ? data.get("losses").getAsInt() : 0;
         if (wins < 0 || losses < 0) throw new IllegalArgumentException("Negative remote statistics");
         return new PlayerStats(wins, losses);
     }

@@ -77,7 +77,7 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerMove(PlayerMoveEvent event) {
         UUID id = event.getPlayer().getUniqueId();
-        if (!plugin.getDuelManager().isFrozen(id) && !plugin.getTeamDuelManager().isFrozen(id)) return;
+        if (!plugin.getDuelManager().isFrozen(id) && !plugin.getTeamDuelManager().isMovementFrozen(id)) return;
 
         // Allow head rotation but not movement
         if (event.getFrom().getBlockX() != event.getTo().getBlockX()

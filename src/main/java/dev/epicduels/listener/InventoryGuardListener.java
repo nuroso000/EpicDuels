@@ -59,13 +59,18 @@ public final class InventoryGuardListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         if (!protectedPlayer(event.getPlayer())) return;
-        String[] words = event.getMessage().trim().toLowerCase(java.util.Locale.ROOT).split("\\s+");
-        String command = words[0];
-        // Only the plugin's own surrender command can run while an inventory snapshot is held.
-        if (!(command.equals("/duel") || command.equals("/epicduels:duel") || command.equals("/d") || command.equals("/epicduels:d"))
-                || words.length != 2 || !words[1].equals("forfeit")) {
+        // Only the plugin's own surrender flow can run while an inventory snapshot is held.
+        if (!isAllowedForfeitCommand(event.getMessage())) {
             event.setCancelled(true);
             event.getPlayer().sendMessage("Commands are unavailable until your duel inventory has been restored.");
         }
+    }
+
+    private static boolean isAllowedForfeitCommand(String message) {
+        String[] words = message.trim().toLowerCase(java.util.Locale.ROOT).split("\\s+");
+        if (words.length < 2 || !(words[0].equals("/duel") || words[0].equals("/epicduels:duel")
+                || words[0].equals("/d") || words[0].equals("/epicduels:d"))) return false;
+        if (!(words[1].equals("forfeit") || words[1].equals("ff") || words[1].equals("leave"))) return false;
+        return words.length == 2 || words.length == 3 && words[2].equals("confirm");
     }
 }

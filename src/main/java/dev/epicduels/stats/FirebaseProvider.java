@@ -78,9 +78,10 @@ public class FirebaseProvider implements StatsProvider {
             com.google.gson.JsonObject data = parsed.isJsonNull() ? new com.google.gson.JsonObject() : parsed.getAsJsonObject();
             com.google.gson.JsonObject events = data.has("events") ? data.getAsJsonObject("events") : new com.google.gson.JsonObject();
             if (events.has(eventId.toString())) return CompletableFuture.completedFuture(null);
-            String field = win ? "wins" : "losses";
-            int value = data.has(field) ? data.get(field).getAsInt() : 0;
-            data.addProperty(field, Math.addExact(value, 1));
+            int wins = data.has("wins") && !data.get("wins").isJsonNull() ? data.get("wins").getAsInt() : 0;
+            int losses = data.has("losses") && !data.get("losses").isJsonNull() ? data.get("losses").getAsInt() : 0;
+            data.addProperty("wins", win ? Math.addExact(wins, 1) : wins);
+            data.addProperty("losses", win ? losses : Math.addExact(losses, 1));
             events.addProperty(eventId.toString(), true);
             data.add("events", events);
             String etag = response.headers().firstValue("ETag").orElseThrow();
@@ -107,8 +108,8 @@ public class FirebaseProvider implements StatsProvider {
         com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseString(json);
         if (parsed.isJsonNull()) return null;
         com.google.gson.JsonObject data = parsed.getAsJsonObject();
-        int wins = data.get("wins").getAsInt();
-        int losses = data.get("losses").getAsInt();
+        int wins = data.has("wins") && !data.get("wins").isJsonNull() ? data.get("wins").getAsInt() : 0;
+        int losses = data.has("losses") && !data.get("losses").isJsonNull() ? data.get("losses").getAsInt() : 0;
         if (wins < 0 || losses < 0) throw new IllegalArgumentException("Negative remote statistics");
         return new PlayerStats(wins, losses);
     }

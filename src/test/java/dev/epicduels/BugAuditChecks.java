@@ -131,7 +131,25 @@ public final class BugAuditChecks {
                 PlayerStats result = (PlayerStats) parse.invoke(provider, type == SupabaseProvider.class ? "[" + json + "]" : json);
                 check(result.getWins() == 12 && result.getLosses() == 3, "JSON whitespace and field order accepted by " + type.getSimpleName());
             }
+            for (String json : List.of("{\"wins\":12}", "{\"losses\":3}")) {
+                PlayerStats result = (PlayerStats) parse.invoke(provider, type == SupabaseProvider.class ? "[" + json + "]" : json);
+                check(result.getWins() == (json.contains("wins") ? 12 : 0)
+                        && result.getLosses() == (json.contains("losses") ? 3 : 0),
+                        "Partial legacy record defaults missing counters to zero for " + type.getSimpleName());
+            }
             check(parse.invoke(provider, type == SupabaseProvider.class ? "[]" : "null") == null, "Missing record preserved");
+        }
+    }
+    private static void inventoryGuardCommandChecks() throws Exception {
+        Method allowed = dev.epicduels.listener.InventoryGuardListener.class
+                .getDeclaredMethod("isAllowedForfeitCommand", String.class);
+        allowed.setAccessible(true);
+        for (String command : List.of("/duel forfeit", "/duel forfeit confirm", "/d ff confirm",
+                "/epicduels:duel leave", "/EPICDUELS:D FORFEIT CONFIRM")) {
+            check((Boolean) allowed.invoke(null, command), "Inventory guard permits forfeit flow: " + command);
+        }
+        for (String command : List.of("/duel stats", "/d challenge Alex", "/duel forfeit confirm extra")) {
+            check(!(Boolean) allowed.invoke(null, command), "Inventory guard blocks non-forfeit command: " + command);
         }
     }
     private static void remoteChecks() throws Exception {
@@ -168,6 +186,20 @@ public final class BugAuditChecks {
             b.recordResult(UUID.randomUUID(), player, false).get(15, TimeUnit.SECONDS);
             check(data.get().get("losses").getAsInt() == 5, "Loss increment preserves wins");
             check(a.fetch(player).get(15, TimeUnit.SECONDS).getWins() == 102, "Provider fetch reads committed totals");
+
+            data.set(new JsonObject()); version.incrementAndGet();
+            UUID firstWin = UUID.randomUUID();
+            a.recordResult(UUID.randomUUID(), firstWin, true).get(15, TimeUnit.SECONDS);
+            PlayerStats winOnly = a.fetch(firstWin).get(15, TimeUnit.SECONDS);
+            check(winOnly.getWins() == 1 && winOnly.getLosses() == 0,
+                    "First Firebase win initializes both readable counters");
+
+            data.set(new JsonObject()); version.incrementAndGet();
+            UUID firstLoss = UUID.randomUUID();
+            b.recordResult(UUID.randomUUID(), firstLoss, false).get(15, TimeUnit.SECONDS);
+            PlayerStats lossOnly = b.fetch(firstLoss).get(15, TimeUnit.SECONDS);
+            check(lossOnly.getWins() == 0 && lossOnly.getLosses() == 1,
+                    "First Firebase loss initializes both readable counters");
         } finally { server.stop(0); }
     }
     private static final Queue<Runnable> tasks = new java.util.concurrent.ConcurrentLinkedQueue<>();
@@ -259,10 +291,18 @@ public final class BugAuditChecks {
         Map<UUID,TeamDuelInstance> teamPlayers = new HashMap<>(); teamPlayers.put(a,team); teamPlayers.put(b,team);
         Map<UUID,TeamDuelInstance> teamIds = new HashMap<>(); teamIds.put(team.getId(),team);
         field(teams, TeamDuelManager.class, "activeByPlayer", teamPlayers); field(teams, TeamDuelManager.class, "activeById", teamIds);
-        field(teams, TeamDuelManager.class, "frozen", new HashSet<>()); field(teams, TeamDuelManager.class, "deadSpectators", new HashSet<>());
+        Set<UUID> teamFrozen = new HashSet<>();
+        field(teams, TeamDuelManager.class, "frozen", teamFrozen); field(teams, TeamDuelManager.class, "deadSpectators", new HashSet<>());
         check(teams.isFrozen(a), "Ending team participant remains protected");
         team.setActive(true); team.markDead(a);
         check(teams.isFrozen(a), "Eliminated team participant cannot attack");
+        teamFrozen.add(a);
+        check(teams.isMovementFrozen(a), "Eliminated participant remains movement-locked until spectator handoff");
+        Field deadField = TeamDuelManager.class.getDeclaredField("deadSpectators"); deadField.setAccessible(true);
+        @SuppressWarnings("unchecked") Set<UUID> dead = (Set<UUID>) deadField.get(teams); dead.add(a);
+        teamFrozen.remove(a);
+        check(teams.isFrozen(a) && !teams.isMovementFrozen(a),
+                "Live-match spectator stays protected while free to fly around the arena");
         TeamDuelInstance replacementTeam = new TeamDuelInstance(Set.of(a),Set.of(UUID.randomUUID()),"test","kit"); teamPlayers.put(a,replacementTeam);
         Method teamFinish = TeamDuelManager.class.getDeclaredMethod("finishReturn", TeamDuelInstance.class); teamFinish.setAccessible(true); teamFinish.invoke(teams,team);
         check(teamPlayers.get(a) == replacementTeam, "Old team cleanup preserves reconnect session");
@@ -371,6 +411,7 @@ public final class BugAuditChecks {
         Path dir = Files.createTempDirectory("epicduels-checks-");
         installServer(dir);
         editorChecks(); backupChecks(dir); snapshotChecks(dir); parserChecks();
+        inventoryGuardCommandChecks();
         statsCoordinationChecks(dir); lifecycleChecks(dir); accessChecks(dir); survivalRespawnChecks(dir); consumedChecks(dir); diskFailureChecks(dir); remoteChecks();
         System.out.println("Bug audit regression checks passed (" + assertions + " assertions).");
     }

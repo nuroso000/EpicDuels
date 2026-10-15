@@ -339,10 +339,12 @@ public class TeamDuelManager {
         } else {
             // Move the player into spectator mode within the arena
             deadSpectators.add(player.getUniqueId());
+            frozen.add(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (!player.isOnline() || activeByPlayer.get(player.getUniqueId()) != instance || !instance.isActive()) return;
                 player.getInventory().clear();
                 player.setGameMode(GameMode.SPECTATOR);
+                frozen.remove(player.getUniqueId());
                 if (instance.getInstanceWorld() != null) {
                     player.teleport(instance.getInstanceWorld().getSpawnLocation());
                 }
@@ -475,6 +477,13 @@ public class TeamDuelManager {
         TeamDuelInstance instance = activeByPlayer.get(playerId);
         return frozen.contains(playerId) || (instance != null && instance.getInstanceWorld() != null
                 && (!instance.isActive() || !instance.isAlive(playerId)));
+    }
+
+    /** Movement stays locked through countdown and match cleanup, then unlocks dead spectators. */
+    public boolean isMovementFrozen(UUID playerId) {
+        TeamDuelInstance instance = activeByPlayer.get(playerId);
+        return frozen.contains(playerId) || (instance != null && instance.getInstanceWorld() != null
+                && !instance.isActive());
     }
 
     public boolean isDeadSpectator(UUID playerId) {
