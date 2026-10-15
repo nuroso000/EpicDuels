@@ -1,10 +1,3 @@
-## Version 3.1.0: configurable presentation
-
-Scoreboards provide lobby, duel, spectator, and queue views. Existing player and
-admin menus support configurable titles and button presentation with stable PDC
-actions. See [CONFIGURATION.md](CONFIGURATION.md) for examples, placeholders,
-layout constraints, and reload behavior.
-
 # <h1 align="center">EpicDuels</h1>
 <p align="center">
   <img src="https://i.ibb.co/VYNPYwxK/Neues-Projekt.png" width="100" alt="Logo">
@@ -23,13 +16,17 @@ layout constraints, and reload behavior.
 
 **The complete duels experience for Paper 1.21.1-1.21.11 in a single, dependency-free jar.**
 
+Version 3.1.0 adds configurable menus and context sidebars for the lobby, duels,
+spectators, and matchmaking. See [CONFIGURATION.md](CONFIGURATION.md) for
+examples, placeholders, layout constraints, and reload behavior.
+
 1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
 
 Why server owners pick it:
 
 - **Five-minute setup, GUI-first UX.** One lobby point, one arena, one kit — after that players do everything through `/duel`. No player ever needs a command list.
 - **Adapts to your server concept.** Every feature has a `features.*` toggle, duel results can be broadcast or kept private, and even the join-time lobby handling can be turned off — so EpicDuels works as a dedicated duels server *or* as one mode among many.
-- **Engineered against exploits.** Isolated per-duel world copies, block tracking with per-round resets, rearrange-only kit personalization, crash-safe inventory backups for no-kit duels, and GUI identification via `InventoryHolder`/PDC instead of fragile title matching.
+- **Engineered against exploits.** Isolated per-duel world copies, block tracking with per-round resets, rearrange-only kit personalization, crash-safe inventory recovery for every duel mode, and GUI identification via `InventoryHolder`/PDC instead of fragile title matching.
 - **Localized.** All ~290 player-facing messages live in MiniMessage language files (English and German included, `language:` config key) — edit any wording or add your own language, reloadable at runtime.
 - **Integrates, but never requires.** PlaceholderAPI placeholders, Supabase/Firebase stats sync, built-in holograms — all optional, none needed.
 
@@ -136,7 +133,7 @@ With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
 
 ## Data files
 
-`config.yml`, `arenas.yml`, `kits.yml`, `playerkits.yml` (personal layouts), `stats.yml`, `leaderboards.yml`, `toggles.yml`, `lang/` (messages) and `inventories/` (own-inventory duel backups) — all created and managed automatically.
+`config.yml`, `menus.yml`, `scoreboard.yml`, `arenas.yml`, `kits.yml`, `playerkits.yml` (personal layouts), `stats.yml`, `leaderboards.yml`, `toggles.yml`, `lang/` (messages) and `inventories/` (temporary inventory recovery records for all duel modes) — all created and managed automatically.
 
 ## Building from source
 

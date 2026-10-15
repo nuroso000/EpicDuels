@@ -1,5 +1,8 @@
 ## 3.1.0
 
+- Fix forfeit confirmation and supported aliases during inventory recovery, allow remote stats records with only wins or losses, and preserve spectator flight for eliminated team-duel players.
+- Save and recover player inventories in every duel mode, including across disconnects and crashes.
+- Record remote stats as idempotent result events with a durable local outbox; install the Supabase compatibility SQL before enabling that backend.
 - Add configurable context sidebars in scoreboard.yml with MiniMessage, real
   match placeholders, bounded update interval, changed-content rendering, and cleanup.
 - Add menus.yml for titles, compatible sizes, button positions, item materials,

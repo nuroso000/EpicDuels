@@ -20,7 +20,8 @@
 #     5. Feature toggles ...... switch every plugin feature on/off
 #                               individually (challenges, matchmaking,
 #                               rematch, parties, tournaments, ...)
-#     6. Stats backend ........ local / Supabase / Firebase sync
+#     6. Stats backend ........ local / Supabase / Firebase event sync
+#     Presentation ............ menus.yml and scoreboard.yml (separate files)
 #
 #   GENERAL NOTES
 #
@@ -438,12 +439,12 @@ features:
 #
 #   - stats.yml always stays active as a local cache — the plugin
 #     keeps working even when the remote is unreachable.
-#   - Every win/loss is pushed to the remote asynchronously; the main
-#     server thread is never blocked.
-#   - When a player's stats are fetched, the HIGHER value of local vs.
-#     remote wins/losses is kept, so no progress is lost when two
-#     servers wrote different values.
-#   - On shutdown all cached stats are pushed one final time.
+#   - Each result is recorded remotely as an idempotent event, asynchronously;
+#     the main server thread is never blocked.
+#   - Unacknowledged events are durably queued in the _pending section of
+#     stats.yml and retried. Do not remove that section manually.
+#   - Existing local totals are not automatically imported into the event
+#     model; reconcile local-only history with the remote baseline first.
 #
 # IMPORTANT: changing the backend requires a full server RESTART —
 # /duel reload does NOT re-initialize the connection.
@@ -497,7 +498,9 @@ stats:
 #   stats.yml ......... local win/loss cache
 #   leaderboards.yml .. hologram positions
 #   toggles.yml ....... players who disabled duel requests (/duel toggle)
-#   inventories/ ...... temporary inventory backups during own-inventory
-#                       duels (one file per player, deleted after restore)
+#   menus.yml ......... configurable menu presentation
+#   scoreboard.yml .... lobby, duel, spectator and queue sidebar presentation
+#   inventories/ ...... temporary inventory recovery records for every
+#                       duel mode (remove only after inspecting unresolved files)
 #
 # ============================================================================

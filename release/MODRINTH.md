@@ -18,6 +18,11 @@
 
 **Everything a duels server needs, in one plugin — and zero dependencies.**
 
+Version 3.1.0 adds configurable menu presentation and lobby, duel, spectator,
+and queue sidebars. Inventory recovery covers every duel mode. Remote statistics
+use idempotent result events; Supabase setup requires the bundled SQL schema and
+private server credentials.
+
 Drop in one jar and your players get 1v1 challenges with Best-of-1/3/5, kit-based matchmaking, 2v2–4v4 team duels, party tournaments with a real bracket, one-click rematches, personal kit layouts, live spectating, leaderboards with floating holograms — each match in its own isolated arena world that is created and deleted automatically.
 
 ---
@@ -63,6 +68,8 @@ That's it — players open everything else through `/duel`.
 
 ---
 
-Full command reference, configuration guide and setup for multi-server stats: see the [GitHub README](https://github.com/nuroso000/EpicDuels) and the release notes.
+Full command reference: see the [GitHub README](https://github.com/nuroso000/EpicDuels).
+Configuration and remote-statistics setup are documented in
+[CONFIGURATION.md](../CONFIGURATION.md) and the [release notes](RELEASE.md).
 
 *Licensed under CC BY-NC-SA 4.0 — free to use on any server, including revenue-generating ones. Not for resale.*

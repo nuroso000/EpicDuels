@@ -1,14 +1,16 @@
 # EpicDuels — Feature-Roadmap
 
-Priorisierte Liste fehlender Features. Stand: Juli 2026, Basis: Branch `bugfixes` (v2.0.0).
+Priorisierte Liste offener Features. Stand: Oktober 2026, Basis: EpicDuels 3.1.0.
 
-> **Update v3.0.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
+> **Update v3.1.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
 > 3.4 (`/duel toggle`), 4.2 (`/duel reload`) und der Join-Handling-Toggle
 > aus 4.5 (`lobby.handle-join`). Erledigte Punkte sind mit ✅ markiert.
 > Ebenfalls Teil von v3.0.0: 3.3 (Spectate-GUI), 3.5 (Kit-Editor pro
 > Spieler), 4.1 (Lokalisierung en/de, `lang/`-Dateien), 4.3 (PlaceholderAPI)
-> und 4.4 (GUI-Refactoring auf InventoryHolder + PDC). `/duel reload` lädt
-> jetzt auch die Sprachdateien neu.
+> und 4.4 (GUI-Refactoring auf InventoryHolder + PDC). Version 3.1.0 ergänzt
+> konfigurierbare Menüs und Scoreboard-Seiten
+> (`menus.yml`, `scoreboard.yml`); `/duel reload` lädt auch diese Dateien und
+> aktualisiert Online-Seitenleisten.
 
 ---
 
@@ -100,11 +102,11 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - ✅ Alle ~290 Spieler-Nachrichten (Chat, Actionbars, Titles, klickbare Buttons) in `lang/messages_<code>.yml` ausgelagert, MiniMessage-Format
 - ✅ Zentrale `Messages`-Klasse (`dev.epicduels.i18n`) mit Platzhaltern (`<player>`, `<kit>`, `<arena>`, …); Klick-Kommandos über `{token}`-Ersetzung mit Tag-Escaping
 - ✅ Mitgeliefert: en + de; Auswahl über Config-Key `language`, Fallback auf eingebautes Englisch, Reload via `/duel reload`
-- Offen: GUI-Item-Namen/-Lore bleiben vorerst im Code (eigener Pass); wenige Admin-Fehlertexte aus `renameArena`/`renameKit` sind noch Englisch
+- ✅ Menü-Titel, Button-Namen, Lore, Materialien, Sichtbarkeit und Positionen sind seit 3.1.0 in `menus.yml` konfigurierbar. Wenige Admin-Fehlertexte aus `renameArena`/`renameKit` sind noch Englisch.
 
 ### 4.2 `/duel reload` (teilweise ✅)
-- ✅ Config zur Laufzeit neu laden (Permission `epicduels.admin`; v3.0.0)
-- Offen: messages.yml (existiert noch nicht, siehe 4.1) und Stats-Backend-Wechsel zur Laufzeit (Provider neu initialisieren — aktuell Neustart nötig)
+- ✅ `config.yml`, Sprachdateien, `menus.yml` und `scoreboard.yml` zur Laufzeit neu laden (Permission `epicduels.admin`; Menüänderungen gelten beim nächsten Öffnen)
+- Offen: Stats-Backend-Wechsel zur Laufzeit (Provider neu initialisieren — aktuell Neustart nötig)
 
 ### 4.3 PlaceholderAPI ✅
 - ✅ Placeholders: `%epicduels_wins%`, `%epicduels_losses%`, `%epicduels_winrate%`, `%epicduels_score%`, `%epicduels_in_duel%` (`dev.epicduels.hook.EpicDuelsExpansion`)

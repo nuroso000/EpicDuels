@@ -23,6 +23,15 @@ To contribute code changes, please follow these steps:
 - Code Quality: Ensure your code is readable and adheres to standard Java naming conventions.
 - Documentation: Update the README or include comments for significant logic changes.
 
+## Build and Regression Checks
+
+Run `mvn clean package` to build the plugin. Run `python3 scripts/checks.py` to
+execute the standalone presentation and bug regression suites; use
+`python3 scripts/checks.py --offline` when dependencies are already cached.
+These checks do not replace verification on a live Paper server. For menu,
+scoreboard, duel, and recovery behavior, describe any server-side checks you
+performed in the pull request.
+
 ## License & Usage
 
 This project is licensed under **CC BY-NC-SA 4.0**.

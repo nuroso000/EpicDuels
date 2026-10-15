@@ -2,6 +2,51 @@
 
 ---
 
+## v3.1.0 — Configurable Menus, Scoreboards & Recovery
+
+**Minecraft:** Paper 1.21.1+
+**Java:** 21
+
+Version 3.1.0 adds configurable presentation and hardens duel recovery and
+cross-server statistics.
+
+### Added and changed
+
+- `menus.yml` configures menu titles, sizes where supported, button materials,
+  names, lore, visibility, and positions while retaining server-side action IDs.
+- `scoreboard.yml` configures lobby, duel, spectator, and queue sidebars with
+  match placeholders. `/duel reload` reloads both presentation files.
+- Player inventories are durably backed up and restored for every duel mode,
+  including after disconnects or crashes. Failed or invalid recovery files
+  remain available for operator inspection.
+- Remote statistics are recorded as idempotent result events and queued in
+  `stats.yml` until acknowledged. Partial remote win/loss records are accepted.
+
+### Fixes
+
+- Inventory recovery permits the full `/duel forfeit confirm` flow and its
+  aliases, so players can complete a forfeit while recovery is unresolved.
+- Eliminated team-duel spectators retain spectator movement instead of being
+  frozen by the match countdown guard.
+
+### Upgrade notes
+
+- Back up `plugins/EpicDuels/` before upgrading. Keep the `_pending` section in
+  `stats.yml`; it contains result events awaiting remote acknowledgement.
+- Before enabling Supabase, install `database/supabase-results.sql`. Use a
+  private server credential and keep row-level security enabled. Set the
+  backend and credentials in `config.yml` as described in
+  [CONFIGURATION.md](../CONFIGURATION.md).
+- Existing local totals are not automatically imported into the new event
+  model. Reconcile local-only history with the remote baseline before enabling
+  remote recording to avoid counting results twice.
+- Inventory backup files in `inventories/` can represent player items awaiting
+  restoration. Do not delete unresolved files without inspecting them.
+- See [CONFIGURATION.md](../CONFIGURATION.md) for complete recovery and
+  remote-statistics behavior and `config.yml` for backend settings.
+
+---
+
 ## v3.0.1 — Result Command Hooks
 
 **Date:** September 2026
@@ -560,62 +605,19 @@ All of the features from the 0.2.x and 0.3.x line are part of v1.0.0:
 
 ### Major Feature: Remote Stats Backends
 
-EpicDuels can now sync player statistics across multiple servers using **Supabase** (PostgreSQL) or **Firebase** Realtime Database. Configure the backend in `config.yml`:
+Version 0.3.0 introduced optional Supabase and Firebase statistics sync beside
+the local `stats.yml` cache. The current event recording, retry, migration,
+credentials, and database setup are documented in the
+[v3.1.0 release notes](RELEASE.md) and
+[CONFIGURATION.md](../CONFIGURATION.md).
 
-```yaml
-stats:
-  backend: "supabase"   # or "firebase" or "local" (default)
-```
-
-#### Supabase Setup
-
-1. Create a `player_stats` table in your Supabase SQL editor:
-   ```sql
-   CREATE TABLE IF NOT EXISTS player_stats (
-     uuid   TEXT PRIMARY KEY,
-     wins   INTEGER NOT NULL DEFAULT 0,
-     losses INTEGER NOT NULL DEFAULT 0
-   );
-   ```
-2. Fill in `config.yml`:
-   ```yaml
-   stats:
-     backend: "supabase"
-     supabase:
-       url: "https://your-project.supabase.co"
-       api-key: "your-anon-key"
-       table: "player_stats"
-   ```
-
-#### Firebase Setup
-
-1. Create a Firebase project and enable Realtime Database.
-2. Fill in `config.yml`:
-   ```yaml
-   stats:
-     backend: "firebase"
-     firebase:
-       database-url: "https://your-project-default-rtdb.firebaseio.com"
-       auth-token: ""   # optional database secret
-   ```
-
-### How It Works
-
-- **Local cache is always active** — `stats.yml` remains the primary cache. The plugin works normally even when the remote is unreachable.
-- **Async sync** — All remote reads/writes happen asynchronously and never block the main server thread.
-- **Merge on fetch** — When a player's stats are loaded from remote, the higher value for wins and losses is kept (local vs. remote), so no data is lost if two servers wrote different values.
-- **Push on change** — Every win/loss is pushed to the remote immediately after updating the local cache.
-- **Push on shutdown** — All cached stats are pushed to the remote during `onDisable` to ensure nothing is lost.
+The remote providers use Java 21's built-in `HttpClient`; Supabase communicates
+through PostgREST, and Firebase uses the Realtime Database REST API.
 
 ### Architecture
 
-```
-StatsProvider (interface)
-├── SupabaseProvider  — PostgREST upsert via java.net.http
-└── FirebaseProvider  — Realtime Database REST via java.net.http
-```
-
-No external libraries required — uses Java 21's built-in `HttpClient`.
+`StatsProvider` defines the asynchronous interface used by `SupabaseProvider`
+and `FirebaseProvider`.
 
 ### Other (included from v0.2.3)
 
