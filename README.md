@@ -125,7 +125,6 @@ gradle clean build    # → build/libs/EpicDuels-3.0.0.jar
 
 Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history and [release/RELEASE.md](release/RELEASE.md) for detailed release notes.
 
-<img alt="Star the EpicDuels repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
 
 <a href="https://www.star-history.com/?repos=nuroso000%2Fepicduels&type=date&legend=top-left">
  <picture>
