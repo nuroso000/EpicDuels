@@ -2,6 +2,17 @@
 
 ---
 
+## v3.1.1 — Paper 26.1+ compatibility
+
+**Minecraft:** Paper 1.21.1–26.3
+**Java runtime:** 21 (Paper 1.21.x), 25 (Paper 26.1+)
+**Build target:** Java 21 bytecode and Paper API 1.21.1
+
+This release keeps one plugin jar compatible across the supported Paper range.
+It was smoke-tested on Paper 1.21.1, 1.21.11, 26.1.2, and 26.3.
+
+---
+
 ## v3.1.0 — Configurable Menus, Scoreboards & Recovery
 
 **Minecraft:** Paper 1.21.1+

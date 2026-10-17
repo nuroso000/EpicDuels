@@ -4,8 +4,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.1--1.21.11-green">
-  <img src="https://img.shields.io/badge/Java-21-orange">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1--26.3-green">
+  <img src="https://img.shields.io/badge/Java-21--bytecode-orange">
   <a href="https://github.com/nuroso000/EpicDuels">
     <img src="https://img.shields.io/badge/GitHub-EpicDuels-181717?style=flat&logo=github&logoColor=white" alt="GitHub">
   </a>
@@ -18,10 +18,11 @@
 
 **Everything a duels server needs, in one plugin — and zero dependencies.**
 
-Version 3.1.0 adds configurable menu presentation and lobby, duel, spectator,
-and queue sidebars. Inventory recovery covers every duel mode. Remote statistics
-use idempotent result events; Supabase setup requires the bundled SQL schema and
-private server credentials.
+Version 3.1.1 extends one-jar support through Paper 26.3. Version 3.1.0 added
+configurable menu presentation and lobby, duel, spectator, and queue sidebars.
+Inventory recovery covers every duel mode. Remote statistics use idempotent
+result events; Supabase setup requires the bundled SQL schema and private server
+credentials.
 
 Drop in one jar and your players get 1v1 challenges with Best-of-1/3/5, kit-based matchmaking, 2v2–4v4 team duels, party tournaments with a real bracket, one-click rematches, personal kit layouts, live spectating, leaderboards with floating holograms — each match in its own isolated arena world that is created and deleted automatically.
 
@@ -64,7 +65,8 @@ That's it — players open everything else through `/duel`.
 
 ## Requirements
 
-**Paper 1.21.1-1.21.11** and **Java 21**. Does not run on Spigot or Vanilla.
+**Paper 1.21.1–26.3**. Use **Java 21** for Paper 1.21.x and **Java 25** for
+Paper 26.1+. Does not run on Spigot or Vanilla.
 
 ---
 

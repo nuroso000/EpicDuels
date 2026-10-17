@@ -19,7 +19,9 @@ To contribute code changes, please follow these steps:
 4. Push to your branch and open a Pull Request.
 
 ## Technical Standards
-- Compatibility: All code must be compatible with Java 21 and the Paper 1.21.1+ API.
+- Compatibility: Keep source compatible with the Paper 1.21.1 API and Java 21
+  bytecode. The single jar must run from Paper 1.21.1 through the current Paper
+  release; Paper 26.1+ servers require Java 25.
 - Code Quality: Ensure your code is readable and adheres to standard Java naming conventions.
 - Documentation: Update the README or include comments for significant logic changes.
 

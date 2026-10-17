@@ -1,9 +1,10 @@
 name: EpicDuels
-version: 3.1.0
+version: 3.1.1
 main: dev.epicduels.EpicDuels
 description: 1v1 duels, team duels, tournaments and matchmaking
 author: nuroso000
 website: https://github.com/nuroso000/EpicDuels
+# Keep the minimum API version so this one jar remains loadable on Paper 1.21.1+.
 api-version: '1.21'
 load: STARTUP
 softdepend: [PlaceholderAPI]

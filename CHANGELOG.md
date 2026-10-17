@@ -1,3 +1,8 @@
+## 3.1.1
+
+- Support one Java 21 bytecode jar on Paper 1.21.1 through 26.3, including
+  the 26.1+ version line. Paper 26.1+ servers require Java 25.
+
 ## 3.1.0
 
 - Fix forfeit confirmation and supported aliases during inventory recovery, allow remote stats records with only wins or losses, and preserve spectator flight for eliminated team-duel players.

@@ -1,4 +1,4 @@
-# Presentation configuration (3.1.0)
+# Presentation configuration (3.1.1)
 
 `menus.yml` and `scoreboard.yml` are created on first startup. `/duel reload`
 reloads both, updates online sidebars immediately, and uses new menu settings on
@@ -131,7 +131,9 @@ not action buttons and are not covered by button overrides.
 
 ## Automated checks
 
-`mvn clean verify` builds the Java 21 artifact. No JUnit framework is introduced.
+`mvn clean verify` builds the Java 21 artifact against the Paper 1.21.1 API.
+The same jar supports Paper 26.1+; those servers must run on Java 25. No JUnit
+framework is introduced.
 The standalone `src/test/java/dev/epicduels/PresentationChecks.java` checks layout
 boundaries, duplicate destinations, swaps, blank lines, legacy colors, and literal
 runtime placeholders. After compilation, run it with `target/classes`,

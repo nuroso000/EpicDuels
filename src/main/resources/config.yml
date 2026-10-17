@@ -1,7 +1,8 @@
 # ============================================================================
 #
 #   EpicDuels — Configuration
-#   Version 3.1.0  ·  Paper 1.21.1+  ·  Java 21
+#   Version 3.1.1  ·  Paper 1.21.1–26.3
+#   Build target: Java 21  ·  Runtime: Java 21 (1.21.x), Java 25 (26.1+)
 #
 #   Documentation ... https://github.com/nuroso000/EpicDuels
 #   Release notes ... release/RELEASE.md

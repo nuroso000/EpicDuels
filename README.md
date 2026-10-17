@@ -4,8 +4,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.1--1.21.11-green">
-  <img src="https://img.shields.io/badge/Java-21-orange">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1--26.3-green">
+  <img src="https://img.shields.io/badge/Java-21--bytecode-orange">
   <a href="https://modrinth.com/plugin/epicduels">
     <img src="https://img.shields.io/badge/Modrinth-EpicDuels-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth">
   </a>
@@ -14,11 +14,12 @@
   </a>
 </p>
 
-**The complete duels experience for Paper 1.21.1-1.21.11 in a single, dependency-free jar.**
+**The complete duels experience for Paper 1.21.1–26.3 in a single, dependency-free jar.**
 
-Version 3.1.0 adds configurable menus and context sidebars for the lobby, duels,
-spectators, and matchmaking. See [CONFIGURATION.md](CONFIGURATION.md) for
-examples, placeholders, layout constraints, and reload behavior.
+Version 3.1.1 extends the single-jar compatibility range through Paper 26.3.
+Version 3.1.0 added configurable menus and context sidebars for the lobby,
+duels, spectators, and matchmaking. See [CONFIGURATION.md](CONFIGURATION.md)
+for examples, placeholders, layout constraints, and reload behavior.
 
 1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
 
@@ -47,7 +48,8 @@ Why server owners pick it:
 
 ## Installation
 
-1. Drop `EpicDuels-3.x.jar` into `plugins/` (Paper 1.21.1-1.21.11, Java 21) and restart.
+1. Drop `EpicDuels-3.x.jar` into `plugins/` and restart. Use Java 21 for
+   Paper 1.21.x or Java 25 for Paper 26.1+.
 2. `/duel setlobby` — set the lobby spawn.
 3. `/duel arena create map1` → build → `/duel arena setspawn1` / `setspawn2` → `/duel arena save`.
 4. Equip gear → `/duel kit create pvp`.
@@ -140,10 +142,13 @@ With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
 ```bash
 mvn clean package     # → target/EpicDuels.jar
 # or
-gradle clean build    # → build/libs/EpicDuels-3.1.0.jar
+gradle clean build    # → build/libs/EpicDuels-3.1.1.jar
 ```
 
-Java 21, Paper API 1.21.1. See [CHANGELOG.md](CHANGELOG.md) for version history and [release/RELEASE.md](release/RELEASE.md) for detailed release notes.
+The jar targets Java 21 bytecode and compiles against the Paper 1.21.1 API to
+retain the oldest supported server. Paper 1.21.x runs on Java 21; Paper 26.1+
+requires Java 25. See [CHANGELOG.md](CHANGELOG.md) for version history and
+[release/RELEASE.md](release/RELEASE.md) for detailed release notes.
 
 
 <a href="https://www.star-history.com/?repos=nuroso000%2Fepicduels&type=date&legend=top-left">

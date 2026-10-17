@@ -3,9 +3,10 @@ plugins {
 }
 
 group = 'dev.epicduels'
-version = '3.1.0'
+version = '3.1.1'
 
 java {
+    // Build one artifact against the oldest supported server API.
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
 }
@@ -30,6 +31,7 @@ dependencies {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Keep the jar runnable on 1.21.x (Java 21) and newer Java runtimes.
     options.release = 21
 }
 

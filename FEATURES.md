@@ -132,4 +132,4 @@ Duelle können aktuell endlos laufen (Spieler können sich verstecken).
 - Architektur: Manager-Klassen werden in `EpicDuels.onEnable()` instanziiert und per Getter gereicht; neue Manager diesem Muster folgen. Überblick steht als Kommentar in `EpicDuels.java`.
 - Arena-Instanzen: Jedes Duell kopiert die Template-Welt (`arena_template_<name>`) zu `arena_instance_<name>_<id>` — teure Operation; bei Best-of-N Instanz wiederverwenden statt neu kopieren.
 - Alle Spieler-Interaktionen laufen über Adventure Components (kein Legacy-ChatColor).
-- Nach jeder Änderung: `mvn -q -DskipTests package` muss grün sein (Java 21, Paper API 1.21.1).
+- Nach jeder Änderung: `mvn -q -DskipTests package` muss grün sein (Java-21-Bytecode, Paper API 1.21.1 als niedrigste Ziel-API). Ein Paper-Server ab Version 26.1 benötigt zur Laufzeit Java 25.
