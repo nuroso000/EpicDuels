@@ -1,3 +1,9 @@
+## 3.2.0
+
+- Publish a prebuilt single jar for Paper 1.21.1 through 26.3, including the
+  Paper 26.1+ line. The jar targets Java 21 bytecode; Paper 26.1+ requires
+  Java 25 at runtime.
+
 ## 3.1.1
 
 - Support one Java 21 bytecode jar on Paper 1.21.1 through 26.3, including

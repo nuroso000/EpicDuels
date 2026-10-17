@@ -1,4 +1,4 @@
-# EpicDuels 3.1.0. Missing settings preserve the existing English presentation.
+# EpicDuels 3.2.0. Missing settings preserve the existing English presentation.
 # Menu IDs correspond to MenuType, in lower-case with hyphens.
 # Buttons use stable IDs slot-N (N is their ORIGINAL built-in slot).
 # MiniMessage placeholders: <name> (original plain name), <kit>, <arena>.

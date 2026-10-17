@@ -16,10 +16,11 @@
 
 **The complete duels experience for Paper 1.21.1–26.3 in a single, dependency-free jar.**
 
-Version 3.1.1 extends the single-jar compatibility range through Paper 26.3.
-Version 3.1.0 added configurable menus and context sidebars for the lobby,
-duels, spectators, and matchmaking. See [CONFIGURATION.md](CONFIGURATION.md)
-for examples, placeholders, layout constraints, and reload behavior.
+Version 3.2.0 is available as a prebuilt single jar for Paper 1.21.1 through
+26.3. Paper 1.21.x runs on Java 21; Paper 26.1+ requires Java 25. Version
+3.1.0 added configurable menus and context sidebars for the lobby, duels,
+spectators, and matchmaking. See [CONFIGURATION.md](CONFIGURATION.md) for
+examples, placeholders, layout constraints, and reload behavior.
 
 1v1 challenges with Best-of-1/3/5, kit matchmaking, 2v2–4v4 team duels, party tournaments, one-click rematches, per-player kit layouts, a live spectate browser, leaderboard holograms and optional cross-server stats — every match in its own automatically managed void-world arena.
 
@@ -48,7 +49,7 @@ Why server owners pick it:
 
 ## Installation
 
-1. Drop `EpicDuels-3.x.jar` into `plugins/` and restart. Use Java 21 for
+1. Drop `EpicDuels-3.2.0.jar` into `plugins/` and restart. Use Java 21 for
    Paper 1.21.x or Java 25 for Paper 26.1+.
 2. `/duel setlobby` — set the lobby spawn.
 3. `/duel arena create map1` → build → `/duel arena setspawn1` / `setspawn2` → `/duel arena save`.
@@ -140,9 +141,9 @@ With PlaceholderAPI installed (optional softdepend), EpicDuels registers:
 ## Building from source
 
 ```bash
-mvn clean package     # → target/EpicDuels.jar
+mvn clean package     # → target/EpicDuels-3.2.0.jar
 # or
-gradle clean build    # → build/libs/EpicDuels-3.1.1.jar
+gradle clean build    # → build/libs/EpicDuels-3.2.0.jar
 ```
 
 The jar targets Java 21 bytecode and compiles against the Paper 1.21.1 API to

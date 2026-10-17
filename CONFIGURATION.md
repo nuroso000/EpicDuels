@@ -1,4 +1,4 @@
-# Presentation configuration (3.1.1)
+# Presentation configuration (3.2.0)
 
 `menus.yml` and `scoreboard.yml` are created on first startup. `/duel reload`
 reloads both, updates online sidebars immediately, and uses new menu settings on

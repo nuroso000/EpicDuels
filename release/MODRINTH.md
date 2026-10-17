@@ -18,8 +18,9 @@
 
 **Everything a duels server needs, in one plugin — and zero dependencies.**
 
-Version 3.1.1 extends one-jar support through Paper 26.3. Version 3.1.0 added
-configurable menu presentation and lobby, duel, spectator, and queue sidebars.
+Version 3.2.0 is available as a prebuilt single jar for Paper 1.21.1 through
+26.3. Version 3.1.0 added configurable menu presentation and lobby, duel,
+spectator, and queue sidebars.
 Inventory recovery covers every duel mode. Remote statistics use idempotent
 result events; Supabase setup requires the bundled SQL schema and private server
 credentials.

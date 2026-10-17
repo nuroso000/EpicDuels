@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'dev.epicduels'
-version = '3.1.1'
+version = '3.2.0'
 
 java {
     // Build one artifact against the oldest supported server API.

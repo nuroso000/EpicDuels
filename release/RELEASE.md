@@ -2,6 +2,19 @@
 
 ---
 
+## v3.2.0 — Prebuilt multi-version jar
+
+**Minecraft:** Paper 1.21.1–26.3
+**Java runtime:** 21 (Paper 1.21.x), 25 (Paper 26.1+)
+**Build target:** Java 21 bytecode and Paper API 1.21.1
+
+This release provides a prebuilt single jar for the supported Paper range. The
+compatibility smoke checks from v3.1.1 cover Paper 1.21.1, 1.21.11, 26.1.2,
+and 26.3; v3.2.0 rebuilds the same compatibility baseline with release version
+3.2.0.
+
+---
+
 ## v3.1.1 — Paper 26.1+ compatibility
 
 **Minecraft:** Paper 1.21.1–26.3

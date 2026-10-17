@@ -27,9 +27,11 @@ To contribute code changes, please follow these steps:
 
 ## Build and Regression Checks
 
-Run `mvn clean package` to build the plugin. Run `python3 scripts/checks.py` to
-execute the standalone presentation and bug regression suites; use
-`python3 scripts/checks.py --offline` when dependencies are already cached.
+The current release is 3.2.0; Gradle produces the prebuilt
+`build/libs/EpicDuels-3.2.0.jar`. Run `mvn clean package` to build the plugin.
+Run `python3 scripts/checks.py` to execute the standalone presentation and bug
+regression suites; use `python3 scripts/checks.py --offline` when dependencies
+are already cached.
 These checks do not replace verification on a live Paper server. For menu,
 scoreboard, duel, and recovery behavior, describe any server-side checks you
 performed in the pull request.

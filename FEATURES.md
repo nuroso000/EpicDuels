@@ -1,6 +1,9 @@
 # EpicDuels — Feature-Roadmap
 
-Priorisierte Liste offener Features. Stand: Oktober 2026, Basis: EpicDuels 3.1.0.
+Priorisierte Liste offener Features. Stand: Oktober 2026, Basis: EpicDuels 3.2.0.
+
+Die aktuelle Version wird als einzelne vorgebaute Jar für Paper 1.21.1 bis
+26.3 ausgeliefert. Paper 1.21.x benötigt Java 21; Paper 26.1+ benötigt Java 25.
 
 > **Update v3.1.0:** Priorität 1 ist komplett umgesetzt (1.1–1.5), dazu
 > 3.4 (`/duel toggle`), 4.2 (`/duel reload`) und der Join-Handling-Toggle
